@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest>
+  <control namespace="novalogica" constructor="KanbanViewControl" version="0.0.1" display-name-key="KanbanViewControl" description-key="KanbanViewControl description" control-type="virtual" >
+    <data-set name="dataset" display-name-key="Dataset"></data-set>
+
+    <property 
+      name="sumField" 
+      display-name-key="Sum Field" 
+      description-key="Choose a field to show a total sum of each column" 
+      of-type="SingleLine.Text" 
+      usage="input" />
+
+    <property 
+      name="notificationPosition" 
+      display-name-key="Notification Position" 
+      description-key="Choose the position where the toast message should appear" 
+      of-type="Enum" 
+      default-value="top-right" 
+      usage="input" 
+      required="false"
+    >
+      <value name="top" display-name-key="Top" description-key="">top-center</value>
+      <value name="topStart" display-name-key="Top Start" description-key="">top-left</value>
+      <value name="topEnd" display-name-key="Top End" description-key="">top-right</value>
+      <value name="bottom" display-name-key="Bottom" description-key="">bottom-center</value>
+      <value name="bottomStart" display-name-key="Bottom Start" description-key="">bottom-left</value>
+      <value name="bottomEnd" display-name-key="Bottom End" description-key="">bottom-right</value>
+    </property>
+
+    <resources>
+      <code path="index.ts" order="1"/>
+      <css path="styles/index.css" order="1" />
+      <platform-library name="React" version="16.8.6" />
+      <platform-library name="Fluent" version="8.29.0" />
+    </resources>
+    <feature-usage>
+      <uses-feature name="Utility" required="true" />
+      <uses-feature name="WebAPI" required="true" />
+    </feature-usage>
+  </control>
+</manifest>
