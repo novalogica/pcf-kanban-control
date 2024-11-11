@@ -40,8 +40,6 @@ const App = ({ context, notificationPosition } : IProps) => {
       }
     })
 
-    const dataset = 
-    
     setColumns(columns);
     setIsLoading(false);
   }, [activeView])
