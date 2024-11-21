@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import { ColumnItem, ViewItem } from "../interfaces";
+import { ColumnItem, ViewEntity, ViewItem } from "../interfaces";
 import { IInputs } from "../generated/ManifestTypes";
 
 interface IBoardContext {
@@ -11,7 +11,11 @@ interface IBoardContext {
   views: ViewItem[],
 
   columns: ColumnItem[],
-  setColumns: React.Dispatch<React.SetStateAction<ColumnItem[]>>
+  setColumns: React.Dispatch<React.SetStateAction<ColumnItem[]>>,
+
+  viewsEntity: ViewEntity[],
+  activeViewEntity: ViewEntity | undefined,
+  setActiveViewEntity: React.Dispatch<React.SetStateAction<ViewEntity | undefined>>,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

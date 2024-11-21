@@ -13,6 +13,7 @@ import Loading from "./container/loading";
 import NoResults from "./container/no-results";
 import Dropdown from "./dropdown/Dropdown";
 import { Lookup } from "./lookup/Lookup";
+import ModalPop from "./modal/modal";
 
 export {
   Loading,
@@ -35,5 +36,7 @@ export {
   Lookup,
   Dropdown,
   
-  SumInformation
+  SumInformation,
+
+  ModalPop
 }

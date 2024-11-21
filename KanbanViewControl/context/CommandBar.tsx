@@ -4,9 +4,10 @@ import { IDropdownOption } from "@fluentui/react";
 import { BoardContext } from "./board-context";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { CardInfo } from "../interfaces";
+import { isLocalHost } from '../lib/utils';
 
 const CommandBar = () => {
-  const { columns, setColumns, context, views, activeView, setActiveView } = useContext(BoardContext);
+  const { columns, setColumns, context, views, activeView, setActiveView, viewsEntity, activeViewEntity ,setActiveViewEntity } = useContext(BoardContext);
   
   const fields = useMemo(() => context.parameters.dataset.columns.map((item) => {
     return { key: item.name, text: item.displayName }
@@ -40,6 +41,11 @@ const CommandBar = () => {
     console.log(item);
   }
 
+  const handleViewEntityChange = (option?: IDropdownOption) => {
+    const view = viewsEntity.find((val) => val.key === option?.key)
+    setActiveViewEntity(view)
+};
+
   return ( 
     <div className="kanban-commandar-bar">
       <KanbanDropdown 
@@ -48,7 +54,17 @@ const CommandBar = () => {
         options={views} 
         selectedOption={activeView}
         onOptionSelected={setActiveView}/>
-
+    {isLocalHost
+    ?
+    <KanbanDropdown 
+        key="view-entity" 
+        label="Entity View" 
+        options={viewsEntity} 
+        selectedOption={activeViewEntity}
+        onOptionSelected={handleViewEntityChange}/>
+    :
+    <></>
+    }
       <div className="commandar-bar-dropdowns">
         <KanbanDropdown 
           key="sort-dropdown" 

@@ -15,3 +15,5 @@
 
 # MSBuild Binary and Structured Log
 *.binlog
+
+/.vscode

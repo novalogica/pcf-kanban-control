@@ -7,7 +7,7 @@ import {
 export const mockCards: CardItem[] = [
   {
     "id": "66e21a107329eb729084f9dc",
-    "column": "todo",
+    "column": "124940000",
     "title": {
       "label": "Title",
       "value": "Implement user authentication"
@@ -45,7 +45,7 @@ export const mockCards: CardItem[] = [
   },
   {
     "id": "66e21a10755953f371d6cd8f",
-    "column": "on-hold",
+    "column": "124940000",
     "title": {
       "label": "Title",
       "value": "Build about us page in Website"
@@ -73,7 +73,7 @@ export const mockCards: CardItem[] = [
   },
   {
     "id": "66e21a106f13045d904944f2",
-    "column": "todo",
+    "column": "124940000",
     "title": {
       "label": "Title",
       "value": "Hubspot Integrator | Project initiation and planning"
