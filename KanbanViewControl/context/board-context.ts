@@ -16,6 +16,7 @@ interface IBoardContext {
   viewsEntity: ViewEntity[],
   activeViewEntity: ViewEntity | undefined,
   setActiveViewEntity: React.Dispatch<React.SetStateAction<ViewEntity | undefined>>,
+  selectedEntity: string | undefined
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

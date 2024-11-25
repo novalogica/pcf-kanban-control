@@ -1,19 +1,38 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { mockColumns } from "../mock/data";
 import { ColumnItem } from "../interfaces";
+import {useDataverse} from "./useDataverse";
 import { DraggableStateSnapshot, DraggableStyle, DropResult } from "@hello-pangea/dnd";
+import { BoardContext } from '../context/board-context';
+import { useContext } from 'react';
+import toast from "react-hot-toast";
 
 export type ColumnId = (typeof mockColumns)[number]["id"];
 
 export const useDnD = (columns: ColumnItem[]) => {
+  const { context } = useContext(BoardContext);
+  const { updateRecord } = useDataverse(context);
   
-  const onDragEnd = (result: DropResult) => {
+  const onDragEnd = async (result: DropResult, record: any) => {
     if (result.destination == null) {
       return;
     }
 
+
+    toast.promise(
+      updateRecord(record),
+      {
+        loading: 'Saving...',
+        success: `Successfully moved to "${record.columnName}" 🎉`,
+        error: (e) => e.message,
+      }
+    )
+
+    console.log("columns", columns)
+
     const itemId = result.draggableId;
-    const sourceColumn = columns.find(c => c.id === result.source.droppableId);
-    const destinationColumn = columns.find(c => c.id === result.destination?.droppableId);
+    const sourceColumn = columns.find(c => c.id == result.source.droppableId);
+    const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
 
     let copy = [...columns];
 

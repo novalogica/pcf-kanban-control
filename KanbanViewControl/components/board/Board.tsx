@@ -8,18 +8,36 @@ import { useDnD } from '../../hooks/useDnD';
 import { isNullOrEmpty } from '../../lib/utils';
 
 const Board = () => {
-  const { columns, setColumns } = useContext(BoardContext);
+  const { columns, setColumns, selectedEntity, activeView} = useContext(BoardContext);
   const { onDragEnd } = useDnD(columns);
 
-  const handleCardDrag = (result: DropResult, _: ResponderProvided) => {
-    const updatedColumns = onDragEnd(result);
+  const handleCardDrag = async (result: DropResult, _: ResponderProvided) => {
+    console.log("drag", result);
+    console.log("view", activeView)
+    console.log("entity", selectedEntity)
+
+    const field = activeView?.uniqueName
+    const columnName = activeView?.columns?.find(column => column.id == result.destination?.droppableId)?.title
+    //const pluralize = (word) => word.endsWith('y') ? word.slice(0, -1) + 'ies' : word + 's';
+    const logicalName = selectedEntity?.endsWith('y') ? selectedEntity.slice(0, -1) + 'ies' : selectedEntity + 's';
+    const record = {
+      update: {
+        [field as string]: result.destination?.droppableId
+      },
+      logicalName: logicalName,
+      id: result.draggableId,
+      columnName
+    }
+
+    const updatedColumns = await onDragEnd(result, record);
+    console.log(updatedColumns)
 
     if(isNullOrEmpty(updatedColumns))
       return;
     
     setColumns(updatedColumns ?? []);
 
-    toast.success("Card moved successfully");
+    //toast.success("Card moved successfully");
   }
 
   return (

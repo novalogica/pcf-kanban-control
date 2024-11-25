@@ -24,6 +24,7 @@ const App = ({ context, notificationPosition } : IProps) => {
   const [entities, setEntities] = useState([]);
   const [views, setViews] = useState<ViewItem[]>([]);
   const [viewsEntity, setViewsEntity] = useState<ViewEntity[]>([]);
+  const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
   const { getEntities, getStatusMetadata, generateViewTypes, getViewsAndFields, getOptionSets } = useDataverse(context);
   
@@ -52,7 +53,7 @@ const App = ({ context, notificationPosition } : IProps) => {
 
         filteredRecord["id"] = record[`${data.entity}id`];
         filteredRecord["tag"] = {label: "", value: ""}
-        filteredRecord["description"] = {label: "", value: ""}
+        //filteredRecord["description"] = {label: "", value: ""}
         filteredRecord["ownerid"] = {
           "label": "Owner",
           "value": {
@@ -68,17 +69,26 @@ const App = ({ context, notificationPosition } : IProps) => {
         // Include fields based on the fields list
         fields.forEach((field: any) => {
             // eslint-disable-next-line no-prototype-builtins
-            if (record.hasOwnProperty(field.name)) {
-                if(field.name.includes("title")){
-                  filteredRecord["title"] = {
-                    label: field.displayName,
-                    value: record[field.name]
-                  };
-                }else{
+            if (record.hasOwnProperty(field.name) && record[field.name] != undefined) {
+              const rec = views.find(item => item.uniqueName == field.name)
+                if(rec && rec.columns){
+                  const value = rec.columns.find(item => item.id == record[field.name])
                   filteredRecord[field.name] = {
                     label: field.displayName,
-                    value: record[field.name]
+                    value: value?.title
                   };
+                }else{
+                  if(field.name.includes("title")){
+                    filteredRecord["title"] = {
+                      label: field.displayName,
+                      value: record[field.name]
+                    };
+                  }else{
+                    filteredRecord[field.name] = {
+                      label: field.displayName,
+                      value: record[field.name]
+                    };
+                  }
                 }
             }
         });
@@ -96,7 +106,7 @@ const App = ({ context, notificationPosition } : IProps) => {
     //console.log("activeViewEntity", activeViewEntity)
 
     const cards = filterRecords(activeViewEntity)
-    console.log(cards)
+    console.log("cards", cards)
     const activeColumns = activeView?.columns ?? []
 
     const columns = activeColumns.map((col) => {
@@ -105,7 +115,7 @@ const App = ({ context, notificationPosition } : IProps) => {
         cards: cards.filter((card: any) => card.column == col.id) 
       }
     })
-
+    console.log("columns", columns)
     setColumns(columns)
   }, [activeView])
 
@@ -143,6 +153,7 @@ const App = ({ context, notificationPosition } : IProps) => {
   const fetchViews = async (logicalName: string) => {
     const views = await getViewsAndFields(logicalName);
     setViewsEntity(views);
+    //getStatusMetadata()
     return views;
   }
 
@@ -166,6 +177,8 @@ const App = ({ context, notificationPosition } : IProps) => {
 
   if(showModal){
     return <ModalPop
+      selectedEntity={selectedEntity}
+      setSelectedEntity={setSelectedEntity}
       setActiveViewEntity={setActiveViewEntity}
       handleEntitySave={handleEntitySave}
       views={viewsEntity}
@@ -174,7 +187,7 @@ const App = ({ context, notificationPosition } : IProps) => {
   }
 
   return (
-    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, viewsEntity, activeViewEntity ,setActiveViewEntity }}>
+    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, viewsEntity, activeViewEntity ,setActiveViewEntity, selectedEntity }}>
         <Board />
         <Toaster 
           position={notificationPosition} 

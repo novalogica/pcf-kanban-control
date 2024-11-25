@@ -21,11 +21,12 @@ interface IProps {
     fetchViews: (logicalName: string) => void,
     handleEntitySave: () => void,
     setActiveViewEntity: React.Dispatch<React.SetStateAction<ViewEntity | undefined>>
+    setSelectedEntity: React.Dispatch<React.SetStateAction<string | undefined>>
+    selectedEntity: string | undefined
 }
 
-const ModalPop = ({ fetchViews, entities, views, handleEntitySave, setActiveViewEntity }: IProps) => {
+const ModalPop = ({ fetchViews, entities, views, handleEntitySave, setActiveViewEntity, setSelectedEntity, selectedEntity }: IProps) => {
     const [isModalOpen, setIsModalOpen] = useState(true);
-    const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
     const [selectedView, setSelectedView] = useState<string | undefined>();
 
     const handleEntityChange = ( event: React.FormEvent<HTMLDivElement>, option?: IDropdownOption) => {

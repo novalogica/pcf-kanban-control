@@ -2,18 +2,9 @@
 import { useMemo } from 'react';
 import { IInputs } from '../generated/ManifestTypes';
 import { isNullOrEmpty, isLocalHost, apiRoutes } from '../lib/utils';
-import { exec } from 'child_process';
 import { ViewEntity, FieldMetadata, ViewItem } from '../interfaces';
 
-type ParameterTypes = Record<string, { typeName: string; structuralProperty: number }>;
 
-interface IProps {
-    endpoint: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    //parameters: Record<string, any>;
-    //parameterTypes: ParameterTypes;
-    //isJSON: boolean;
-}
 
 export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     //@ts-expect-error - Xrm is not recognized localy
@@ -41,13 +32,14 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         }
     }
 
-    const updateRecord = async (item: ComponentFramework.WebApi.Entity) => {
+    const updateRecord = async (record: any) => {
         try {
-            const response = await API.updateRecord(
-                entityName,
-                item.id,
-                item
-            )
+            const response = await execute({
+                endpoint: `${record.logicalName}(${record.id})`,
+                method: "PATCH",
+                body: JSON.stringify(record.update)
+            });
+            return response;
 
             //Show toast notification with 
         } catch(e) {
@@ -57,24 +49,26 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
     const getStatusMetadata = async () => {
         try {
-            const url = `${BASE_URL}/api/data/v9.2/EntityDefinitions(LogicalName='${entityName}')
+
+            /*const url = `EntityDefinitions(LogicalName='nl_cases')
             /Attributes(LogicalName='statuscode')
             /Microsoft.Dynamics.CRM.StatusAttributeMetadata
             ?$select=LogicalName
-            &$expand=OptionSet($select=Options,MetadataId)`; 
-            
-            const response = await fetch(url, { 
-                method: "GET", 
-                headers: {
-                    "Accept": "application/json",
-                    "OData-MaxVersion": "4.0",
-                    "OData-Version": "4.0",
-                    "Authorization": `Bearer ${apiRoutes.token}`
-                } 
-            });
+            &$expand=OptionSet($select=Options,MetadataId)`;*/
 
-            const result = await response.json();
-            const options = result.OptionSet?.Options;
+            const url = `EntityDefinitions(LogicalName='nl_opportunity')/Attributes/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName,DisplayName&$expand=OptionSet($select=Options,MetadataId)`;
+
+
+            const metadata = await execute({
+                endpoint: url,
+                method: "GET"
+            })
+
+            console.log("StatusMetadata", metadata)
+
+            const options = metadata.OptionSet?.Options;
+
+            console.log("StatusOptions", options)
 
             if(isNullOrEmpty(options))
                 return;
@@ -130,7 +124,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 if(activeView == undefined)
                     return
 
-                datasetColumns = activeView.fields.filter(field => field.dataType == "Picklist")
+                datasetColumns = activeView.fields.filter(field => field.dataType == "Picklist" || field.dataType == "Status")
             }else{
                 datasetColumns = dataset.columns.filter(col => col.dataType == "OptionSet");
             }
@@ -146,7 +140,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             const filter = datasetColumns.map((column) => `attributename eq '${column.name}'`).join(' or ');
 
             const columnOptions = isLocalHost ? 
-            await execute({endpoint: `stringmaps?$filter=(objecttypecode eq '${entityLogicalName}' and (${filter}))`})
+            await execute({endpoint: `stringmaps?$filter=(objecttypecode eq '${entityLogicalName}' and (${filter}))`, method: "GET"})
             : 
             await context.webAPI.retrieveMultipleRecords(
                 "stringmap",
@@ -178,7 +172,12 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
             console.log(columns);
 
-            const statusCodeColumn = columns.find((item) => item.key == 'statuscode');
+            const sortedColumns = columns.map(item => ({
+                ...item,
+                columns: item.columns.sort((a: any, b: any) => a.order - b.order)
+            }));
+
+            /*const statusCodeColumn = columns.find((item) => item.key == 'statuscode');
 
             if (statusCodeColumn) {
                 const statusCodeOptions = await getStatusMetadata();
@@ -188,9 +187,9 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 statusCodeColumn.columns = statusCodeColumn.columns.filter((columnOption: any) => 
                     filteredStatusCodeOptions.some((filteredOption: any) => filteredOption.Value === columnOption.key)
                 );
-            }
+            }*/
 
-            return columns;
+            return sortedColumns;
         } catch (e) {
             //Show toast notification with error message
         }
@@ -199,7 +198,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     const getEntities = async () => {
         try {
             //Show toast notification with
-            const entities = await execute({endpoint: "EntityDefinitions?$select=LogicalName,DisplayName"});
+            const entities = await execute({endpoint: "EntityDefinitions?$select=LogicalName,DisplayName", method: "GET"});
 
             const internalTablePattern = /^(adx_|bot|flow|ai|field|calendar|custom|role|sdk|report|power|retention|relationship|privilege|plugin|organization|git|internal|msdyn_|workflow|system|solution|subscription|import|msfp_|user|trace|time|email|entity|mspp_|canvas|bulk|channel|copilot|mobile|mailbox|metadata|metric|ribbon|saved|search|rollup|process|application|appmodule|dv|duplicate|document)/i;
 
@@ -234,16 +233,16 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         //const entityLogicalName = "nl_case"
         try {
             const systemViews: { value: ViewEntity[] } = await execute({
-                endpoint: `savedqueries?$filter=returnedtypecode eq '${entityLogicalName}'&$select=savedqueryid,name,layoutxml`
+                endpoint: `savedqueries?$filter=returnedtypecode eq '${entityLogicalName}'&$select=savedqueryid,name,layoutxml`, method: "GET"
             });
             const personalViews: { value: ViewEntity[] } = await execute({
-                endpoint: `userqueries?$filter=returnedtypecode eq '${entityLogicalName}'&$select=userqueryid,name,layoutxml`
+                endpoint: `userqueries?$filter=returnedtypecode eq '${entityLogicalName}'&$select=userqueryid,name,layoutxml`, method: "GET"
             });
             const metadata: { value: any[] } = await execute({
-                endpoint: `EntityDefinitions(LogicalName='${entityLogicalName}')/Attributes?$select=LogicalName,AttributeType,DisplayName`
+                endpoint: `EntityDefinitions(LogicalName='${entityLogicalName}')/Attributes?$select=LogicalName,AttributeType,DisplayName`, method: "GET"
             });
             const records: {value: any[]} = await execute({
-                endpoint: `nl_cases`
+                endpoint: `nl_cases`, method: "GET"
             })
             // Combine all views
             const allViews = [...systemViews.value, ...personalViews.value];
@@ -279,28 +278,29 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         }
     }
 
-    function parseFieldsFromLayoutXml(layoutXml: string): string[] {
+    const parseFieldsFromLayoutXml = (layoutXml: string): string[] => {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(layoutXml, "text/xml");
         const cells = xmlDoc.getElementsByTagName("cell");
         const fields: string[] = [];
         for (let i = 0; i < cells.length; i++) {
-            const name = cells[i].getAttribute("name");
-            if (name) fields.push(name);
+            const cell = cells[i];
+            const fieldName = cell.getAttribute("name");
+            if (fieldName) fields.push(fieldName);
         }
         return fields;
     }
 
-    function mapMetadata(metadata: any[]): Record<string, FieldMetadata> {
+    const mapMetadata = (metadata: any[]): Record<string, FieldMetadata> => {
         const map: Record<string, FieldMetadata> = {};
         metadata.forEach((attr) => {
             const displayName = attr.DisplayName?.LocalizedLabels?.[0]?.Label || attr.LogicalName;
             map[attr.LogicalName] = { type: attr.AttributeType, displayName };
         });
         return map;
-    }
+    };
 
-    const execute = async (props: IProps) => {
+    const execute = async (props: any) => {
         const response = isLocalHost ? await executeLocalhost(props) : await executeLocalhost(props);
 
         if (!response.ok) {
@@ -319,23 +319,28 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         }            
     }
 
-    const executeLocalhost = async (props: IProps) => {
-        console.log("[Start Localhost Request]", props.endpoint)
+    const executeLocalhost = async (props: any) => {
+        console.log("[Start Request]", props.endpoint)
         const myHeaders = new Headers();
         myHeaders.append("OData-MaxVersion", "4.0");
         myHeaders.append("OData-Version", "4.0");
         myHeaders.append("Content-Type", "application/json; charset=utf-8");
         myHeaders.append("Accept", "application/json");
-        myHeaders.append("Authorization", `Bearer ${apiRoutes.token}`);
+        if(isLocalHost)
+            myHeaders.append("Authorization", `Bearer ${apiRoutes.token}`);
 
         //const raw = JSON.stringify(props.parameters);
 
         const requestOptions = {
-            method: "GET",
+            method: props.method ?? "GET",
             headers: myHeaders,
-            //body: "",
+            body: props?.body,
             redirect: "follow" as RequestRedirect
         };
+
+        if (!requestOptions.body) {
+            delete requestOptions.body;
+        }
 
         const response = await fetch(`${apiRoutes.localhostUrl}${props.endpoint}`, requestOptions);
         return response;
