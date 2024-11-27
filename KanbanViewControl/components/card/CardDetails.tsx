@@ -1,7 +1,7 @@
 import * as React from "react";
 import { CardInfo, UniqueIdentifier } from "../../interfaces";
 import { Text } from "@fluentui/react/lib/Text";
-import { isEntityReference } from "../../lib/utils";
+import { isEntityReference, isNullOrEmpty } from "../../lib/utils";
 import { Lookup } from "../lookup/Lookup";
 import { useNavigation } from "../../hooks/useNavigation";
 import { BoardContext } from "../../context/board-context";
@@ -17,16 +17,16 @@ const CardDetails = ({ id, info }: ICardInfoProps) => {
   const { context } = useContext(BoardContext);
   const { openForm } = useNavigation(context);
 
-  const onLookupClicked = () => {
-    openForm(context.parameters.dataset.getTargetEntityType(), id.toString())
+  const onLookupClicked = (entityName: string, id: string) => {
+    openForm(entityName, id)
   }
 
   const handleInfoValue = (value: MultiType) => {
     switch(typeof value) {
       case "number":
-        return context.formatting.formatCurrency(value)
+        return isNullOrEmpty(value) ? context.formatting.formatCurrency(0) : context.formatting.formatCurrency(value)
       default: 
-        return value;
+        return isNullOrEmpty(value) ? "-" : value;
     }
   }
 

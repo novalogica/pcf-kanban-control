@@ -40,8 +40,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 body: JSON.stringify(record.update)
             });
             return response;
-
-            //Show toast notification with 
         } catch(e) {
             //Show toast notification with error message
         }
@@ -49,13 +47,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
     const getStatusMetadata = async () => {
         try {
-
-            /*const url = `EntityDefinitions(LogicalName='nl_cases')
-            /Attributes(LogicalName='statuscode')
-            /Microsoft.Dynamics.CRM.StatusAttributeMetadata
-            ?$select=LogicalName
-            &$expand=OptionSet($select=Options,MetadataId)`;*/
-
             const url = `EntityDefinitions(LogicalName='nl_opportunity')/Attributes/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName,DisplayName&$expand=OptionSet($select=Options,MetadataId)`;
 
 
@@ -117,8 +108,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
     const getOptionSets = async (activeView: ViewEntity | undefined) => {
         try {
-            //Show toast notification with 
-
             let datasetColumns
             if(isLocalHost){
                 if(activeView == undefined)
@@ -131,7 +120,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             
             const entityLogicalName = activeView?.entity ?? entityName
             
-            console.log(datasetColumns)
+            console.log("OptionSetsWithoutColumns", datasetColumns)
 
             if(isNullOrEmpty(datasetColumns) || datasetColumns.length <= 0) {
                 return [];
@@ -170,24 +159,12 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 }
             })
 
-            console.log(columns);
+            console.log("OptionSetsWithColumns", columns);
 
             const sortedColumns = columns.map(item => ({
                 ...item,
                 columns: item.columns.sort((a: any, b: any) => a.order - b.order)
             }));
-
-            /*const statusCodeColumn = columns.find((item) => item.key == 'statuscode');
-
-            if (statusCodeColumn) {
-                const statusCodeOptions = await getStatusMetadata();
-            
-                const filteredStatusCodeOptions = statusCodeOptions.filter((option: any) => option.State == 0);
-            
-                statusCodeColumn.columns = statusCodeColumn.columns.filter((columnOption: any) => 
-                    filteredStatusCodeOptions.some((filteredOption: any) => filteredOption.Value === columnOption.key)
-                );
-            }*/
 
             return sortedColumns;
         } catch (e) {
@@ -195,9 +172,12 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         }
     }
 
+    /**
+     *  Localhost Function
+     * @returns all the custom entities can be changed to return all of them
+     */
     const getEntities = async () => {
         try {
-            //Show toast notification with
             const entities = await execute({endpoint: "EntityDefinitions?$select=LogicalName,DisplayName", method: "GET"});
 
             const internalTablePattern = /^(adx_|bot|flow|ai|field|calendar|custom|role|sdk|report|power|retention|relationship|privilege|plugin|organization|git|internal|msdyn_|workflow|system|solution|subscription|import|msfp_|user|trace|time|email|entity|mspp_|canvas|bulk|channel|copilot|mobile|mailbox|metadata|metric|ribbon|saved|search|rollup|process|application|appmodule|dv|duplicate|document)/i;
@@ -222,15 +202,17 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             });
 
             return entitiesOptions;
-            //return result;
         } catch (e) {
             //Show toast notification with error message
         }
     }
 
+    /**
+     *  Localhost Function
+     * @returns all the views from the chosen entity and the fields/records
+     */
     const getViewsAndFields = async (entityLogicalName: string): Promise<ViewEntity[]> => {
-        //TODO: make the entity dynamic
-        //const entityLogicalName = "nl_case"
+        const logicalNamePluralized = entityLogicalName?.endsWith('y') ? entityLogicalName.slice(0, -1) + 'ies' : entityLogicalName + 's';
         try {
             const systemViews: { value: ViewEntity[] } = await execute({
                 endpoint: `savedqueries?$filter=returnedtypecode eq '${entityLogicalName}'&$select=savedqueryid,name,layoutxml`, method: "GET"
@@ -242,7 +224,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 endpoint: `EntityDefinitions(LogicalName='${entityLogicalName}')/Attributes?$select=LogicalName,AttributeType,DisplayName`, method: "GET"
             });
             const records: {value: any[]} = await execute({
-                endpoint: `nl_cases`, method: "GET"
+                endpoint: logicalNamePluralized, method: "GET"
             })
             // Combine all views
             const allViews = [...systemViews.value, ...personalViews.value];

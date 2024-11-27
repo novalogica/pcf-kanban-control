@@ -10,6 +10,7 @@ import Loading from './components/container/loading';
 import { DataType } from './enums/data-type';
 import { Toaster } from 'react-hot-toast';
 import { useDataverse } from './hooks/useDataverse';
+import { consoleLog, getColumnValue, isLocalHost } from './lib/utils';
 
 interface IProps {
   context: ComponentFramework.Context<IInputs>,
@@ -26,23 +27,38 @@ const App = ({ context, notificationPosition } : IProps) => {
   const [viewsEntity, setViewsEntity] = useState<ViewEntity[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
-  const { getEntities, getStatusMetadata, generateViewTypes, getViewsAndFields, getOptionSets } = useDataverse(context);
+  const { getEntities, getViewsAndFields, getOptionSets } = useDataverse(context);
+  const { dataset } = context.parameters;
   
-  /*const views = useMemo(() => {
+
+  const handleColumnsChange = async () => {
+    const options = await getOptionSets(undefined);
+
+    if(options === undefined)
+      return;
+    setViews(options);
+    setActiveView(options[0] ?? []);
+
+    setIsLoading(false);
+  }
+
+
+  useMemo(() => {
     console.log("[Entity View Changed]")
+    setSelectedEntity(dataset.getTargetEntityType())
 
-    const datasetColumns = context.parameters.dataset.columns.filter(c => {
-      return c.dataType == DataType.OptionSet
-    });
+    consoleLog("columns", dataset.columns, {anyWhereDebug: true})
+    console.log("records", dataset.records)
 
-    return datasetColumns.map((col) => ({
-      key: col.name,
-      text: col.displayName,
-      type: col.dataType
-    }));
+    handleColumnsChange()
     
-  }, [context.parameters.dataset.columns])*/
+  }, [context.parameters.dataset.columns])
 
+  /**
+   * Localhost function
+   * @param data 
+   * @returns all the cards ready to be displayed on the columns
+   */
   const filterRecords = (data: any) => {
     const { records, fields } = data;
     const columnKey = activeView?.key
@@ -99,20 +115,45 @@ const App = ({ context, notificationPosition } : IProps) => {
 
 
   useMemo(() => {
-    if(activeView === undefined)
+    if(activeView === undefined || activeView.columns === undefined)
       return
+
+    console.log("[Changed View]")
 
     //console.log("activeView", activeView)
     //console.log("activeViewEntity", activeViewEntity)
+    let cards: any[]
 
-    const cards = filterRecords(activeViewEntity)
+    if(isLocalHost){
+      cards = filterRecords(activeViewEntity)
+    }else{
+      cards = Object.entries(dataset.records).map(([id, record]) => {
+
+        const columnValues = dataset.columns.reduce((acc, col) => {
+          if(col.name === activeView.key){
+            const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : {id: null};
+            const key = targetColumn ? targetColumn.id : null;
+            acc = {...acc, column: key}
+          }
+
+          const name = col.name.includes("title") ? "title" : col.name; 
+  
+          const columnValue = getColumnValue(record, col);
+          return { ...acc, [name]: columnValue };
+        }, {});
+  
+        return { id, ...columnValues };
+  
+      })
+    }
+
     console.log("cards", cards)
     const activeColumns = activeView?.columns ?? []
 
     const columns = activeColumns.map((col) => {
       return { 
         ...col, 
-        cards: cards.filter((card: any) => card.column == col.id) 
+        cards: cards.filter((card: any) => card?.column == col.id) 
       }
     })
     console.log("columns", columns)
@@ -122,17 +163,6 @@ const App = ({ context, notificationPosition } : IProps) => {
   
 
   useEffect(() => {
-    //console.log(context.parameters.dataset.columns);
-
-    /*const columns = mockColumns.map((col) => {
-      return { 
-        ...col, 
-        cards: mockCards.filter((card) => card.column == col.id) 
-      }
-    })
-
-    setColumns(columns);*/
-
     const fetchEntities = async () => {
       try {
           const entities = await getEntities();
@@ -146,14 +176,13 @@ const App = ({ context, notificationPosition } : IProps) => {
       }
     };
 
-    fetchEntities();
-    
+    if(isLocalHost)
+      fetchEntities();
   }, [])
 
   const fetchViews = async (logicalName: string) => {
     const views = await getViewsAndFields(logicalName);
     setViewsEntity(views);
-    //getStatusMetadata()
     return views;
   }
 
@@ -165,7 +194,7 @@ const App = ({ context, notificationPosition } : IProps) => {
       return;
     setViews(options);
     setActiveView(options[0] ?? []);
-    //setColumns(options[0].columns);
+
     setIsLoading(false);
     setShowModal(false);
   }

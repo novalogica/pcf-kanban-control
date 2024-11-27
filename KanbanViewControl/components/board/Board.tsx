@@ -2,7 +2,6 @@ import * as React from 'react';
 import { useContext } from 'react';
 import { CommandBar, Column } from '..';
 import { DragDropContext, DropResult, ResponderProvided } from '@hello-pangea/dnd';
-import toast from "react-hot-toast";
 import { BoardContext } from '../../context/board-context';
 import { useDnD } from '../../hooks/useDnD';
 import { isNullOrEmpty } from '../../lib/utils';
@@ -18,7 +17,6 @@ const Board = () => {
 
     const field = activeView?.uniqueName
     const columnName = activeView?.columns?.find(column => column.id == result.destination?.droppableId)?.title
-    //const pluralize = (word) => word.endsWith('y') ? word.slice(0, -1) + 'ies' : word + 's';
     const logicalName = selectedEntity?.endsWith('y') ? selectedEntity.slice(0, -1) + 'ies' : selectedEntity + 's';
     const record = {
       update: {
@@ -29,6 +27,8 @@ const Board = () => {
       columnName
     }
 
+    console.log("recordUpdateJSON", record)
+
     const updatedColumns = await onDragEnd(result, record);
     console.log(updatedColumns)
 
@@ -36,8 +36,6 @@ const Board = () => {
       return;
     
     setColumns(updatedColumns ?? []);
-
-    //toast.success("Card moved successfully");
   }
 
   return (
