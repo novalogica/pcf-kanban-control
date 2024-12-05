@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { IInputs } from '../generated/ManifestTypes';
-import { isNullOrEmpty, isLocalHost, apiRoutes } from '../lib/utils';
+import { isNullOrEmpty, isLocalHost, apiRoutes, PluralizedName, consoleLog } from '../lib/utils';
 import { ViewEntity, FieldMetadata, ViewItem } from '../interfaces';
+
 
 
 
@@ -13,12 +14,13 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     const { dataset } = parameters;
     const entityName = useMemo(() => parameters.dataset.getTargetEntityType(), [])
 
-    const generateViewTypes = async (activeView: ViewEntity | undefined) => {
+    const generateViewTypes = async (activeView: ViewEntity | undefined, logicalName: string) => {
         const promises = [ getOptionSets(activeView) ];
-    
-        //if (isBPFEnabled.raw == "0") {
-        //    promises.push(getBusinessProcessFlows());
-        //}
+        
+        /*console.log("bpf", isBPFEnabled)
+        if (isLocalHost || isBPFEnabled.raw == "0") {
+            //promises.push(getBusinessProcessFlows(logicalName));
+        }*/
         
         try{
             const [optionsetViews, bpfViews] = await Promise.all(promises);
@@ -70,40 +72,83 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         }
     }
 
-    const getBusinessProcessFlow = async () => {
+    const getBusinessProcessFlows = async (logicalName: string, records: string[]) => {
         try {
-            const stages = await context.webAPI.retrieveMultipleRecords(
-                "processstage",
-                `?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${entityName}'&$expand=processid($select=name,uniquename)`
-            );
+            const stages = await execute({
+                endpoint: `processstages?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename)`
+            });
+
+            consoleLog("stages", stages)
         
-            return stages.entities.reduce((accumulator: any, stage) => {
-            let process = accumulator.find((p: any) => p.key === stage.processid.workflowid);
-            
-            const column = {
-                key: stage.stagename,
-                label: stage.stagename,
-                order: stage.stagecategory
-            };
-            
-            if (!process) {
-                process = {
-                key: stage.processid.workflowid,
-                text: stage.processid.name,
-                uniqueName: stage.processid.uniquename || undefined,
-                type: 'BPF',
-                columns: [ column ]
+            const stagesReduced = stages.value.reduce((accumulator: any, stage: any) => {
+                let process = accumulator.find((p: any) => p.key === stage.processid.workflowid);
+                
+                const column = {
+                    id: stage.stagename,
+                    key: stage.processstageid,
+                    label: stage.stagename,
+                    title: stage.stagename,
+                    order: stage.stagecategory
                 };
-                accumulator.push(process);
-            } else {
-                process.columns.push(column);
-            }
-            
-            return accumulator;
+                
+                if (!process) {
+                    process = {
+                    key: stage.processid.workflowid,
+                    text: stage.processid.name,
+                    uniqueName: stage.processid.uniquename || undefined,
+                    type: 'BPF',
+                    columns: [ column ]
+                    };
+                    accumulator.push(process);
+                } else {
+                    process.columns.push(column);
+                }
+                
+                return accumulator;
             }, []);
+
+            // Filter out duplicate columns based on `id`
+            stagesReduced.forEach((process: any) => {
+                const uniqueColumns = new Map();
+                process.columns = process.columns.filter((column: any) => {
+                    if (!uniqueColumns.has(column.id)) {
+                        uniqueColumns.set(column.id, true);
+                        return true;
+                    }
+                    return false;
+                });
+            });
+
+            consoleLog("stagesRed", stagesReduced)
+            const processLogicalName = PluralizedName(stagesReduced[0].uniqueName);
+            consoleLog("processLogicalName", processLogicalName)
+            stagesReduced[0].records = await getRecordCurrentStage(logicalName, processLogicalName, records)
+            return stagesReduced;
         } catch (e) {
             //Show toast notification with error message
         }
+    }
+
+    const getRecordCurrentStage = async (entityName: string, logicalName: string | undefined, records: string[]): Promise<ComponentFramework.WebApi.Entity[]> => {
+        if(!logicalName)
+            return [];
+
+        consoleLog("asdas",entityName,logicalName)
+    
+        const filter = records.map(r => `_bpf_${entityName}id_value eq ${r}`).join(' or ')
+
+        const stages = await execute({
+            endpoint: `${logicalName}?$select=_activestageid_value,_processid_value,_bpf_${entityName}id_value&$filter=${filter}&$expand=activestageid($select=stagename)`
+        })
+
+        consoleLog("recordStages", stages)
+    
+        return stages.value.map((item: any) => {
+            return {
+                id: item[`_bpf_${entityName}id_value`],
+                stageName: item.activestageid.stagename
+            }
+        });
     }
 
     const getOptionSets = async (activeView: ViewEntity | undefined) => {
@@ -120,7 +165,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             
             const entityLogicalName = activeView?.entity ?? entityName
             
-            console.log("OptionSetsWithoutColumns", datasetColumns)
+            consoleLog("OptionSetsWithoutColumns", datasetColumns)
 
             if(isNullOrEmpty(datasetColumns) || datasetColumns.length <= 0) {
                 return [];
@@ -159,7 +204,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 }
             })
 
-            console.log("OptionSetsWithColumns", columns);
+            consoleLog("OptionSetsWithColumns", columns);
 
             const sortedColumns = columns.map(item => ({
                 ...item,
@@ -212,7 +257,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
      * @returns all the views from the chosen entity and the fields/records
      */
     const getViewsAndFields = async (entityLogicalName: string): Promise<ViewEntity[]> => {
-        const logicalNamePluralized = entityLogicalName?.endsWith('y') ? entityLogicalName.slice(0, -1) + 'ies' : entityLogicalName + 's';
+        const logicalNamePluralized = PluralizedName(entityLogicalName);
         try {
             const systemViews: { value: ViewEntity[] } = await execute({
                 endpoint: `savedqueries?$filter=returnedtypecode eq '${entityLogicalName}'&$select=savedqueryid,name,layoutxml`, method: "GET"
@@ -252,7 +297,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 view.key = view?.savedqueryid as string ?? view?.userqueryid as string
                 view.fields = fields;
             });
-            console.log(allViews);
+            console.log("allViews", allViews);
             return allViews;
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -331,10 +376,11 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     return {
         updateRecord,
         getStatusMetadata,
-        getBusinessProcessFlow,
+        getBusinessProcessFlows,
         getOptionSets,
         getEntities,
         generateViewTypes,
-        getViewsAndFields
+        getViewsAndFields,
+        getRecordCurrentStage
     }
 }

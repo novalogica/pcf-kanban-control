@@ -35,9 +35,9 @@ const personaContainer: React.CSSProperties = {
     flexDirection: 'column', 
     alignItems: 'start', 
     fontSize: '12px', 
-    color: '#797C80',
+    color: '#115ea3',
     cursor: 'pointer',
-    gap: 4
+    gap: 4,
 }
 
 export const Lookup = ({ onOpenLookup, info }: IProps) => {
@@ -50,7 +50,7 @@ export const Lookup = ({ onOpenLookup, info }: IProps) => {
   }
 
   return (
-    <div style={personaContainer} onClick={onPersonaClicked}>
+    <div style={personaContainer} className="personaContainer" onClick={onPersonaClicked}>
         <Persona
           className="user-badge"
           text={name}

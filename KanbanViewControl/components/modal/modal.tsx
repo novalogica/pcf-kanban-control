@@ -11,6 +11,7 @@ import {
 } from '@fluentui/react';
 import { useState, useContext } from "react";
 import { ViewEntity } from "../../interfaces";
+import { consoleLog } from "../../lib/utils";
 //import { BoardContext } from "../../context/board-context";
 
 
@@ -30,20 +31,21 @@ const ModalPop = ({ fetchViews, entities, views, handleEntitySave, setActiveView
     const [selectedView, setSelectedView] = useState<string | undefined>();
 
     const handleEntityChange = ( event: React.FormEvent<HTMLDivElement>, option?: IDropdownOption) => {
+        consoleLog("entitySelected", option?.key)
         setSelectedEntity(option?.key as string);
         fetchViews(option?.key as string ?? "")
     };
 
     const handleViewChange = (event: React.FormEvent<HTMLDivElement>,option?: IDropdownOption) => {
         const view = views.find((val) => val.key === option?.key)
-        console.log(option);
+        consoleLog(option);
         setActiveViewEntity(view)
         setSelectedView(option?.key as string);
     };
 
     const handleSave = () => {
-        console.log('Selected Entity:', selectedEntity);
-        console.log('Selected View:', selectedView);
+        consoleLog('Selected Entity:', selectedEntity);
+        consoleLog('Selected View:', selectedView);
         setIsModalOpen(false);
         handleEntitySave()
     };

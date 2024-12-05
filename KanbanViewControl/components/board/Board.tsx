@@ -4,33 +4,34 @@ import { CommandBar, Column } from '..';
 import { DragDropContext, DropResult, ResponderProvided } from '@hello-pangea/dnd';
 import { BoardContext } from '../../context/board-context';
 import { useDnD } from '../../hooks/useDnD';
-import { isNullOrEmpty } from '../../lib/utils';
+import { consoleLog, isNullOrEmpty, PluralizedName } from '../../lib/utils';
 
 const Board = () => {
   const { columns, setColumns, selectedEntity, activeView} = useContext(BoardContext);
   const { onDragEnd } = useDnD(columns);
 
   const handleCardDrag = async (result: DropResult, _: ResponderProvided) => {
-    console.log("drag", result);
-    console.log("view", activeView)
-    console.log("entity", selectedEntity)
+    consoleLog("drag", result);
+    consoleLog("view", activeView)
+    consoleLog("entity", selectedEntity)
 
     const field = activeView?.uniqueName
     const columnName = activeView?.columns?.find(column => column.id == result.destination?.droppableId)?.title
-    const logicalName = selectedEntity?.endsWith('y') ? selectedEntity.slice(0, -1) + 'ies' : selectedEntity + 's';
+    const logicalName = PluralizedName(selectedEntity as string)
     const record = {
       update: {
         [field as string]: result.destination?.droppableId
       },
       logicalName: logicalName,
+      entityName: selectedEntity,
       id: result.draggableId,
       columnName
     }
 
-    console.log("recordUpdateJSON", record)
+    consoleLog("recordUpdateJSON", record)
 
     const updatedColumns = await onDragEnd(result, record);
-    console.log(updatedColumns)
+    consoleLog(updatedColumns)
 
     if(isNullOrEmpty(updatedColumns))
       return;

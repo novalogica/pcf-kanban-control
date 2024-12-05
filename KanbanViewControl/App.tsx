@@ -27,28 +27,71 @@ const App = ({ context, notificationPosition } : IProps) => {
   const [viewsEntity, setViewsEntity] = useState<ViewEntity[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
-  const { getEntities, getViewsAndFields, getOptionSets } = useDataverse(context);
+  const { getEntities, getViewsAndFields, getOptionSets, getBusinessProcessFlows } = useDataverse(context);
   const { dataset } = context.parameters;
   
 
+  const handleViewChange = () => {
+    if(activeView === undefined || activeView.columns === undefined)
+      return
+
+    consoleLog("[Changed View]")
+    consoleLog(activeView)
+
+    let cards: any[]
+
+    if(isLocalHost){
+      cards = filterRecordsLocalhost(activeViewEntity)
+    }else{
+      cards = filterRecords(activeView)
+    }
+
+    consoleLog("cards", cards)
+    const activeColumns = activeView?.columns ?? []
+
+    const columns = activeColumns.map((col) => {
+      return { 
+        ...col, 
+        cards: cards.filter((card: any) => card?.column == col.id) 
+      }
+    })
+    consoleLog("columns", columns)
+    setColumns(columns)
+  }
+
   const handleColumnsChange = async () => {
     const options = await getOptionSets(undefined);
-
-    if(options === undefined)
+    const recordIds = Object.keys(dataset.records);
+    const process = await getBusinessProcessFlows(dataset.getTargetEntityType(), recordIds)
+    consoleLog("process", process)
+    const allViews = [
+      ...options ?? [],
+      ...process ?? []
+    ]
+    consoleLog(allViews)
+    if(allViews === undefined)
       return;
-    setViews(options);
-    setActiveView(options[0] ?? []);
+    setViews(allViews);
+    
+    if(activeView != undefined){
+      setActiveView(allViews.find((view) => view.key === activeView.key));
+      handleViewChange()
+    }else{
+      setActiveView(allViews[0] ?? []);
+    }
 
     setIsLoading(false);
   }
 
-
   useMemo(() => {
-    console.log("[Entity View Changed]")
+    if(isLocalHost)
+      return;
+
+    consoleLog("[Entity View Changed]")
     setSelectedEntity(dataset.getTargetEntityType())
 
     consoleLog("columns", dataset.columns, {anyWhereDebug: true})
-    console.log("records", dataset.records)
+    consoleLog("records", dataset.records)
 
     handleColumnsChange()
     
@@ -59,10 +102,11 @@ const App = ({ context, notificationPosition } : IProps) => {
    * @param data 
    * @returns all the cards ready to be displayed on the columns
    */
-  const filterRecords = (data: any) => {
+  const filterRecordsLocalhost = (data: any) => {
     const { records, fields } = data;
     const columnKey = activeView?.key
 
+    console.log(records)
     // Dynamically filter records
     return records.map((record: any) => {
         const filteredRecord: any = {};
@@ -80,7 +124,12 @@ const App = ({ context, notificationPosition } : IProps) => {
             etn: "systemuser"
           }
         };
-        filteredRecord["column"] = record[columnKey ?? ""]
+        if(activeView?.type === "BPF"){
+          filteredRecord["column"] = activeView.records?.find(val => val.id === record[`${data.entity}id`])?.stageName ?? ""
+        }else{
+          filteredRecord["column"] = record[columnKey ?? ""]
+        }
+        
 
         // Include fields based on the fields list
         fields.forEach((field: any) => {
@@ -114,50 +163,38 @@ const App = ({ context, notificationPosition } : IProps) => {
   }
 
 
-  useMemo(() => {
-    if(activeView === undefined || activeView.columns === undefined)
-      return
+  const filterRecords = (activeView: ViewItem) => {
+    return Object.entries(dataset.records).map(([id, record]) => {
 
-    console.log("[Changed View]")
+      const columnValues = dataset.columns.reduce((acc, col) => {
+        if(col.name === activeView.key){
+          const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : {id: null};
+          const key = targetColumn ? targetColumn.id : null;
+          acc = {...acc, column: key}
+        }
 
-    //console.log("activeView", activeView)
-    //console.log("activeViewEntity", activeViewEntity)
-    let cards: any[]
+        if(activeView.type === "BPF"){
+          const key = activeView.records?.find(val => val.id === id)?.stageName ?? ""
+          acc = {...acc, column: key}
+        }
 
-    if(isLocalHost){
-      cards = filterRecords(activeViewEntity)
-    }else{
-      cards = Object.entries(dataset.records).map(([id, record]) => {
+        const name = col.name.includes("title") ? "title" : col.name; 
 
-        const columnValues = dataset.columns.reduce((acc, col) => {
-          if(col.name === activeView.key){
-            const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : {id: null};
-            const key = targetColumn ? targetColumn.id : null;
-            acc = {...acc, column: key}
-          }
+        const columnValue = getColumnValue(record, col);
+        return { ...acc, [name]: columnValue };
+      }, {});
 
-          const name = col.name.includes("title") ? "title" : col.name; 
-  
-          const columnValue = getColumnValue(record, col);
-          return { ...acc, [name]: columnValue };
-        }, {});
-  
-        return { id, ...columnValues };
-  
-      })
-    }
+      return { id, ...columnValues };
 
-    console.log("cards", cards)
-    const activeColumns = activeView?.columns ?? []
-
-    const columns = activeColumns.map((col) => {
-      return { 
-        ...col, 
-        cards: cards.filter((card: any) => card?.column == col.id) 
-      }
     })
-    console.log("columns", columns)
-    setColumns(columns)
+  }
+  
+
+  /**
+   * On View change
+   */
+  useMemo(() => {
+    handleViewChange()
   }, [activeView])
 
   
@@ -178,22 +215,33 @@ const App = ({ context, notificationPosition } : IProps) => {
 
     if(isLocalHost)
       fetchEntities();
+      
   }, [])
 
   const fetchViews = async (logicalName: string) => {
-    const views = await getViewsAndFields(logicalName);
-    setViewsEntity(views);
-    return views;
+    const viewsEntities = await getViewsAndFields(logicalName);
+    setViewsEntity(viewsEntities);
+
+    return viewsEntities;
   }
 
   const handleEntitySave = async () => {
     console.log(activeViewEntity)
 
     const options = await getOptionSets(activeViewEntity);
-    if(options === undefined)
+    const recordIds = viewsEntity[0].records.map(record => record.nl_caseid);
+    const process = await getBusinessProcessFlows(selectedEntity as string, recordIds)
+    console.log("process", process)
+    const allViews = [
+      ...options ?? [],
+      ...process
+    ]
+    console.log("views", allViews)
+    console.log("ViewsOptions", options)
+    if(allViews === undefined)
       return;
-    setViews(options);
-    setActiveView(options[0] ?? []);
+    setViews(allViews);
+    setActiveView(allViews[0] ?? []);
 
     setIsLoading(false);
     setShowModal(false);

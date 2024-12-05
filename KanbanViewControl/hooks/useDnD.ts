@@ -6,15 +6,29 @@ import { DraggableStateSnapshot, DraggableStyle, DropResult } from "@hello-pange
 import { BoardContext } from '../context/board-context';
 import { useContext } from 'react';
 import toast from "react-hot-toast";
+import { useNavigation } from "./useNavigation";
+import { consoleLog } from "../lib/utils";
 
 export type ColumnId = (typeof mockColumns)[number]["id"];
 
 export const useDnD = (columns: ColumnItem[]) => {
-  const { context } = useContext(BoardContext);
+  const { context, activeView } = useContext(BoardContext);
   const { updateRecord } = useDataverse(context);
+  const { openForm } = useNavigation(context);
   
   const onDragEnd = async (result: DropResult, record: any) => {
     if (result.destination == null) {
+      return;
+    }
+
+    if(activeView?.type === "BPF"){
+      try {
+        await openForm(record.entityName, record.id)
+      } catch (e: any) {
+        toast.error(e.message);
+      } finally {
+        context.parameters.dataset.refresh();
+      }
       return;
     }
 
@@ -28,7 +42,7 @@ export const useDnD = (columns: ColumnItem[]) => {
       }
     )
 
-    console.log("columns", columns)
+    consoleLog("columns", columns)
 
     const itemId = result.draggableId;
     const sourceColumn = columns.find(c => c.id == result.source.droppableId);
