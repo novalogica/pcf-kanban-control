@@ -6,6 +6,7 @@ import { useContext, useMemo } from "react";
 import { BoardContext } from "../../context/board-context";
 import SumInformation from "./SumInformation";
 import { validateSumProperty } from "../../lib/utils";
+import { useNavigation } from "../../hooks/useNavigation";
 
 interface IProps {
   column: ColumnItem
@@ -13,6 +14,7 @@ interface IProps {
 
 const ColumnHeader = ({ column }: IProps) => {
   const { context } = useContext(BoardContext);
+  const { createNewRecord } = useNavigation(context);
   
   const count = useMemo(() => {
     return column.cards?.length ?? 0
@@ -24,7 +26,7 @@ const ColumnHeader = ({ column }: IProps) => {
         <Text variant="xLarge" nowrap>{column.title}</Text>
         <div className="column-actions">
           { count > 0 && <Text variant="small" className="column-counter">{count}</Text> }
-          <IconButton iconName='Add' onClick={() => {}} noBorder/>
+          <IconButton iconName='Add' onClick={() => {createNewRecord()}} noBorder/>
         </div>
       </div>
       {

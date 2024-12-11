@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { mockColumns } from "../mock/data";
-import { ColumnItem } from "../interfaces";
+import { CardInfo, CardItem, ColumnItem } from "../interfaces";
 import {useDataverse} from "./useDataverse";
 import { DraggableStateSnapshot, DraggableStyle, DropResult } from "@hello-pangea/dnd";
 import { BoardContext } from '../context/board-context';
@@ -12,7 +12,7 @@ import { consoleLog } from "../lib/utils";
 export type ColumnId = (typeof mockColumns)[number]["id"];
 
 export const useDnD = (columns: ColumnItem[]) => {
-  const { context, activeView } = useContext(BoardContext);
+  const { context, activeView, setColumns } = useContext(BoardContext);
   const { updateRecord } = useDataverse(context);
   const { openForm } = useNavigation(context);
   
@@ -32,15 +32,8 @@ export const useDnD = (columns: ColumnItem[]) => {
       return;
     }
 
+    let movedCards: ColumnItem[] | undefined
 
-    toast.promise(
-      updateRecord(record),
-      {
-        loading: 'Saving...',
-        success: `Successfully moved to "${record.columnName}" 🎉`,
-        error: (e) => e.message,
-      }
-    )
 
     consoleLog("columns", columns)
 
@@ -48,44 +41,81 @@ export const useDnD = (columns: ColumnItem[]) => {
     const sourceColumn = columns.find(c => c.id == result.source.droppableId);
     const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
 
-    let copy = [...columns];
+    const sourceCard = sourceColumn?.cards?.find(i => i.id === itemId);
 
-    if (!sourceColumn || !destinationColumn) {
-      return;
+    movedCards = await moveCard(columns, sourceCard, result);
+    setColumns(movedCards ?? [])
+
+    const response = await toast.promise(
+      updateRecord(record),
+      {
+        loading: 'Saving...',
+        success: `Successfully moved to "${record.columnName}" 🎉`,
+        error: (e) => e.message,
+      }
+    )
+    
+    consoleLog("result", result)
+
+    if(!response)
+      return movedCards
+      
+    consoleLog("response", response)
+
+    if(response.ok !== true) {
+      const oldValue = sourceColumn?.title;
+      (sourceCard![Object.keys(record.update)[0]] as CardInfo).value = oldValue as string
+      movedCards = await moveCard(columns, sourceCard, result)
+    } else {
+      const updatedValue = destinationColumn?.title;
+      (sourceCard![Object.keys(record.update)[0]] as CardInfo).value = updatedValue as string
+      movedCards = await moveCard(columns, sourceCard, result)
     }
 
-    const sourceCard = sourceColumn.cards?.find(i => i.id === itemId);
-    const sourceColumnCardIndex = sourceColumn.cards?.findIndex(i => i.id === itemId);
-
-    if (sourceColumnCardIndex !== undefined && sourceColumnCardIndex !== -1 && sourceCard) {
-      copy = copy.map(col => {
-        if (col.id === sourceColumn.id) {
-          return {
-            ...col,
-            cards: col.cards?.filter((_, index) => index !== sourceColumnCardIndex),
-          };
-        }
-        return col;
-      });
-
-      return copy.map(col => {
-        if (col.id === destinationColumn.id) {
-          return {
-            ...col,
-            cards: [
-              ...col.cards?.slice(0, result.destination!.index) ?? [],
-              sourceCard,
-              ...col.cards?.slice(result.destination!.index) ?? [],
-            ],
-          };
-        }
-        return col;
-      });
-    }
+    setColumns(movedCards ?? [])
+    return movedCards
   };
 
   return { 
     onDragEnd,
+  }
+}
+
+const moveCard = async (columns: ColumnItem[], sourceCard: CardItem | undefined, result: DropResult) => {
+  consoleLog('[moveCard]')
+  let copy = [...columns];
+
+  const itemId = result.draggableId;
+  const sourceColumn = columns.find(c => c.id == result.source.droppableId);
+  const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
+
+  const sourceColumnCardIndex = sourceColumn?.cards?.findIndex(i => i.id === itemId);
+
+
+  if (sourceColumnCardIndex !== undefined && sourceColumnCardIndex !== -1 && sourceCard) {
+    copy = copy.map(col => {
+      if (col.id === sourceColumn?.id) {
+        return {
+          ...col,
+          cards: col.cards?.filter((_, index) => index !== sourceColumnCardIndex),
+        };
+      }
+      return col;
+    });
+
+    return copy.map(col => {
+      if (col.id === destinationColumn?.id) {
+        return {
+          ...col,
+          cards: [
+            ...col.cards?.slice(0, result.destination!.index) ?? [],
+            sourceCard,
+            ...col.cards?.slice(result.destination!.index) ?? [],
+          ],
+        };
+      }
+      return col;
+    });
   }
 }
 

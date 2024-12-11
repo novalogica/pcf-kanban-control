@@ -132,7 +132,7 @@ const App = ({ context, notificationPosition } : IProps) => {
         
 
         // Include fields based on the fields list
-        fields.forEach((field: any) => {
+        fields.forEach((field: any, index: number) => {
             // eslint-disable-next-line no-prototype-builtins
             if (record.hasOwnProperty(field.name) && record[field.name] != undefined) {
               const rec = views.find(item => item.uniqueName == field.name)
@@ -143,7 +143,7 @@ const App = ({ context, notificationPosition } : IProps) => {
                     value: value?.title
                   };
                 }else{
-                  if(field.name.includes("title")){
+                  if(index == 0){
                     filteredRecord["title"] = {
                       label: field.displayName,
                       value: record[field.name]
@@ -166,7 +166,7 @@ const App = ({ context, notificationPosition } : IProps) => {
   const filterRecords = (activeView: ViewItem) => {
     return Object.entries(dataset.records).map(([id, record]) => {
 
-      const columnValues = dataset.columns.reduce((acc, col) => {
+      const columnValues = dataset.columns.reduce((acc, col, index) => {
         if(col.name === activeView.key){
           const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : {id: null};
           const key = targetColumn ? targetColumn.id : null;
@@ -178,7 +178,7 @@ const App = ({ context, notificationPosition } : IProps) => {
           acc = {...acc, column: key}
         }
 
-        const name = col.name.includes("title") ? "title" : col.name; 
+        const name = index === 0 ? "title" : col.name;
 
         const columnValue = getColumnValue(record, col);
         return { ...acc, [name]: columnValue };
@@ -229,7 +229,10 @@ const App = ({ context, notificationPosition } : IProps) => {
     console.log(activeViewEntity)
 
     const options = await getOptionSets(activeViewEntity);
-    const recordIds = viewsEntity[0].records.map(record => record.nl_caseid);
+    
+    const recordIds = viewsEntity[0].records.map(record => record[`${activeViewEntity?.entity}id`]);
+    consoleLog("rr", `${activeViewEntity?.entity}id`)
+    consoleLog("recordsIds", recordIds)
     const process = await getBusinessProcessFlows(selectedEntity as string, recordIds)
     console.log("process", process)
     const allViews = [

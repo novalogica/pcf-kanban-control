@@ -11,6 +11,14 @@
       usage="input" />
 
     <property 
+      name="bpfStepsOptionsOrder" 
+      display-name-key="Business Process Flow Step Order" 
+      description-key="User can reorganize the column orders by providing a json"
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+    />
+
+    <property 
       name="notificationPosition" 
       display-name-key="Notification Position" 
       description-key="Choose the position where the toast message should appear" 

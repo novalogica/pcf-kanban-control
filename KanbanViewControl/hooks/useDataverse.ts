@@ -79,16 +79,34 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             });
 
             consoleLog("stages", stages)
+
+            const bpfStepsOptionsOrder = context.parameters.bpfStepsOptionsOrder.raw as string;
+            let parsedValue: any;
+            try {
+                parsedValue = JSON.parse(bpfStepsOptionsOrder);
+            } catch (error) {
+                console.error("Error parsing JSON:", error);
+                parsedValue = null;
+            }
+            consoleLog("bpfStepsOptionsOrder", JSON.parse(bpfStepsOptionsOrder))
+
+            if (parsedValue != null && Array.isArray(parsedValue)) {
+                consoleLog(parsedValue.find((val: any) => val.id === "New Stage"))
+            }
         
             const stagesReduced = stages.value.reduce((accumulator: any, stage: any) => {
                 let process = accumulator.find((p: any) => p.key === stage.processid.workflowid);
                 
+                // Find the order value from parsedValue
+                const matchedStep = parsedValue?.find((val: any) => val.id === stage.stagename);
+                //parsedValue.find((val: any) => val.id === "New Stage")
+
                 const column = {
                     id: stage.stagename,
                     key: stage.processstageid,
                     label: stage.stagename,
                     title: stage.stagename,
-                    order: stage.stagecategory
+                    order: matchedStep ? matchedStep?.order ?? 100 : 100
                 };
                 
                 if (!process) {
@@ -118,13 +136,19 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                     return false;
                 });
             });
+            
+            if(stagesReduced[0] != undefined){
+                stagesReduced[0].columns = stagesReduced[0].columns.sort((a: any, b: any ) => a.order - b.order)
 
-            consoleLog("stagesRed", stagesReduced)
-            const processLogicalName = PluralizedName(stagesReduced[0].uniqueName);
-            consoleLog("processLogicalName", processLogicalName)
-            stagesReduced[0].records = await getRecordCurrentStage(logicalName, processLogicalName, records)
-            return stagesReduced;
+                consoleLog("stagesRed", stagesReduced)
+                const processLogicalName = PluralizedName(stagesReduced[0].uniqueName);
+                consoleLog("processLogicalName", processLogicalName)
+                stagesReduced[0].records = await getRecordCurrentStage(logicalName, processLogicalName, records)
+                return stagesReduced;
+            }
+            return []
         } catch (e) {
+            consoleLog(e)
             //Show toast notification with error message
         }
     }
@@ -149,6 +173,13 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 stageName: item.activestageid.stagename
             }
         });
+    }
+
+    const retrieveStatusMetadata = async (logicalName: string): Promise<any> => {
+        const entity = logicalName ?? entityName
+        const options = await execute({endpoint: `EntityDefinitions(LogicalName='${entity}')/Attributes(LogicalName='statuscode')/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName&$expand=OptionSet($select=Options,MetadataId)`})
+        consoleLog("optionsMeta", options)
+        return options.OptionSet?.Options;
     }
 
     const getOptionSets = async (activeView: ViewEntity | undefined) => {
@@ -203,6 +234,18 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                     columns: options
                 }
             })
+
+            const statusCodeColumn = columns.find((item) => item.key == 'statuscode');
+
+            if (statusCodeColumn) {
+                const statusCodeOptions = await retrieveStatusMetadata(activeView?.entity as string);
+            
+                const filteredStatusCodeOptions = statusCodeOptions.filter((option: any) => option.State == 0);
+            
+                statusCodeColumn.columns = statusCodeColumn.columns.filter((columnOption: any) => 
+                    filteredStatusCodeOptions.some((filteredOption: any) => filteredOption.Value === columnOption.key)
+                );
+            }
 
             consoleLog("OptionSetsWithColumns", columns);
 

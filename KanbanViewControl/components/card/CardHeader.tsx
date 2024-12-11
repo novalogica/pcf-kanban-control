@@ -10,7 +10,7 @@ const CardHeader = ({ children }: IProps) => {
     <div className="card-header-container">
       {children}
       <div className="drag-handle">
-        <IconButton iconName="More" color="#70a970" noBorder/>
+        {/*<IconButton iconName="More" color="#70a970" noBorder/>*/}
       </div>
     </div>
   );
