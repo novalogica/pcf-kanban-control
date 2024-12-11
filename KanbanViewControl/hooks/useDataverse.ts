@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useContext, useMemo } from 'react';
 import { IInputs } from '../generated/ManifestTypes';
-import { isNullOrEmpty, isLocalHost, apiRoutes, PluralizedName, consoleLog } from '../lib/utils';
+import { isNullOrEmpty, isLocalHost, apiRoutes, PluralizedName, consoleLog, unlocatedColumn } from '../lib/utils';
 import { ViewEntity, FieldMetadata, ViewItem } from '../interfaces';
 
 
@@ -9,7 +9,7 @@ import { ViewEntity, FieldMetadata, ViewItem } from '../interfaces';
 
 export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     //@ts-expect-error - Xrm is not recognized localy
-    const BASE_URL = typeof Xrm !== 'undefined' ? Xrm.Utility.getGlobalContext().getClientUrl() : "";
+    const BASE_URL = typeof Xrm !== 'undefined' ? Xrm.Utility.getGlobalContext().getClientUrl() + "/api/data/v9.2/" : apiRoutes.localhostUrl;
     const { parameters, webAPI: API } = context;
     const { dataset } = parameters;
     const entityName = useMemo(() => parameters.dataset.getTargetEntityType(), [])
@@ -231,7 +231,10 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                     text: column.displayName,
                     uniqueName: column.name,
                     dataType: column.dataType,
-                    columns: options
+                    columns: [
+                        unlocatedColumn,
+                        ...options
+                    ]
                 }
             })
 
@@ -390,7 +393,10 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     }
 
     const executeLocalhost = async (props: any) => {
+        //@ts-expect-error - Currently is the only way to retrieve client url 
+        const BASE_URLLLLLL = typeof Xrm !== 'undefined' ? Xrm.Utility.getGlobalContext().getClientUrl(): "";
         console.log("[Start Request]", props.endpoint)
+        console.log("BASE_URL____ V33333", BASE_URL, BASE_URLLLLLL)
         const myHeaders = new Headers();
         myHeaders.append("OData-MaxVersion", "4.0");
         myHeaders.append("OData-Version", "4.0");
@@ -412,7 +418,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             delete requestOptions.body;
         }
 
-        const response = await fetch(`${apiRoutes.localhostUrl}${props.endpoint}`, requestOptions);
+        const response = await fetch(`${BASE_URL}${props.endpoint}`, requestOptions);
         return response;
     }
 

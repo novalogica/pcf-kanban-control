@@ -127,7 +127,7 @@ const App = ({ context, notificationPosition } : IProps) => {
         if(activeView?.type === "BPF"){
           filteredRecord["column"] = activeView.records?.find(val => val.id === record[`${data.entity}id`])?.stageName ?? ""
         }else{
-          filteredRecord["column"] = record[columnKey ?? ""]
+          filteredRecord["column"] = record[columnKey ?? ""] ?? "unlocated"
         }
         
 
@@ -169,7 +169,7 @@ const App = ({ context, notificationPosition } : IProps) => {
       const columnValues = dataset.columns.reduce((acc, col, index) => {
         if(col.name === activeView.key){
           const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : {id: null};
-          const key = targetColumn ? targetColumn.id : null;
+          const key = targetColumn ? targetColumn.id : "unlocated";
           acc = {...acc, column: key}
         }
 
