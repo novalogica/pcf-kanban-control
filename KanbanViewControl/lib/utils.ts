@@ -60,10 +60,10 @@ export const getColorFromInitials = (initials: string, colorPalette: PersonaInit
 }
 
 export const unlocatedColumn = {
-    key: "unlocated",
-    id: "unlocated", 
-    label: "Unlocated",
-    title: "Unlocated", 
+    key: "unallocated",
+    id: "unallocated", 
+    label: "Unallocated",
+    title: "Unallocated", 
     order: 0
 }
 
