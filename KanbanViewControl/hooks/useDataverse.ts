@@ -81,6 +81,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             consoleLog("stages", stages)
 
             const bpfStepsOptionsOrder = context.parameters.bpfStepsOptionsOrder.raw as string;
+            consoleLog("bpfStepsOptionsOrder", bpfStepsOptionsOrder)
             let parsedValue: any;
             try {
                 parsedValue = JSON.parse(bpfStepsOptionsOrder);
@@ -88,11 +89,13 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 console.error("Error parsing JSON:", error);
                 parsedValue = null;
             }
-            consoleLog("bpfStepsOptionsOrder", JSON.parse(bpfStepsOptionsOrder))
+            //consoleLog("bpfStepsOptionsOrder", JSON.parse(bpfStepsOptionsOrder))
 
-            if (parsedValue != null && Array.isArray(parsedValue)) {
+            //consoleLog("parsedValue", parsedValue)
+
+            /*if (parsedValue != null && Array.isArray(parsedValue)) {
                 consoleLog(parsedValue.find((val: any) => val.id === "New Stage"))
-            }
+            }*/
         
             const stagesReduced = stages.value.reduce((accumulator: any, stage: any) => {
                 let process = accumulator.find((p: any) => p.key === stage.processid.workflowid);
@@ -232,7 +235,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                     uniqueName: column.name,
                     dataType: column.dataType,
                     columns: [
-                        unlocatedColumn,
                         ...options
                     ]
                 }

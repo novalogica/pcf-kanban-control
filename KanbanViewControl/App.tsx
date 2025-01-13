@@ -10,7 +10,7 @@ import Loading from './components/container/loading';
 import { DataType } from './enums/data-type';
 import { Toaster } from 'react-hot-toast';
 import { useDataverse } from './hooks/useDataverse';
-import { consoleLog, getColumnValue, isLocalHost } from './lib/utils';
+import { consoleLog, getColumnValue, isLocalHost, unlocatedColumn } from './lib/utils';
 
 interface IProps {
   context: ComponentFramework.Context<IInputs>,
@@ -47,7 +47,14 @@ const App = ({ context, notificationPosition } : IProps) => {
     }
 
     consoleLog("cards", cards)
-    const activeColumns = activeView?.columns ?? []
+    let activeColumns = activeView?.columns ?? []
+
+    if(activeView.type != "BPF" && (cards.some(card => !(activeView.key in card)) || cards.some(card => card[activeView.key]?.value === ""))){
+        activeColumns = [
+          unlocatedColumn,
+          ...activeColumns
+        ]
+    }
 
     const columns = activeColumns.map((col) => {
       return { 
