@@ -180,7 +180,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
             return sortedColumns;
         } catch (e) {
-            //TODO: Show toast notification with error message
+            console.log(e)
         }
     }
 

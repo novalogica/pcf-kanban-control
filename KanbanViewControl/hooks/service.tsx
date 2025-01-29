@@ -26,7 +26,7 @@ export class XrmService {
                     return response?.ok ? response.json(): reject(response.statusText);
                 })
                 .then((data) => {
-                    return resolve(data.value);
+                    return resolve(data);
                 })
                 .catch((e) => reject(e));
         });
