@@ -1,44 +1,95 @@
 # Kanban View Control
 
-This dataset PowerApps Component Framework control (PCF) allows users to see records in a kanban view format.
+![Kanban Control](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-example.png)
+
+This **PowerApps Component Framework (PCF)** control enables users to visualize records in a **Kanban** view.
+
+## 📌 Features
+- Dynamic Kanban board view.
+- Supports **business process flows** and **OptionSet** columns.
+- Drag-and-drop functionality.
+- Lookup field support.
+- Toast notifications for value updates.
+
+## 🚀 Usage
+
+After adding the control, configure the following properties:
+
+| Property | Description |
+|----------|-------------|
+| **Business Process Flow Step Order** | Defines the order of business process flow steps. |
+| **Notification Position** | Sets the position of toast messages. |
+
+## 📊 View Types
+
+The dropdown automatically adjusts to the associated dataset view. If a new **OptionSet** column is added, the control updates dynamically to reflect the new values.
+
+- Column Order: The Kanban columns are reordered based on the dataset view’s column order.
 
 
-## Usage
+⚠ **Note:** If the **Status Reason** column is included in the view, only **active statuses** will be displayed.
 
-Also, once the control is added, you need to provide the following properties:
+## 🃏 Card Behavior
 
-| Property | Description    |
-| :---:   | :---: |
-| Business Process Flow Step Order | Define the order for your business process flow steps  |
-| Notification Position | Enumeration value that defines toast message position   |
+The fields displayed on each card are **not hardcoded**. They are dynamically pulled from the dataset view, ensuring real-time adaptation to the dataset’s structure.
 
+You can still use standard **Edit Columns** and **Edit Filters** functionality.
 
-## View Types 
+- **Edit filters or search** will normally affect the items that appear in the kanban.
+- **Edit Columns** can be used to add, remove or sort the columns that appear on the card as well as the "View Type" dropdown.
 
-This dropdown adjusts automatically to the associated dataset view. If you add a new OptionSet column to the view, it will adjust and show the respective columns for the OptionSet options.
+![Kanban columns example](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-columns-example.png)
 
-*For the 'Status Reason' column, if it is added to the view, you will only be able to see active statuses.*
-
-## Card
-
-The fields displayed on the card are not hard-coded; instead, they are dynamically received from the dataset view associated with this PCF (PowerApps Component Framework) control. This allows the card to automatically adapt to the data provided by the dataset, ensuring that the most relevant information is shown in real-time based on the dataset's current state.
+### 🔹 Additional Notes
+- Lookup fields remain accessible from the card.
+- Dragging a card to another column triggers a toast message indicating **success** or **failure** of the update.
+- If the selected **View Type** is linked to a **business process flow**, the record will **not** move directly to another column. Instead, a popup will open, requiring a **manual stage update**.
 
 
-## Notes
-- Lookup fields can still be accessed from the card.
-- When you drag the card to another column and update it, you will receive a toast message indicating whether the update succeeded or failed.
-- When the selected 'View Type' is related to a business process flow, you will not be moved directly to another column. Instead, a popup with the record will automatically open, and you will need to manually update the business process flow stage.
-   
+## Localization
+The control is localized to support the following languages:
+- English (US) (1033)
 
-### Deploy
-In order to deploy to your environment you'll need to run this commands: 
-   #### 1. Create your authentication profile using the pac auth create command
-      pac auth create --url https://xyz.crm.dynamics.com 
+## Todo:
+   #### 1. Add support the following languages: 
+   - Arabic (1025)
+   - German (1031)
+   - French (1036)
+   - Italian (1040)
+   - Japanese (1041)
+   - Dutch (1043)
+   - Portuguese (Brazil) (1046)
+   - Chinese (Simplified) (2052)
+   - Portuguese (Portugal) (2070)
+   - Spanish (3082)
 
-   #### 2. If you have previously created an authentication profile, you can view all the existing profiles using the pac auth list command
-      pac auth list
-   #### 3. To switch between the previously created authentication profiles, use the pac auth select command:
-      pac auth select --index <index of the active profile>
-   #### 4. Ensure that you have a valid connection and push the component
-      pac pcf push -pp <your publisher prefix>
-   
+---
+
+## 📦 Deployment
+
+Run the following commands to deploy the control:
+
+#### 1. Create an authentication profile:
+   ```sh
+   pac auth create --url https://xyz.crm.dynamics.com
+   ```
+#### 2. List existing authentication profiles:
+   ```sh
+   pac auth list
+   ```
+#### 3. Switch to a specific authentication profile:
+   ```sh
+   pac auth select --index <index of the active profile>
+   ```
+#### 4. Ensure a valid connection and push the component:
+   ```sh
+   pac pcf push -pp <your publisher prefix>
+   ```
+
+## Contributions
+Contributions to improve or enhance this control are welcome. If you encounter issues or have feature requests, please create an issue or submit a pull request in the repository.
+
+---
+
+### License
+This control is licensed under the MIT License. See the LICENSE file for details.
