@@ -16,6 +16,7 @@
       description-key="User can reorganize the column orders by providing a json"
       of-type="SingleLine.TextArea" 
       usage="input" 
+      required="false"
     />
 
     <property 
