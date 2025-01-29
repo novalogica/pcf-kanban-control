@@ -20,7 +20,7 @@ After adding the control, configure the following properties:
 | **Business Process Flow Step Order** | Defines the order of business process flow steps. |
 | **Notification Position** | Sets the position of toast messages. |
 
-## 📊 View Types
+## View Types
 
 The dropdown automatically adjusts to the associated dataset view. If a new **OptionSet** column is added, the control updates dynamically to reflect the new values.
 
@@ -29,7 +29,7 @@ The dropdown automatically adjusts to the associated dataset view. If a new **Op
 
 ⚠ **Note:** If the **Status Reason** column is included in the view, only **active statuses** will be displayed.
 
-## 🃏 Card Behavior
+## Card Behavior
 
 The fields displayed on each card are **not hardcoded**. They are dynamically pulled from the dataset view, ensuring real-time adaptation to the dataset’s structure.
 
@@ -45,25 +45,6 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 - Dragging a card to another column triggers a toast message indicating **success** or **failure** of the update.
 - If the selected **View Type** is linked to a **business process flow**, the record will **not** move directly to another column. Instead, a popup will open, requiring a **manual stage update**.
 
-
-## Localization
-The control is localized to support the following languages:
-- English (US) (1033)
-
-## Todo:
-   #### 1. Add support the following languages: 
-   - Arabic (1025)
-   - German (1031)
-   - French (1036)
-   - Italian (1040)
-   - Japanese (1041)
-   - Dutch (1043)
-   - Portuguese (Brazil) (1046)
-   - Chinese (Simplified) (2052)
-   - Portuguese (Portugal) (2070)
-   - Spanish (3082)
-
----
 
 ## 📦 Deployment
 
