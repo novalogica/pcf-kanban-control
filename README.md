@@ -19,7 +19,7 @@ After adding the control, configure the following properties:
 
 | Property | Description |
 |----------|-------------|
-| **Business Process Flow Step Order** | Defines the order of business process flow steps. |
+| **Business Process Flow Step Order** | Adds more control to order of business process flow steps. |
 | **Notification Position** | Sets the position of toast messages. |
 
 ## View Types
@@ -27,7 +27,6 @@ After adding the control, configure the following properties:
 The dropdown automatically adjusts to the associated dataset view. If a new **OptionSet** column is added, the control updates dynamically to reflect the new values.
 
 - Column Order: The Kanban columns are reordered based on the dataset view’s column order.
-
 
 ⚠ **Note:** If the **Status Reason** column is included in the view, only **active statuses** will be displayed.
 
@@ -58,6 +57,8 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
    ```sh
    [{"id":"Develop","order":2},{"id":"Propose","order":1},{"id":"Close","order":0}]
    ```
+You can set the JSON data in the input using the old interface 
+** View > Custom Controls > Kanban View Control > Business Process Flow Steps > Edit > Bind to a static value > Paste JSON**
 
 ## 📦 Deployment
 

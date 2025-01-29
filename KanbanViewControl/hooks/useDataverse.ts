@@ -47,7 +47,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             const bpfStepsOptionsOrder = context.parameters.bpfStepsOptionsOrder.raw as string;
             const parsedValue = isNullOrEmpty(bpfStepsOptionsOrder) ? null:  JSON.parse(bpfStepsOptionsOrder);
         
-            const stagesReduced = (await stages).entities.reduce((acc: any, stage: any) => {
+            const stagesReduced = stages.entities.reduce((acc: any, stage: any) => {
                 let process = acc.find((p: any) => p.key === stage.processid.workflowid);
                 
                 const matchedStep = parsedValue?.find((val: any) => val.id === stage.stagename);
