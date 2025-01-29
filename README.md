@@ -45,7 +45,7 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 
 | ![Kanban View Type example()](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-view-type-example.png)| 
 |:--:|
-| *Figure 3: View Type options based on selected columns* |
+| *Figure 3: View Type options based on option-set columns* |
 
 ### 🔹 Additional Notes
 - Lookup fields remain accessible from the card.

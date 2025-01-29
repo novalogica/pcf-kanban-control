@@ -89,8 +89,8 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             
             if(stagesReduced[0] != undefined){
                 stagesReduced[0].columns = stagesReduced[0].columns.sort((a: any, b: any ) => a.order - b.order)
-                const processLogicalName = pluralizedLogicalNames(stagesReduced[0].uniqueName);
-                stagesReduced[0].records = await getRecordCurrentStage(logicalName, processLogicalName, records)
+                
+                stagesReduced[0].records = await getRecordCurrentStage(logicalName, stagesReduced[0].uniqueName, records)
                 return stagesReduced;
             }
 
@@ -106,7 +106,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
         const filter = records.map(r => `_bpf_${entityName}id_value eq ${r}`).join(' or ')
         const stages = webAPI.retrieveMultipleRecords(
-            entityName,
+            logicalName,
             `?$select=_activestageid_value,_processid_value,_bpf_${entityName}id_value&$filter=${filter}&$expand=activestageid($select=stagename)`
         )
 
