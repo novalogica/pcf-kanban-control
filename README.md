@@ -1,6 +1,4 @@
-# Draggable Kanban Control
-
-
+# Kanban View Control
 
 This dataset PowerApps Component Framework control (PCF) allows users to see records in a kanban view format.
 

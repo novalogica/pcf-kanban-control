@@ -25,7 +25,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
     const getStatusMetadata = async () => {
         try {
-            const metadata = xrmService.fetch(`EntityDefinitions(LogicalName='nl_opportunity')/Attributes/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName,DisplayName&$expand=OptionSet($select=Options,MetadataId)`)
+            const metadata = xrmService.fetch(`api/data/v9.2/EntityDefinitions(LogicalName='nl_opportunity')/Attributes/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName,DisplayName&$expand=OptionSet($select=Options,MetadataId)`)
             const options = (metadata as any).OptionSet?.Options;
 
             if(isNullOrEmpty(options))
@@ -120,7 +120,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
     const retrieveStatusMetadata = async (logicalName: string): Promise<any> => {
         const entity = logicalName ?? entityName
-        const options =  await xrmService.fetch(`EntityDefinitions(LogicalName='${entity}')/Attributes(LogicalName='statuscode')/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName&$expand=OptionSet($select=Options,MetadataId)`);
+        const options =  await xrmService.fetch(`api/data/v9.2/EntityDefinitions(LogicalName='${entity}')/Attributes(LogicalName='statuscode')/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName&$expand=OptionSet($select=Options,MetadataId)`);
         return (options as any).OptionSet?.Options;
     }
 
