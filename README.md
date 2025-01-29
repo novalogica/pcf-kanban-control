@@ -8,9 +8,10 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 
 ## 📌 Features
 - Dynamic Kanban board view.
+- Dynamically shows columns based on the selected view
 - Supports **business process flows** and **OptionSet** columns.
 - Drag-and-drop functionality.
-- Lookup field support.
+- Lookup column support.
 - Toast notifications for value updates.
 
 ## 🚀 Usage
@@ -25,14 +26,15 @@ After adding the control, configure the following properties:
 ## View Types
 
 The dropdown automatically adjusts to the associated dataset view. If a new **OptionSet** column is added, the control updates dynamically to reflect the new values.
+Also, if the table has any active BPFs, they will appear as an option in the "View type" dropdown.
 
-- Column Order: The Kanban columns are reordered based on the dataset view’s column order.
+- Column Order: Card columns are reordered based on the dataset view’s column order.
 
 ⚠ **Note:** If the **Status Reason** column is included in the view, only **active statuses** will be displayed.
 
 ## Card Behavior
 
-The fields displayed on each card are **not hardcoded**. They are dynamically pulled from the dataset view, ensuring real-time adaptation to the dataset’s structure.
+The columns displayed on each card are **not hardcoded**. They are dynamically pulled from the dataset view, ensuring real-time adaptation to the dataset’s structure.
 
 You can still use standard **Edit Columns** and **Edit Filters** functionality.
 
@@ -45,10 +47,10 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 
 | ![Kanban View Type example()](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-view-type-example.png)| 
 |:--:|
-| *Figure 3: View Type options based on option-set columns* |
+| *Figure 3: View Type options based on choice columns* |
 
 ### 🔹 Additional Notes
-- Lookup fields remain accessible from the card.
+- Lookup columns remain accessible from the card.
 - Dragging a card to another column triggers a toast message indicating **success** or **failure** of the update.
 - If the selected **View Type** is linked to a **business process flow**, the record will **not** move directly to another column. Instead, a popup will open, requiring a **manual stage update**.
 
