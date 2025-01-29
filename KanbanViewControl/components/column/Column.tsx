@@ -3,9 +3,9 @@ import { Draggable, Droppable } from "@hello-pangea/dnd";
 import Card from "../card/Card";
 import ColumnHeader from "./ColumnHeader";
 import { ColumnItem } from "../../interfaces";
-import { getItemStyle, getListStyle } from "../../hooks/useDnD";
 import { isNullOrEmpty } from "../../lib/utils";
 import NoResults from "../container/no-results";
+import { getItemStyle, getListStyle } from "../../lib/card-drag";
 
 const Column = ({ column } : { column: ColumnItem }) => {
   return ( 

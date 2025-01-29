@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMemo } from 'react';
 import { IInputs } from '../generated/ManifestTypes';
 import { isNullOrEmpty, pluralizedLogicalNames } from '../lib/utils';
@@ -16,34 +15,12 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         return service;
     }, [context]);
 
-    const generateViewTypes = async (activeView: ViewEntity | undefined, logicalName: string) => {
-        const promises = [ getOptionSets(activeView) ];
-        
-        try{
-            const [optionsetViews, bpfViews] = await Promise.all(promises);
-            return [
-                ...(optionsetViews || []), 
-                ...(bpfViews || [])
-            ];
-        } catch(e) {
-            console.error(e);
-            return []
-        }
-    }
-
     const updateRecord = async (record: any) => {
-        try {
-            const response = await webAPI.updateRecord(
-                record.entityName,
-                record.id,
-                record.update
-            )
-
-            return response;
-        } catch(e) {
-            //TODO: how toast notification with error message
-            console.log(e)
-        }
+        return await webAPI.updateRecord(
+            record.entityName,
+            record.id,
+            record.update
+        )
     }
 
     const getStatusMetadata = async () => {
@@ -68,14 +45,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             )
 
             const bpfStepsOptionsOrder = context.parameters.bpfStepsOptionsOrder.raw as string;
-
-            let parsedValue: any;
-            try {
-                parsedValue = JSON.parse(bpfStepsOptionsOrder);
-            } catch (error) {
-                console.error("Error parsing JSON:", error);
-                parsedValue = null;
-            }
+            const parsedValue = isNullOrEmpty(bpfStepsOptionsOrder) ? null:  JSON.parse(bpfStepsOptionsOrder);
         
             const stagesReduced = (await stages).entities.reduce((acc: any, stage: any) => {
                 let process = acc.find((p: any) => p.key === stage.processid.workflowid);
@@ -119,14 +89,14 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             
             if(stagesReduced[0] != undefined){
                 stagesReduced[0].columns = stagesReduced[0].columns.sort((a: any, b: any ) => a.order - b.order)
-
                 const processLogicalName = pluralizedLogicalNames(stagesReduced[0].uniqueName);
                 stagesReduced[0].records = await getRecordCurrentStage(logicalName, processLogicalName, records)
                 return stagesReduced;
             }
+
             return []
         } catch (e) {
-            //TODO: Show toast notification with error message
+            return [];
         }
     }
 
@@ -135,7 +105,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             return [];
 
         const filter = records.map(r => `_bpf_${entityName}id_value eq ${r}`).join(' or ')
-
         const stages = webAPI.retrieveMultipleRecords(
             logicalName,
             `?$select=_activestageid_value,_processid_value,_bpf_${entityName}id_value&$filter=${filter}&$expand=activestageid($select=stagename)`
@@ -220,7 +189,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         getStatusMetadata,
         getBusinessProcessFlows,
         getOptionSets,
-        generateViewTypes,
         getRecordCurrentStage
     }
 }

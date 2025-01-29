@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export type FieldMetadata = {
     type: string;
     displayName: string;

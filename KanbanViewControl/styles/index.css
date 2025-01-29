@@ -209,15 +209,6 @@
   box-shadow: 0px 0px 15px -3px rgba(0,0,0,0.1);
 }
 
-.commandar-bar-dropdowns {
-  display: none;
-  flex-direction: row;
-  justify-content: start;
-  align-items: center;
-  gap: 16px;
-  padding-right: 16px;
-}
-
 /** Dropdown */
 .kanban-dropdown {
   display: flex;

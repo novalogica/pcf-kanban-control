@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { ColumnItem } from "./column.type";
 

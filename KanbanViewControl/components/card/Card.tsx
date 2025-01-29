@@ -42,7 +42,6 @@ const Card = ({ item }: IProps) => {
         </CardDetailsList>
       </CardBody>
       <CardFooter>
-        {/*<Text className="card-text card-tag" variant="xSmall" nowrap>{item?.tag?.value ?? ""}</Text>*/}
         <IconButton iconName="ChevronRight" cursor="pointer" noBorder onClick={onCardClick} />
       </CardFooter>
     </div>

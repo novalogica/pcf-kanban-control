@@ -13,7 +13,7 @@ interface ICardInfoProps {
   info: CardInfo
 }
 
-const CardDetails = ({ id, info }: ICardInfoProps) => {
+const CardDetails = ({ info }: ICardInfoProps) => {
   const { context } = useContext(BoardContext);
   const { openForm } = useNavigation(context);
 
@@ -26,7 +26,7 @@ const CardDetails = ({ id, info }: ICardInfoProps) => {
       case "number":
         return isNullOrEmpty(value) ? context.formatting.formatCurrency(0) : context.formatting.formatCurrency(value)
       default: 
-        return isNullOrEmpty(value) || value === "unallocated" ? "-" : value;
+        return isNullOrEmpty(value) || value == "Unallocated" ? "-" : value;
     }
   }
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PersonaInitialsColor } from "@fluentui/react/lib/Persona";
 import { CardInfo } from "../interfaces";
 

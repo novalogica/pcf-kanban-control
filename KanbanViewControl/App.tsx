@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react';
 import { IInputs } from './generated/ManifestTypes';
 import { Board } from './components';
@@ -18,12 +17,9 @@ interface IProps {
 
 const App = ({ context, notificationPosition } : IProps) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const [activeView, setActiveView] = useState<ViewItem | undefined>();
   const [columns, setColumns] = useState<ColumnItem[]>([]);
-  const [entities, setEntities] = useState([]);
   const [views, setViews] = useState<ViewItem[]>([]);
-  const [viewsEntity, setViewsEntity] = useState<ViewEntity[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context);
