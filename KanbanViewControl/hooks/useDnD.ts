@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { mockColumns } from "../mock/data";
 import { CardInfo, CardItem, ColumnItem } from "../interfaces";
 import {useDataverse} from "./useDataverse";
 import { DraggableStateSnapshot, DraggableStyle, DropResult } from "@hello-pangea/dnd";
@@ -7,9 +6,8 @@ import { BoardContext } from '../context/board-context';
 import { useContext } from 'react';
 import toast from "react-hot-toast";
 import { useNavigation } from "./useNavigation";
-import { consoleLog } from "../lib/utils";
 
-export type ColumnId = (typeof mockColumns)[number]["id"];
+export type ColumnId = ColumnItem[][number]["id"];
 
 export const useDnD = (columns: ColumnItem[]) => {
   const { context, activeView, setColumns } = useContext(BoardContext);
@@ -34,13 +32,9 @@ export const useDnD = (columns: ColumnItem[]) => {
 
     let movedCards: ColumnItem[] | undefined
 
-
-    consoleLog("columns", columns)
-
     const itemId = result.draggableId;
     const sourceColumn = columns.find(c => c.id == result.source.droppableId);
     const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
-
     const sourceCard = sourceColumn?.cards?.find(i => i.id === itemId);
 
     movedCards = await moveCard(columns, sourceCard, result);
@@ -55,14 +49,10 @@ export const useDnD = (columns: ColumnItem[]) => {
       }
     )
     
-    consoleLog("result", result)
-
-    if(!response)
-      return movedCards
+    // if(!response)
+    //  return movedCards
       
-    consoleLog("response", response)
-
-    if(response.ok !== true) {
+    if(!response) {
       const oldValue = sourceColumn?.title;
       (sourceCard![Object.keys(record.update)[0]] as CardInfo).value = oldValue as string
       movedCards = await moveCard(columns, sourceCard, result)
@@ -82,15 +72,12 @@ export const useDnD = (columns: ColumnItem[]) => {
 }
 
 const moveCard = async (columns: ColumnItem[], sourceCard: CardItem | undefined, result: DropResult) => {
-  consoleLog('[moveCard]')
   let copy = [...columns];
 
   const itemId = result.draggableId;
   const sourceColumn = columns.find(c => c.id == result.source.droppableId);
   const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
-
   const sourceColumnCardIndex = sourceColumn?.cards?.findIndex(i => i.id === itemId);
-
 
   if (sourceColumnCardIndex !== undefined && sourceColumnCardIndex !== -1 && sourceCard) {
     copy = copy.map(col => {

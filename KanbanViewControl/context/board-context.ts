@@ -13,7 +13,6 @@ interface IBoardContext {
   columns: ColumnItem[],
   setColumns: React.Dispatch<React.SetStateAction<ColumnItem[]>>,
 
-  viewsEntity: ViewEntity[],
   activeViewEntity: ViewEntity | undefined,
   setActiveViewEntity: React.Dispatch<React.SetStateAction<ViewEntity | undefined>>,
   selectedEntity: string | undefined

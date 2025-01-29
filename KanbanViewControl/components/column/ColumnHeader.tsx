@@ -1,11 +1,9 @@
 import * as React from "react";
 import { Text } from "@fluentui/react/lib/Text";
 import IconButton from "../button/IconButton";
-import { CardInfo, ColumnItem } from "../../interfaces";
+import { ColumnItem } from "../../interfaces";
 import { useContext, useMemo } from "react";
 import { BoardContext } from "../../context/board-context";
-import SumInformation from "./SumInformation";
-import { validateSumProperty } from "../../lib/utils";
 import { useNavigation } from "../../hooks/useNavigation";
 
 interface IProps {
@@ -34,11 +32,6 @@ const ColumnHeader = ({ column }: IProps) => {
           <IconButton iconName='Add' onClick={() => {onAddNewRecord(column.id as string)}} noBorder/>
         </div>
       </div>
-      {
-        context.parameters.sumField.raw 
-        && validateSumProperty(column.cards ?? [], context.parameters.sumField.raw as string)
-        && <SumInformation column={column} />
-      }
     </div>
   );
 }
