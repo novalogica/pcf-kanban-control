@@ -11,7 +11,7 @@ Also, once the control is added, you need to provide the following properties:
 
 | Property | Description    |
 | :---:   | :---: |
-| Allow BPF View Option? | Define if you want to show business process flow view option  |
+| Business Process Flow Step Order | Define the order for your business process flow steps  |
 | Notification Position | Enumeration value that defines toast message position   |
 
 
