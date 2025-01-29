@@ -58,7 +58,7 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
    [{"id":"Develop","order":2},{"id":"Propose","order":1},{"id":"Close","order":0}]
    ```
 You can set the JSON data in the input using the old interface 
-** View > Custom Controls > Kanban View Control > Business Process Flow Steps > Edit > Bind to a static value > Paste JSON**
+#### View > Custom Controls > Kanban View Control > Business Process Flow Steps > Edit > Bind to a static value > Paste JSON
 
 ## 📦 Deployment
 
