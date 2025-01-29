@@ -54,9 +54,9 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 - If the selected **View Type** is linked to a **business process flow**, the record will **not** move directly to another column. Instead, a popup will open, requiring a **manual stage update**.
 
 
-###Example - Business Process Flow Step Order
+###Example JSON string - Business Process Flow Step Order
    ```sh
-   '[{"id":"Develop","order":2},{"id":"Propose","order":1},{"id":"Close","order":0}]'
+   [{"id":"Develop","order":2},{"id":"Propose","order":1},{"id":"Close","order":0}]
    ```
 
 ## 📦 Deployment

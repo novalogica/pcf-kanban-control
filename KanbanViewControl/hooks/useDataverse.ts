@@ -39,7 +39,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
     const getBusinessProcessFlows = async (logicalName: string, records: string[]) => {
         try {
-            const stages = webAPI.retrieveMultipleRecords(
+            const stages = await webAPI.retrieveMultipleRecords(
                 "processstages",
                 `?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename)`
             )
