@@ -1,6 +1,7 @@
 # Kanban View Control
 
 ![Kanban Control](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-example.png)
+*Figure 1: Kanban view displaying cases by priority.*
 
 This **PowerApps Component Framework (PCF)** control enables users to visualize records in a **Kanban** view.
 
@@ -39,6 +40,10 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 - **Edit Columns** can be used to add, remove or sort the columns that appear on the card as well as the "View Type" dropdown.
 
 ![Kanban columns example](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-columns-example.png)
+*Figure 2: Dataset columns from example above*
+
+![Kanban View Type example()](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-view-type-example.png)
+*Figure 3: View Type options based on selected columns*
 
 ### 🔹 Additional Notes
 - Lookup fields remain accessible from the card.
