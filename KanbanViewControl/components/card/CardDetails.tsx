@@ -26,7 +26,7 @@ const CardDetails = ({ id, info }: ICardInfoProps) => {
       case "number":
         return isNullOrEmpty(value) ? context.formatting.formatCurrency(0) : context.formatting.formatCurrency(value)
       default: 
-        return isNullOrEmpty(value) ? "-" : value;
+        return isNullOrEmpty(value) || value === "unallocated" ? "-" : value;
     }
   }
 
