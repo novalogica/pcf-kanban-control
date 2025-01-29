@@ -106,7 +106,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
         const filter = records.map(r => `_bpf_${entityName}id_value eq ${r}`).join(' or ')
         const stages = webAPI.retrieveMultipleRecords(
-            logicalName,
+            entityName,
             `?$select=_activestageid_value,_processid_value,_bpf_${entityName}id_value&$filter=${filter}&$expand=activestageid($select=stagename)`
         )
 
