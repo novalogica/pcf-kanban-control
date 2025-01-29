@@ -107,9 +107,7 @@ const App = ({ context, notificationPosition } : IProps) => {
     })
   }
   
-  useMemo(() => {
-    handleViewChange()
-  }, [activeView])
+  useMemo(handleViewChange, [activeView])
 
   if(isLoading) {
     return <Loading />

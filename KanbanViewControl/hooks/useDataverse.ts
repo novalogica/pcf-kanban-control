@@ -34,7 +34,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     const updateRecord = async (record: any) => {
         try {
             const response = await webAPI.updateRecord(
-                record.logicalName,
+                record.entityName,
                 record.id,
                 record.update
             )

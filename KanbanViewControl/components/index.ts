@@ -7,7 +7,7 @@ import { CardDetails, CardDetailsList } from "./card/CardDetails";
 import CardFooter from "./card/CardFooter";
 import CardHeader from "./card/CardHeader";
 import Column from "./column/Column";
-import CommandBar from "../context/CommandBar";
+import CommandBar from "./command-bar/command";
 import Loading from "./container/loading";
 import NoResults from "./container/no-results";
 import Dropdown from "./dropdown/Dropdown";

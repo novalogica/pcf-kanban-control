@@ -9,12 +9,13 @@ const style: React.CSSProperties = {
   backgroundColor: '#efefef',
   color: '#b4b4b4',
   width: '95%',
-  height: '100%'
+  height: '100%',
+  minHeight: 50
 }
 
 const NoResults = () => {
   return ( 
-    <div className='no-results-container' style={style}>
+    <div style={style}>
       <p>No results found</p>
     </div>
   );

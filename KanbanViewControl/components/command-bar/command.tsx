@@ -1,9 +1,9 @@
 import * as React from "react";
-import KanbanDropdown from "../components/dropdown/Dropdown";
+import KanbanDropdown from "../dropdown/Dropdown";
 import { IDropdownOption } from "@fluentui/react";
-import { BoardContext } from "./board-context";
+import { BoardContext } from "../../context/board-context";
 import { useContext, useMemo } from "react";
-import { CardInfo } from "../interfaces";
+import { CardInfo } from "../../interfaces";
 
 const CommandBar = () => {
   const { columns, setColumns, context, views, activeView, setActiveView, activeViewEntity, setActiveViewEntity } = useContext(BoardContext);

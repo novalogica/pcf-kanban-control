@@ -10,7 +10,7 @@ export class KanbanViewControl implements ComponentFramework.ReactControl<IInput
     public init(
         context: ComponentFramework.Context<IInputs>,
         notifyOutputChanged: () => void,
-        state: ComponentFramework.Dictionary
+        _: ComponentFramework.Dictionary
     ): void {
         context.mode.trackContainerResize(true);
     }

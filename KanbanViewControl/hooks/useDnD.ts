@@ -6,6 +6,7 @@ import { BoardContext } from '../context/board-context';
 import { useContext } from 'react';
 import toast from "react-hot-toast";
 import { useNavigation } from "./useNavigation";
+import { isNullOrEmpty } from "../lib/utils";
 
 export type ColumnId = ColumnItem[][number]["id"];
 
@@ -44,14 +45,11 @@ export const useDnD = (columns: ColumnItem[]) => {
       updateRecord(record),
       {
         loading: 'Saving...',
-        success: `Successfully moved to "${record.columnName}" 🎉`,
+        success: `Successfully moved to ${record.columnName} 🎉`,
         error: (e) => e.message,
       }
     )
     
-    // if(!response)
-    //  return movedCards
-      
     if(!response) {
       const oldValue = sourceColumn?.title;
       (sourceCard![Object.keys(record.update)[0]] as CardInfo).value = oldValue as string

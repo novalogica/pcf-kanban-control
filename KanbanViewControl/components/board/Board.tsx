@@ -11,13 +11,12 @@ const Board = () => {
   const { onDragEnd } = useDnD(columns);
 
   const handleCardDrag = async (result: DropResult, _: ResponderProvided) => {
-
     const field = activeView?.uniqueName
     const columnName = activeView?.columns?.find(column => column.id == result.destination?.droppableId)?.title
     const logicalName = pluralizedLogicalNames(selectedEntity as string)
     const record = {
       update: {
-        [field as string]: result.destination?.droppableId
+        [field as string]: result.destination?.droppableId == "unallocated" ? null : result.destination?.droppableId
       },
       logicalName: logicalName,
       entityName: selectedEntity,
