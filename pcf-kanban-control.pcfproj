@@ -11,7 +11,7 @@
     <Name>pcf-kanban-control</Name>
     <ProjectGuid>78ba2704-e60d-4c73-9ef6-5c94f4fbb657</ProjectGuid>
     <OutputPath>$(MSBuildThisFileDirectory)out\controls</OutputPath>
-    <!--<PcfBuildMode>production</PcfBuildMode>-->
+    <PcfBuildMode>production</PcfBuildMode>
   </PropertyGroup>
 
   <PropertyGroup>
