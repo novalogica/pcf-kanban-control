@@ -25,7 +25,6 @@ const App = ({ context, notificationPosition } : IProps) => {
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context);
   const { dataset } = context.parameters;
   
-
   const handleViewChange = () => {
     if(activeView === undefined || activeView.columns === undefined)
       return
@@ -58,8 +57,10 @@ const App = ({ context, notificationPosition } : IProps) => {
       ...options ?? [],
       ...process ?? []
     ]
+
     if(allViews === undefined)
       return;
+
     setViews(allViews);
     
     if(activeView != undefined){

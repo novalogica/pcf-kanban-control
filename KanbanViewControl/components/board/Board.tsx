@@ -7,7 +7,7 @@ import { useDnD } from '../../hooks/useDnD';
 import { isNullOrEmpty, pluralizedLogicalNames } from '../../lib/utils';
 
 const Board = () => {
-  const { columns, setColumns, selectedEntity, activeView} = useContext(BoardContext);
+  const { context, columns, setColumns, selectedEntity, activeView} = useContext(BoardContext);
   const { onDragEnd } = useDnD(columns);
 
   const handleCardDrag = async (result: DropResult, _: ResponderProvided) => {
@@ -24,13 +24,8 @@ const Board = () => {
       columnName
     }
 
-
-    const updatedColumns = await onDragEnd(result, record);
-
-    if(isNullOrEmpty(updatedColumns))
-      return;
-    
-    setColumns(updatedColumns ?? []);
+    await onDragEnd(result, record);
+    context.parameters.dataset.refresh();
   }
 
   return (
