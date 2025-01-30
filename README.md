@@ -8,8 +8,8 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 
 ## 📌 Features
 - Dynamic Kanban board view.
-- Dynamically shows columns based on the selected view
-- Supports **business process flows** and **OptionSet** columns.
+- Dynamically shows columns based on the selected view.
+- Supports **business process flows** and **Choice** columns.
 - Drag-and-drop functionality.
 - Lookup column support.
 - Toast notifications for value updates.
@@ -25,7 +25,7 @@ After adding the control, configure the following properties:
 
 ## View Types
 
-The dropdown automatically adjusts to the associated dataset view. If a new **OptionSet** column is added, the control updates dynamically to reflect the new values.
+The dropdown automatically adjusts to the associated dataset view. If a new **Choice** column is added, the control updates dynamically to reflect the new values.
 Also, if the table has any active BPFs, they will appear as an option in the "View type" dropdown.
 
 - Column Order: Card columns are reordered based on the dataset view’s column order.
