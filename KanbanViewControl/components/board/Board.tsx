@@ -4,10 +4,10 @@ import { CommandBar, Column } from '..';
 import { DragDropContext, DropResult, ResponderProvided } from '@hello-pangea/dnd';
 import { BoardContext } from '../../context/board-context';
 import { useDnD } from '../../hooks/useDnD';
-import { isNullOrEmpty, pluralizedLogicalNames } from '../../lib/utils';
+import { pluralizedLogicalNames } from '../../lib/utils';
 
 const Board = () => {
-  const { context, columns, setColumns, selectedEntity, activeView} = useContext(BoardContext);
+  const { context, columns, selectedEntity, activeView} = useContext(BoardContext);
   const { onDragEnd } = useDnD(columns);
 
   const handleCardDrag = async (result: DropResult, _: ResponderProvided) => {
