@@ -1,6 +1,6 @@
 # Kanban View Control
 
-| [![Kanban Control](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-example.png)](https://github.com/novalogica/pcf-kanban-control/blob/main/kanban-control.mp4) |
+| ![Kanban Control](https://github.com/novalogica/pcf-kanban-control/blob/main/KanbanViewControl/screenshots/kanban-case-example.png) |
 |:--:|
 | *Figure 1: Kanban view displaying cases by priority.* |
 
