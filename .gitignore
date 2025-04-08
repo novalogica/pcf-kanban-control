@@ -17,3 +17,6 @@
 *.binlog
 
 /.vscode
+
+# Others
+/Solutions
