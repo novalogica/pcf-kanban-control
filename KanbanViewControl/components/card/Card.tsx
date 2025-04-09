@@ -10,6 +10,10 @@ import IconButton from "../button/IconButton";
 import { useNavigation } from "../../hooks/useNavigation";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 interface IProps {
   item: CardItem,
@@ -20,14 +24,55 @@ const Card = ({ item }: IProps) => {
   const { openForm } = useNavigation(context);
 
   const onCardClick = () => {
-      openForm(context.parameters.dataset.getTargetEntityType(), item.id.toString())  
+    openForm(context.parameters.dataset.getTargetEntityType(), item.id.toString())
   }
 
   const cardDetails = useMemo(() => {
     return Object.entries(item)?.filter(i => i[0] != 'title' && i[0] != 'tag' && i[0] != 'id' && i[0] != 'column')
   }, [item])
 
-  return ( 
+  const getCardTags = (item: any) => {
+    const tags = []
+    const estCloseDateValue = item?.osm_estimatedclosedate.value;
+    const estRevenueValueString = item?.osm_estimatedvalue.value;
+
+    let daysLeftToClose: number | undefined | null;
+
+    if (estCloseDateValue) {
+      // Assuming osm_estimatedclosedate.value is an ISO 8601 UTC date string
+      const estimatedCloseDate = dayjs.utc(estCloseDateValue);
+      const todayUTC = dayjs.utc();
+
+      const differenceInDays = estimatedCloseDate.diff(todayUTC, 'day');
+      daysLeftToClose = differenceInDays;
+    }
+
+    if (daysLeftToClose !== undefined && daysLeftToClose !== null) {
+      if (daysLeftToClose < 10) {
+        tags.push({ name: 'Urgent', color: 'red' })
+      }
+    }
+
+    let estRevenueValueNumber: number | undefined;
+
+    if (estRevenueValueString) {
+      // Remove the currency symbol and commas, then parse as a float
+      const cleanedRevenueString = estRevenueValueString.replace('₹', '').replace('$','').replace(/,/g, '');
+      estRevenueValueNumber = parseFloat(cleanedRevenueString);
+
+      console.log(estRevenueValueNumber)
+
+      if (!isNaN(estRevenueValueNumber)) {
+        if (estRevenueValueNumber > 5000) {
+          tags.push({ name: 'High Value', color: 'green' });
+        }
+      }
+    }
+    console.log(tags)
+    return tags;
+  };
+
+  return (
     <div className="card-container">
       <CardHeader>
         <Text className="card-title" nowrap>{item?.title?.value}</Text>
@@ -42,7 +87,16 @@ const Card = ({ item }: IProps) => {
         </CardDetailsList>
       </CardBody>
       <CardFooter>
-        <span className="text-badge">New</span>
+        <div>
+          {
+            getCardTags(item).map(tag => {
+              return (
+                <span key={tag.name} className="text-badge" style={{ backgroundColor: tag.color }}>{tag.name}</span>
+              )
+            })
+          }
+        </div>
+
         <IconButton iconName="ChevronRight" cursor="pointer" noBorder onClick={onCardClick} />
       </CardFooter>
     </div>
