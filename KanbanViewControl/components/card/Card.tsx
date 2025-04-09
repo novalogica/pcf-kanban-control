@@ -27,8 +27,22 @@ const Card = ({ item }: IProps) => {
     return Object.entries(item)?.filter(i => i[0] != 'title' && i[0] != 'tag' && i[0] != 'id' && i[0] != 'column')
   }, [item])
 
+  const getBackgroundColor = (item : any) => {
+    const ratingValue = item?.osm_opportunityratingcode.value;
+    if (ratingValue !== undefined && ratingValue !== null) {
+      if (ratingValue == 'Cold') {
+        return '#e5f8fa';
+      } else if (ratingValue == 'Warm') {
+        return '#fff2cd';
+      } else {
+        return '#fcd9d6';
+      }
+    }
+    return ''; // Default background color if rating is not available
+  };
+
   return ( 
-    <div className="card-container">
+    <div className="card-container" style={{ backgroundColor: getBackgroundColor(item)}}>
       <CardHeader>
         <Text className="card-title" nowrap>{item?.title?.value}</Text>
       </CardHeader>
