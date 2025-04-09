@@ -291,6 +291,14 @@ body {
   border: 1px solid #dedede;
 }
 
+.text-badge {
+  background-color: red;
+  color: white;
+  padding: 4px 8px;
+  text-align: center;
+  border-radius: 5px;
+}
+
 @supports not selector(::-webkit-scrollbar) {
   .cards-wrapper {
       scrollbar-color: var(--sb-thumb-color) var(--sb-track-color);

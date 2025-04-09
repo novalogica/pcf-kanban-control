@@ -42,6 +42,7 @@ const Card = ({ item }: IProps) => {
         </CardDetailsList>
       </CardBody>
       <CardFooter>
+        <span className="text-badge">New</span>
         <IconButton iconName="ChevronRight" cursor="pointer" noBorder onClick={onCardClick} />
       </CardFooter>
     </div>
