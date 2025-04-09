@@ -82,23 +82,29 @@ const App = ({ context, notificationPosition } : IProps) => {
     return Object.entries(dataset.records).map(([id, record]) => {
 
       const columnValues = dataset.columns.reduce((acc, col, index) => {
-        if(col.name === activeView.key){
+        // console.log('ca', col, activeView)
+        if (col.name === activeView.key) {
           const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : {id: null};
           const key = targetColumn ? targetColumn.id : "unallocated";
-          acc = {...acc, column: key}
+          acc = { ...acc, column: key };
         }
-
-        if(activeView.type === "BPF"){
-          const key = activeView.records?.find(val => val.id === id)?.stageName ?? ""
-          acc = {...acc, column: key}
+  
+        if (activeView.type === "BPF") {
+          const key = activeView.records?.find(val => val.id === id)?.stageName ?? "";
+          console.log('key', key)
+          acc = { ...acc, column: key };
         }
-
+  
         const name = index === 0 ? "title" : col.name;
-
         const columnValue = getColumnValue(record, col);
         return { ...acc, [name]: columnValue };
       }, {});
 
+      // Get the value of your specific field
+      const specificFieldValue = record.getValue("tgmsl_NoofDaysuntilEstCloseDate"); // Replace with your actual field name
+
+      console.log('specificFieldValue', specificFieldValue)
+  
       return { id, ...columnValues };
 
     })
