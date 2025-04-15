@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { IInputs } from './generated/ManifestTypes';
 import { Board } from './components';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { BoardContext } from './context/board-context';
 import { ColumnItem, ViewItem, ViewEntity } from './interfaces';
 import Loading from './components/container/loading';
@@ -70,6 +70,10 @@ const App = ({ context, notificationPosition } : IProps) => {
       setActiveView(allViews[0] ?? []);
     }
 
+    if (allViews[0]) {
+      handleViewChange();
+    }
+
     setIsLoading(false);
   }
 
@@ -77,6 +81,13 @@ const App = ({ context, notificationPosition } : IProps) => {
     setSelectedEntity(dataset.getTargetEntityType())
     handleColumnsChange()
   }, [context.parameters.dataset.columns])
+
+  // useEffect to trigger handleViewChange after activeView is set initially
+  // useEffect(() => {
+  //   if (activeView) {
+  //     handleViewChange();
+  //   }
+  // }, [activeView]);
 
   const filterRecords = (activeView: ViewItem) => {
     return Object.entries(dataset.records).map(([id, record]) => {
