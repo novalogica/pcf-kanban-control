@@ -87,14 +87,15 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 });
             });
             
-            if(stagesReduced[0] != undefined){
-                stagesReduced[0].columns = stagesReduced[0].columns.sort((a: any, b: any ) => a.order - b.order)
-                
-                stagesReduced[0].records = await getRecordCurrentStage(logicalName, stagesReduced[0].uniqueName, records)
-                return stagesReduced;
-            }
+            stagesReduced.forEach(async (process: any) => {
+                if(process != undefined){
+                    process.columns = process.columns.sort((a: any, b: any ) => a.order - b.order)
 
-            return []
+                    process.records = await getRecordCurrentStage(logicalName, process.uniqueName, records)
+                }
+            })
+
+            return stagesReduced;
         } catch (e) {
             return [];
         }
