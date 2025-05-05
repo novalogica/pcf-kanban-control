@@ -143,6 +143,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             const columns = datasetColumns.map((column) => {
                 const options = columnOptions.entities
                                     .filter((option: any) => option.attributename == column.name)
+                                    .filter((option: any) => option.langid == context.userSettings.languageId)
                                     .map((option: any) => ({
                                         key: option.attributevalue,
                                         id: option.attributevalue, 
