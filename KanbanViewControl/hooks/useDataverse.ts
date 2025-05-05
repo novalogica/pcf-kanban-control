@@ -105,15 +105,17 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         if(!logicalName)
             return [];
 
-        const filter = records.map(r => `_bpf_${entityName}id_value eq ${r}`).join(' or ')
-        const stages = webAPI.retrieveMultipleRecords(
+        const process = logicalName.includes("_") ? `_bpf_${entityName}id_value` : `_${entityName}id_value`;
+        const filter = records.map(r => `${process} eq ${r}`).join(' or ')
+
+        const stages = await webAPI.retrieveMultipleRecords(
             logicalName,
-            `?$select=_activestageid_value,_processid_value,_bpf_${entityName}id_value&$filter=${filter}&$expand=activestageid($select=stagename)`
+            `?$select=_activestageid_value,_processid_value,${process}&$filter=${filter}&$expand=activestageid($select=stagename)`
         )
 
-        return (await stages).entities.map((item: any) => {
+        return stages.entities.map((item: any) => {
             return {
-                id: item[`_bpf_${entityName}id_value`],
+                id: item[process],
                 stageName: item.activestageid.stagename
             }
         });
