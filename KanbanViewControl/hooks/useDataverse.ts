@@ -62,11 +62,11 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 
                 if (!process) {
                     process = {
-                    key: stage.processid.workflowid,
-                    text: stage.processid.name,
-                    uniqueName: stage.processid.uniquename || undefined,
-                    type: 'BPF',
-                    columns: [ column ]
+                        key: stage.processid.workflowid,
+                        text: stage.processid.name,
+                        uniqueName: stage.processid.uniquename || undefined,
+                        type: 'BPF',
+                        columns: [ column ]
                     };
                     acc.push(process);
                 } else {

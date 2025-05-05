@@ -53,6 +53,7 @@ const App = ({ context, notificationPosition } : IProps) => {
     const options = await getOptionSets(undefined);
     const recordIds = Object.keys(dataset.records);
     const process = await getBusinessProcessFlows(dataset.getTargetEntityType(), recordIds)
+
     const allViews = [
       ...options ?? [],
       ...process ?? []
@@ -63,11 +64,18 @@ const App = ({ context, notificationPosition } : IProps) => {
 
     setViews(allViews);
     
-    if(activeView != undefined){
-      setActiveView(allViews.find((view) => view.key === activeView.key));
-      handleViewChange()
-    }else{
-      setActiveView(allViews[0] ?? []);
+    const defaultView = context.parameters.defaultView?.raw;
+
+    if(defaultView) {
+      const view = allViews.find((view) => view.text == defaultView);
+      setActiveView(view ?? allViews[0]);
+    } else {
+      if(activeView != undefined){
+        setActiveView(allViews.find((view) => view.key === activeView.key));
+        handleViewChange()
+      } else{
+        setActiveView(allViews[0] ?? []);
+      }
     }
 
     setIsLoading(false);

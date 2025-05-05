@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { CommandBar, Column } from '..';
 import { DragDropContext, DropResult, ResponderProvided } from '@hello-pangea/dnd';
 import { BoardContext } from '../../context/board-context';
@@ -28,9 +28,15 @@ const Board = () => {
     context.parameters.dataset.refresh();
   }
 
+  const hideViews = useMemo(() => {
+    return context.parameters.hideViewBy?.raw
+  },[context.parameters.hideViewBy])
+
   return (
     <div className='main-container'>
-      <CommandBar />
+      {
+        !hideViews && <CommandBar />
+      }
       <div className='kanban-container'>
           <div className='columns-wrapper'>
             <DragDropContext onDragEnd={handleCardDrag}>

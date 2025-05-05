@@ -3,7 +3,7 @@
   <control 
     namespace="novalogica" 
     constructor="KanbanViewControl" 
-    version="1.0.0" 
+    version="1.1.0"
     display-name-key="Kanban View Control" 
     description-key="PowerApps Component Framework control (PCF) that allows users to see records in a kanban view format." 
     control-type="virtual"
@@ -15,6 +15,22 @@
       display-name-key="Business Process Flow Step Order" 
       description-key="User can reorganize the column orders by providing a json"
       of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="defaultView" 
+      display-name-key="Default View By" 
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="hideViewBy" 
+      display-name-key="Hide View By if default View By set?" 
+      of-type="TwoOptions" 
       usage="input" 
       required="false"
     />

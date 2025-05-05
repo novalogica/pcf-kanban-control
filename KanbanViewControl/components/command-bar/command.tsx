@@ -1,11 +1,11 @@
 import * as React from "react";
 import KanbanDropdown from "../dropdown/Dropdown";
 import { BoardContext } from "../../context/board-context";
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 
 const CommandBar = () => {
   const { views, activeView, setActiveView } = useContext(BoardContext);
-  
+
   return ( 
     <div className="kanban-commandar-bar">
       <KanbanDropdown 
