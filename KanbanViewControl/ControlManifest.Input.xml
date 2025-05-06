@@ -3,7 +3,7 @@
   <control 
     namespace="novalogica" 
     constructor="KanbanViewControl" 
-    version="1.2.0"
+    version="1.3.0"
     display-name-key="Kanban View Control" 
     description-key="PowerApps Component Framework control (PCF) that allows users to see records in a kanban view format." 
     control-type="virtual"
