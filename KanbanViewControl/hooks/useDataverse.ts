@@ -87,13 +87,13 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 });
             });
             
-            stagesReduced.forEach(async (process: any) => {
+            await Promise.all(stagesReduced.map(async (process: any) => {
                 if(process != undefined){
                     process.columns = process.columns.sort((a: any, b: any ) => a.order - b.order)
 
                     process.records = await getRecordCurrentStage(logicalName, process.uniqueName, records)
                 }
-            })
+            }))
 
             return stagesReduced;
         } catch (e) {
