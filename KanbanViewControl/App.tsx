@@ -52,12 +52,18 @@ const App = ({ context, notificationPosition } : IProps) => {
   const handleColumnsChange = async () => {
     const options = await getOptionSets(undefined);
     const recordIds = Object.keys(dataset.records);
-    const process = await getBusinessProcessFlows(dataset.getTargetEntityType(), recordIds)
 
-    const allViews = [
-      ...options ?? [],
-      ...process ?? []
-    ]
+    if(Object.keys(dataset.records).length <= 0) {
+      return;
+    }
+    
+    if (context.parameters.dataset.paging != null && context.parameters.dataset.paging.hasNextPage == true && Object.keys(dataset.records).length < 2500) {
+      context.parameters.dataset.paging.loadNextPage();
+      return;
+    } 
+    
+    const process = await getBusinessProcessFlows(dataset.getTargetEntityType(), recordIds)
+    const allViews = [...options ?? [], ...process ?? []]
 
     if(allViews === undefined)
       return;
@@ -66,7 +72,7 @@ const App = ({ context, notificationPosition } : IProps) => {
     
     const defaultView = context.parameters.defaultView?.raw;
 
-    if(defaultView) {
+    if(defaultView && !activeView) {
       const view = allViews.find((view) => view.text == defaultView);
       setActiveView(view ?? allViews[0]);
     } else {
@@ -87,11 +93,12 @@ const App = ({ context, notificationPosition } : IProps) => {
   }, [context.parameters.dataset.columns])
 
   const filterRecords = (activeView: ViewItem) => {
-    return Object.entries(dataset.records).map(([id, record]) => {
+    const records = Object.entries(dataset.records);
 
+    return records.map(([id, record]) => {
       const columnValues = dataset.columns.reduce((acc, col, index) => {
         if(col.name === activeView.key){
-          const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : {id: null};
+          const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : { id: null};
           const key = targetColumn ? targetColumn.id : "unallocated";
           acc = {...acc, column: key}
         }
@@ -108,7 +115,6 @@ const App = ({ context, notificationPosition } : IProps) => {
       }, {});
 
       return { id, ...columnValues };
-
     })
   }
   
@@ -119,7 +125,7 @@ const App = ({ context, notificationPosition } : IProps) => {
   }
 
   return (
-    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity ,setActiveViewEntity, selectedEntity }}>
+    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity }}>
         <Board />
         <Toaster 
           position={notificationPosition} 

@@ -20,6 +20,7 @@ export class KanbanViewControl implements ComponentFramework.ReactControl<IInput
             context,  
             notificationPosition: context.parameters.notificationPosition?.raw
         });
+
     }
 
     public getOutputs(): IOutputs {

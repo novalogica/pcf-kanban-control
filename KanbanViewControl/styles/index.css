@@ -221,8 +221,11 @@
   gap: 16px
 }
 
+.kanban-dropdown .ms-Dropdown {
+  width: auto !important;
+}
+
 .kanban-dropdown .ms-Dropdown-title {
-  padding: 0px !important;
   border: none !important;
 }
 

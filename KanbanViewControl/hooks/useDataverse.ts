@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { IInputs } from '../generated/ManifestTypes';
-import { isNullOrEmpty, pluralizedLogicalNames } from '../lib/utils';
+import { isNullOrEmpty } from '../lib/utils';
 import { ViewEntity } from '../interfaces';
 import { XrmService } from './service';
 
@@ -41,40 +41,43 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         try {
             const stages = await webAPI.retrieveMultipleRecords(
                 "processstage",
-                `?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename)`
+                `?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename,statecode)`
             )
 
-            const bpfStepsOptionsOrder = context.parameters.bpfStepsOptionsOrder.raw as string;
+            const bpfStepsOptionsOrder = context.parameters.bpfStepsOptionsOrder?.raw ?? "";
             const parsedValue = isNullOrEmpty(bpfStepsOptionsOrder) ? null:  JSON.parse(bpfStepsOptionsOrder);
+            const filter = context.parameters.filteredBusinessProcessFlows?.raw ?? "";
+            const filterOutBusinessProcess = isNullOrEmpty(filter) ? undefined :  JSON.parse(filter);
         
-            const stagesReduced = stages.entities.reduce((acc: any, stage: any) => {
-                let process = acc.find((p: any) => p.key === stage.processid.workflowid);
-                
-                const matchedStep = parsedValue?.find((val: any) => val.id === stage.stagename);
+            const stagesReduced = stages.entities
+                .filter((stage: any) => (!filterOutBusinessProcess || !filterOutBusinessProcess.includes(stage.processid.name)) && stage.processid.statecode == 1)
+                .reduce((acc: any, stage: any) => {
+                    let process = acc.find((p: any) => p.key === stage.processid.workflowid);
+                    const matchedStep = parsedValue?.find((val: any) => val.id === stage.stagename);
 
-                const column = {
-                    id: stage.stagename,
-                    key: stage.processstageid,
-                    label: stage.stagename,
-                    title: stage.stagename,
-                    order: matchedStep ? matchedStep?.order ?? 100 : 100
-                };
-                
-                if (!process) {
-                    process = {
-                        key: stage.processid.workflowid,
-                        text: stage.processid.name,
-                        uniqueName: stage.processid.uniquename || undefined,
-                        type: 'BPF',
-                        columns: [ column ]
+                    const column = {
+                        id: stage.stagename,
+                        key: stage.processstageid,
+                        label: stage.stagename,
+                        title: stage.stagename,
+                        order: matchedStep ? matchedStep?.order ?? 100 : 100
                     };
-                    acc.push(process);
-                } else {
-                    process.columns.push(column);
-                }
-                
-                return acc;
-            }, []);
+                    
+                    if (!process) {
+                        process = {
+                            key: stage.processid.workflowid,
+                            text: stage.processid.name,
+                            uniqueName: stage.processid.uniquename || undefined,
+                            type: 'BPF',
+                            columns: [ column ]
+                        };
+                        acc.push(process);
+                    } else {
+                        process.columns.push(column);
+                    }
+                    
+                    return acc;
+                }, []);
 
             stagesReduced.forEach((process: any) => {
                 const uniqueColumns = new Map();
@@ -90,7 +93,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             await Promise.all(stagesReduced.map(async (process: any) => {
                 if(process != undefined){
                     process.columns = process.columns.sort((a: any, b: any ) => a.order - b.order)
-
                     process.records = await getRecordCurrentStage(logicalName, process.uniqueName, records)
                 }
             }))
@@ -105,13 +107,15 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         if(!logicalName)
             return [];
 
-        const process = logicalName.includes("_") ? `_bpf_${entityName}id_value` : `_${entityName}id_value`;
-        const filter = records.map(r => `${process} eq ${r}`).join(' or ')
+        const process = logicalName.includes("_") ? `_bpf_${entityName}id_value` : `${entityName}id_value`;
+
+        const property = logicalName.includes("_") ? `bpf_${entityName}id` : `${entityName}id`;
+        const filter = `(Microsoft.Dynamics.CRM.In(PropertyName='${property}',PropertyValues=[${records.map(id => `'${id}'`).join(',')}]))`
 
         const stages = await webAPI.retrieveMultipleRecords(
             logicalName,
             `?$select=_activestageid_value,_processid_value,${process}&$filter=${filter}&$expand=activestageid($select=stagename)`
-        )
+        );
 
         return stages.entities.map((item: any) => {
             return {
