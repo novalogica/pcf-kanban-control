@@ -15,7 +15,7 @@ interface IProps {
   notificationPosition: "top-center" | "top-left" | "top-right" | "bottom-center" | "bottom-left" | "bottom-right",
 }
 
-const App = ({ context, notificationPosition } : IProps) => {
+const App = ({ context, notificationPosition }: IProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<ViewItem | undefined>();
   const [columns, setColumns] = useState<ColumnItem[]>([]);
@@ -24,26 +24,26 @@ const App = ({ context, notificationPosition } : IProps) => {
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context);
   const { dataset } = context.parameters;
-  
+
   const handleViewChange = () => {
-    if(activeView === undefined || activeView.columns === undefined)
+    if (activeView === undefined || activeView.columns === undefined)
       return
 
     const cards: any[] = filterRecords(activeView)
 
     let activeColumns = activeView?.columns ?? []
 
-    if(activeView.type != "BPF" && (cards.some(card => !(activeView.key in card)) || cards.some(card => card[activeView.key]?.value === ""))){
-        activeColumns = [
-          unlocatedColumn,
-          ...activeColumns
-        ]
+    if (activeView.type != "BPF" && (cards.some(card => !(activeView.key in card)) || cards.some(card => card[activeView.key]?.value === ""))) {
+      activeColumns = [
+        unlocatedColumn,
+        ...activeColumns
+      ]
     }
 
     const columns = activeColumns.map((col) => {
-      return { 
-        ...col, 
-        cards: cards.filter((card: any) => card?.column == col.id) 
+      return {
+        ...col,
+        cards: cards.filter((card: any) => card?.column == col.id)
       }
     })
     setColumns(columns)
@@ -65,21 +65,21 @@ const App = ({ context, notificationPosition } : IProps) => {
     const process = await getBusinessProcessFlows(dataset.getTargetEntityType(), recordIds)
     const allViews = [...options ?? [], ...process ?? []]
 
-    if(allViews === undefined)
+    if (allViews === undefined)
       return;
 
     setViews(allViews);
-    
+
     const defaultView = context.parameters.defaultView?.raw;
 
     if(defaultView && !activeView) {
       const view = allViews.find((view) => view.text == defaultView);
       setActiveView(view ?? allViews[0]);
     } else {
-      if(activeView != undefined){
+      if (activeView != undefined) {
         setActiveView(allViews.find((view) => view.key === activeView.key));
         handleViewChange()
-      } else{
+      } else {
         setActiveView(allViews[0] ?? []);
       }
     }
@@ -100,12 +100,12 @@ const App = ({ context, notificationPosition } : IProps) => {
         if(col.name === activeView.key){
           const targetColumn = activeView.columns !== undefined ? activeView.columns.find(column => column.title === record.getFormattedValue(col.name)) : { id: null};
           const key = targetColumn ? targetColumn.id : "unallocated";
-          acc = {...acc, column: key}
+          acc = { ...acc, column: key }
         }
 
-        if(activeView.type === "BPF"){
+        if (activeView.type === "BPF") {
           const key = activeView.records?.find(val => val.id === id)?.stageName ?? ""
-          acc = {...acc, column: key}
+          acc = { ...acc, column: key }
         }
 
         const name = index === 0 ? "title" : col.name;
@@ -117,10 +117,10 @@ const App = ({ context, notificationPosition } : IProps) => {
       return { id, ...columnValues };
     })
   }
-  
+
   useMemo(handleViewChange, [activeView])
 
-  if(isLoading) {
+  if (isLoading) {
     return <Loading />
   }
 

@@ -11,15 +11,6 @@
     <data-set name="dataset" display-name-key="Dataset" />
 
     <property 
-      name="bpfStepsOptionsOrder" 
-      display-name-key="Business Process Flow Step Order" 
-      description-key="User can reorganize the column orders by providing a json"
-      of-type="SingleLine.TextArea" 
-      usage="input" 
-      required="false"
-    />
-
-    <property 
       name="defaultView" 
       display-name-key="Default View By" 
       of-type="SingleLine.TextArea" 

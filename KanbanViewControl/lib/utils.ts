@@ -2,14 +2,14 @@ import { PersonaInitialsColor } from "@fluentui/react/lib/Persona";
 import { CardInfo } from "../interfaces";
 
 export const isNullOrEmpty = (value: unknown) => {
-    if(value === '' || value == null || !value)
+    if (value === '' || value == null || !value)
         return true;
-    
+
     return false;
 }
 
 export const getColumnValue = (
-    record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord, 
+    record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
     column: ComponentFramework.PropertyHelper.DataSetApi.Column
 ): string | CardInfo => {
     const value = record.getValue(column.name);
@@ -43,14 +43,14 @@ const isLookupValue = (value: any): value is ComponentFramework.LookupValue => {
     return value && typeof value === 'object' && 'id' in value && 'name' in value && 'entityType' in value;
 }
 
-export const getRandomInt = (min: number , max: number) => {
+export const getRandomInt = (min: number, max: number) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 export const getColorFromInitials = (initials: string, colorPalette: PersonaInitialsColor[]) => {
     const charSum = initials
-    .split('')
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+        .split('')
+        .reduce((sum, char) => sum + char.charCodeAt(0), 0);
 
     return colorPalette[charSum % colorPalette.length];
 }
@@ -73,4 +73,39 @@ export function chunkArray<T>(array: T[], chunkSize: number): T[][] {
         results.push(array.slice(i, i + chunkSize));
     }
     return results;
+}
+
+export function orderStages(entities: BusinessProcessFlowEntity[]): BusinessProcessFlowEntity[] {
+    const stageMap = new Map<string, BusinessProcessFlowEntity>();
+    const nextStageIds = new Set<string>();
+
+    for (const entity of entities) {
+        const stageId = entity.Stage.StageId;
+        const nextStageId = entity.Stage.NextStageId;
+
+        stageMap.set(stageId, entity);
+        if (nextStageId) {
+            nextStageIds.add(nextStageId);
+        }
+    }
+
+    const firstStage = Array.from(stageMap.values()).find(
+        entity => !nextStageIds.has(entity.Stage.StageId)
+    );
+
+    if (!firstStage) {
+        throw new Error("Could not find the first stage.");
+    }
+
+    const orderedEntities: BusinessProcessFlowEntity[] = [];
+    let currentStage: BusinessProcessFlowEntity | undefined = firstStage;
+
+    while (currentStage) {
+        orderedEntities.push(currentStage);
+
+        const nextId: string | null | undefined = currentStage.Stage.NextStageId;
+        currentStage = nextId ? stageMap.get(nextId) : undefined;
+    }
+
+    return orderedEntities;
 }

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { IInputs } from '../generated/ManifestTypes';
-import { isNullOrEmpty } from '../lib/utils';
+import { isNullOrEmpty, orderStages } from '../lib/utils';
 import { ViewEntity } from '../interfaces';
 import { XrmService } from './service';
 
@@ -28,7 +28,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             const metadata = xrmService.fetch(`api/data/v9.2/EntityDefinitions(LogicalName='nl_opportunity')/Attributes/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName,DisplayName&$expand=OptionSet($select=Options,MetadataId)`)
             const options = (metadata as any).OptionSet?.Options;
 
-            if(isNullOrEmpty(options))
+            if (isNullOrEmpty(options))
                 return;
 
             return options;
@@ -41,41 +41,48 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
         try {
             const stages = await webAPI.retrieveMultipleRecords(
                 "processstage",
-                `?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename,statecode)`
+                `?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename,statecode,uidata)`
             )
 
-            const bpfStepsOptionsOrder = context.parameters.bpfStepsOptionsOrder?.raw ?? "";
-            const parsedValue = isNullOrEmpty(bpfStepsOptionsOrder) ? null:  JSON.parse(bpfStepsOptionsOrder);
             const filter = context.parameters.filteredBusinessProcessFlows?.raw ?? "";
-            const filterOutBusinessProcess = isNullOrEmpty(filter) ? undefined :  JSON.parse(filter);
-        
+            const filterOutBusinessProcess = isNullOrEmpty(filter) ? undefined : JSON.parse(filter);
+
             const stagesReduced = stages.entities
                 .filter((stage: any) => (!filterOutBusinessProcess || !filterOutBusinessProcess.includes(stage.processid.name)) && stage.processid.statecode == 1)
                 .reduce((acc: any, stage: any) => {
                     let process = acc.find((p: any) => p.key === stage.processid.workflowid);
-                    const matchedStep = parsedValue?.find((val: any) => val.id === stage.stagename);
+                    const processUiData = stage.processid.uidata ? JSON.parse(stage.processid.uidata) as BusinnessProcessFlowUIData : undefined;
+
+                    let entities: BusinessProcessFlowEntity[] = [];
+
+                    if (processUiData && processUiData.BusinessProcessFlowEntities && processUiData.BusinessProcessFlowEntities["$values"].length > 0) {
+                        entities = processUiData.BusinessProcessFlowEntities["$values"]
+                            .filter((entity: BusinessProcessFlowEntity) => !entity.Relationships);
+                    }
+
+                    const orderedEntities = orderStages(entities);
 
                     const column = {
                         id: stage.stagename,
                         key: stage.processstageid,
                         label: stage.stagename,
                         title: stage.stagename,
-                        order: matchedStep ? matchedStep?.order ?? 100 : 100
+                        order: orderedEntities.findIndex(e => e.Stage.StageDisplayName === stage.stagename)
                     };
-                    
+
                     if (!process) {
                         process = {
                             key: stage.processid.workflowid,
                             text: stage.processid.name,
                             uniqueName: stage.processid.uniquename || undefined,
                             type: 'BPF',
-                            columns: [ column ]
+                            columns: [column]
                         };
                         acc.push(process);
                     } else {
                         process.columns.push(column);
                     }
-                    
+
                     return acc;
                 }, []);
 
@@ -89,10 +96,10 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                     return false;
                 });
             });
-            
+
             await Promise.all(stagesReduced.map(async (process: any) => {
-                if(process != undefined){
-                    process.columns = process.columns.sort((a: any, b: any ) => a.order - b.order)
+                if (process != undefined) {
+                    process.columns = process.columns.sort((a: any, b: any) => a.order - b.order)
                     process.records = await getRecordCurrentStage(logicalName, process.uniqueName, records)
                 }
             }))
@@ -104,7 +111,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
     }
 
     const getRecordCurrentStage = async (entityName: string, logicalName: string | undefined, records: string[]): Promise<ComponentFramework.WebApi.Entity[]> => {
-        if(!logicalName)
+        if (!logicalName)
             return [];
 
         const process = logicalName.includes("_") ? `_bpf_${entityName}id_value` : `${entityName}id_value`;
@@ -127,7 +134,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
     const retrieveStatusMetadata = async (logicalName: string): Promise<any> => {
         const entity = logicalName ?? entityName
-        const options =  await xrmService.fetch(`api/data/v9.2/EntityDefinitions(LogicalName='${entity}')/Attributes(LogicalName='statuscode')/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName&$expand=OptionSet($select=Options,MetadataId)`);
+        const options = await xrmService.fetch(`api/data/v9.2/EntityDefinitions(LogicalName='${entity}')/Attributes(LogicalName='statuscode')/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName&$expand=OptionSet($select=Options,MetadataId)`);
         return (options as any).OptionSet?.Options;
     }
 
@@ -136,7 +143,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             const datasetColumns = dataset.columns.filter(col => col.dataType == "OptionSet");
             const entityLogicalName = activeView?.entity ?? entityName
 
-            if(isNullOrEmpty(datasetColumns) || datasetColumns.length <= 0) {
+            if (isNullOrEmpty(datasetColumns) || datasetColumns.length <= 0) {
                 return [];
             }
 
@@ -149,15 +156,15 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
             const columns = datasetColumns.map((column) => {
                 const options = columnOptions.entities
-                                    .filter((option: any) => option.attributename == column.name)
-                                    .filter((option: any) => option.langid == context.userSettings.languageId)
-                                    .map((option: any) => ({
-                                        key: option.attributevalue,
-                                        id: option.attributevalue, 
-                                        label: option.value,
-                                        title: option.value, 
-                                        order: option.displayorder
-                                    }));
+                    .filter((option: any) => option.attributename == column.name)
+                    .filter((option: any) => option.langid == context.userSettings.languageId)
+                    .map((option: any) => ({
+                        key: option.attributevalue,
+                        id: option.attributevalue,
+                        label: option.value,
+                        title: option.value,
+                        order: option.displayorder
+                    }));
 
                 return {
                     key: column.name,
@@ -175,8 +182,8 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             if (statusCodeColumn) {
                 const statusCodeOptions = await retrieveStatusMetadata(activeView?.entity as string);
                 const filteredStatusCodeOptions = statusCodeOptions.filter((option: any) => option.State == 0);
-            
-                statusCodeColumn.columns = statusCodeColumn.columns.filter((columnOption: any) => 
+
+                statusCodeColumn.columns = statusCodeColumn.columns.filter((columnOption: any) =>
                     filteredStatusCodeOptions.some((filteredOption: any) => filteredOption.Value === columnOption.key)
                 );
             }
