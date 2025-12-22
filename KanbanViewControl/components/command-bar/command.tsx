@@ -4,13 +4,13 @@ import { BoardContext } from "../../context/board-context";
 import { useContext, useMemo } from "react";
 
 const CommandBar = () => {
-  const { views, activeView, setActiveView } = useContext(BoardContext);
+  const { views, activeView, setActiveView, viewByLabel } = useContext(BoardContext);
 
   return ( 
     <div className="kanban-commandar-bar">
       <KanbanDropdown 
         key="view-dropdown" 
-        label="View by" 
+        label={viewByLabel} 
         options={views} 
         selectedOption={activeView}
         onOptionSelected={setActiveView}/>
