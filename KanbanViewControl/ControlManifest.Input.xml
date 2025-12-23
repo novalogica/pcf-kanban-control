@@ -30,15 +30,6 @@
         />
 
 	  <property
-		name="errorMessage"
-		display-name-key="Error Message"
-		description-key="Message shown when a record update fails"
-		of-type="SingleLine.Text"
-		usage="input"
-		required="false"
-/>
-
-	  <property
 		name="savingText"
 		display-name-key="Saving Text"
 		description-key="Text shown while data is saving"
