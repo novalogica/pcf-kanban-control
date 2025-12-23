@@ -11,7 +11,9 @@ interface IBoardContext {
   setColumns: React.Dispatch<React.SetStateAction<ColumnItem[]>>,
   activeViewEntity: ViewEntity | undefined,
   setActiveViewEntity: React.Dispatch<React.SetStateAction<ViewEntity | undefined>>,
-  selectedEntity: string | undefined
+  selectedEntity: string | undefined,
+  viewByLabel: string,
+  noResultsLabel: string,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

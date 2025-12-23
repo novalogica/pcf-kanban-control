@@ -25,6 +25,9 @@ const App = ({ context, notificationPosition }: IProps) => {
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context);
   const { dataset } = context.parameters;
 
+  const viewByLabel = context.parameters.viewByLabel?.raw ?? "View by";
+  const noResultsLabel = context.parameters.emptyColumnText?.raw ?? "No results found";
+
   const handleViewChange = () => {
     if (activeView === undefined || activeView.columns === undefined)
       return
@@ -125,7 +128,7 @@ const App = ({ context, notificationPosition }: IProps) => {
   }
 
   return (
-    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity }}>
+    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity, viewByLabel, noResultsLabel }}>
         <Board />
         <Toaster 
           position={notificationPosition} 

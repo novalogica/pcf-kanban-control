@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { useContext } from 'react';
+import { BoardContext } from '../../context/board-context';
 
 const style: React.CSSProperties = {
   display: 'flex',
@@ -14,9 +16,10 @@ const style: React.CSSProperties = {
 }
 
 const NoResults = () => {
+    const { noResultsLabel } = useContext(BoardContext);
   return ( 
     <div style={style}>
-      <p>No results found</p>
+      <p>{noResultsLabel}</p>
     </div>
   );
 }

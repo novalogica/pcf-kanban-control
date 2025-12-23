@@ -13,7 +13,7 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 - Drag-and-drop functionality.
 - Lookup column support.
 - Toast notifications for value updates.
-
+- 
 ## 🚀 Usage
 
 After adding the control, configure the following properties:
@@ -22,6 +22,11 @@ After adding the control, configure the following properties:
 |----------|-------------|
 | **Business Process Flow Step Order** | Adds more control to order of business process flow steps. |
 | **Notification Position** | Sets the position of toast messages. |
+| **Success Message** | Message displayed when a record is successfully moved or updated. Use `{columnName}` as a placeholder to dynamically insert the column name. |
+| **View By Label** | Label text for the *View by* dropdown in the Kanban. If not set, the default label is **View by**. |
+| **Saving Text** | Text shown while data is being saved. |
+| **Empty Column Text** | Text shown when a Kanban column has no records. |
+
 
 ## View Types
 

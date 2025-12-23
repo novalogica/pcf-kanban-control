@@ -13,6 +13,11 @@ export const useDnD = (columns: ColumnItem[]) => {
   const { context, activeView, setColumns } = useContext(BoardContext);
   const { updateRecord } = useDataverse(context);
   const { openForm } = useNavigation(context);
+
+  const uiTexts = {
+      movedSuccess: context.parameters.successMessage?.raw ?? "Successfully moved to {columnName} 🎉",
+      loadingText: context.parameters.savingText?.raw ?? "Saving...",
+  }
   
   const onDragEnd = async (result: DropResult, record: any) => {
     if (result.destination == null) {
@@ -40,11 +45,13 @@ export const useDnD = (columns: ColumnItem[]) => {
     movedCards = await moveCard(columns, sourceCard, result);
     setColumns(movedCards ?? [])
 
+    const successMessage = uiTexts.movedSuccess.replace("{columnName}", destinationColumn?.title ?? "Unallocated");
+
     const response = await toast.promise(
       updateRecord(record),
       {
-        loading: 'Saving...',
-        success: `Successfully moved to ${record.columnName ?? "Unallocated"} 🎉`,
+        loading: uiTexts.loadingText,
+        success: successMessage,
         error: (e) => e.message,
       }
     )
