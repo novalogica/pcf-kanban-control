@@ -47,6 +47,17 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             const filter = context.parameters.filteredBusinessProcessFlows?.raw ?? "";
             const filterOutBusinessProcess = isNullOrEmpty(filter) ? undefined : JSON.parse(filter);
 
+            const stepOrderConfigRaw = context.parameters.businessProcessFlowStepOrder?.raw ?? "";
+            let stepOrderConfig: { id: string; order: number }[] | undefined;
+
+            if (!isNullOrEmpty(stepOrderConfigRaw)) {
+                try {
+                    stepOrderConfig = JSON.parse(stepOrderConfigRaw);
+                } catch (e) {
+                    console.log("Failed to parse businessProcessFlowStepOrder JSON configuration.", e);
+                }
+            }
+
             const stagesReduced = stages.entities
                 .filter((stage: any) => (!filterOutBusinessProcess || !filterOutBusinessProcess.includes(stage.processid.name)) && stage.processid.statecode == 1)
                 .reduce((acc: any, stage: any) => {
@@ -62,12 +73,15 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
 
                     const orderedEntities = orderStages(entities);
 
+                    const defaultOrder = orderedEntities.findIndex(e => e.Stage.StageDisplayName === stage.stagename);
+                    const customOrder = stepOrderConfig?.find(config => config.id === stage.stagename)?.order;
+
                     const column = {
                         id: stage.stagename,
                         key: stage.processstageid,
                         label: stage.stagename,
                         title: stage.stagename,
-                        order: orderedEntities.findIndex(e => e.Stage.StageDisplayName === stage.stagename)
+                        order: customOrder ?? defaultOrder
                     };
 
                     if (!process) {

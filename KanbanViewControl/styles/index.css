@@ -100,9 +100,24 @@
   border-radius: 10px;
   background-color: white;
   box-shadow: 0px 0px 15px -3px rgba(0,0,0,0.1);
-  padding: 20px;
-  gap: 16px;
+  padding: 12px 14px;
+  gap: 10px;
   cursor: grab;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.card-container:hover {
+  box-shadow: 0px 2px 12px -2px rgba(0,0,0,0.18);
+  background-color: #fafafa;
+}
+
+.card-container.no-drag {
+  cursor: pointer;
+}
+
+.card-container.no-drag:hover {
+  box-shadow: 0px 2px 12px -2px rgba(0,0,0,0.18);
+  background-color: #fafafa;
 }
 
 .card-header-container {
@@ -141,14 +156,14 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .card-info {
   display: flex;
   flex-direction: column;
   justify-content: start;
-  gap: 4px;
+  gap: 2px;
 }
 
 .card-info-label {
@@ -168,17 +183,9 @@
   flex-wrap: wrap;
   justify-content: start;
   align-items: start;
-  gap: 24px
+  gap: 16px
 }
 
-.card-footer {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: end;
-  border-top: 1px solid rgb(241, 241, 241);
-  padding-top: 16px;
-}
 
 .card-text {
   text-align: start;

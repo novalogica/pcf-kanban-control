@@ -28,8 +28,26 @@
     />
 
     <property 
+      name="businessProcessFlowStepOrder" 
+      display-name-key="Business Process Flow Step Order" 
+      description-key="Provide a JSON array to control the order of business process flow stages (e.g. [{&quot;id&quot;:&quot;Develop&quot;,&quot;order&quot;:2}])."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="hideViewBy" 
       display-name-key="Hide View By if default View By set?" 
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowCardMove" 
+      display-name-key="Allow moving cards" 
+      description-key="When disabled, cards cannot be moved by drag and drop."
       of-type="TwoOptions" 
       usage="input" 
       required="false"

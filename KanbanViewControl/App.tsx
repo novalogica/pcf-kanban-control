@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { IInputs } from './generated/ManifestTypes';
 import { Board } from './components';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { BoardContext } from './context/board-context';
 import { ColumnItem, ViewItem, ViewEntity } from './interfaces';
 import Loading from './components/container/loading';
@@ -22,6 +22,7 @@ const App = ({ context, notificationPosition }: IProps) => {
   const [views, setViews] = useState<ViewItem[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
+  const draggingRef = useRef(false);
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context);
   const { dataset } = context.parameters;
 
@@ -125,7 +126,7 @@ const App = ({ context, notificationPosition }: IProps) => {
   }
 
   return (
-    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity }}>
+    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity, draggingRef }}>
         <Board />
         <Toaster 
           position={notificationPosition} 
