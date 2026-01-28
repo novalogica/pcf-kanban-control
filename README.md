@@ -18,10 +18,20 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 
 After adding the control, configure the following properties:
 
-| Property | Description |
-|----------|-------------|
-| **Business Process Flow Step Order** | Adds more control to order of business process flow steps. |
-| **Notification Position** | Sets the position of toast messages. |
+## ⚙️ Configuration
+
+All configurable properties from the Control Manifest:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| **Default View By** | Text | Pre-selects a view in the "View type" dropdown by matching this value to the view label (e.g. view name or choice label). If set, the board loads with this view applied. |
+| **Filter out Business Process Flows** | Text | Provide an array of strings with the business process flow names to filter out. Those BPFs will not appear in the "View type" dropdown. |
+| **Business Process Flow Step Order** | Text | JSON array to control the order of business process flow stages (e.g. `[{"id":"Develop","order":2},{"id":"Propose","order":1}]`). |
+| **Hide View By if default View By set?** | Yes/No | When **Yes**, the "View type" dropdown is hidden if a default view is configured. Use this for a fixed view without switching. |
+| **Allow moving cards** | Yes/No | When **No**, drag-and-drop is disabled; cards cannot be moved between columns. Clicking a card still opens the record. Default: **Yes**. |
+| **Hide empty columns** | Yes/No | When **Yes**, columns that contain no cards are not shown. Default: **No**. |
+| **Allow creating new records from board** | Yes/No | When **No**, the add (+) button on each column header is hidden and new records cannot be created from the board. Default: **Yes**. |
+| **Notification Position** | Enum | Position where toast messages (e.g. save success/failure) appear. Options: **Top**, **Top Start**, **Top End**, **Bottom**, **Bottom Start**, **Bottom End**. Default: **Top End** (top-right). |
 
 ## View Types
 

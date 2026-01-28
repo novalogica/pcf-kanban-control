@@ -54,6 +54,24 @@
     />
 
     <property 
+      name="hideEmptyColumns" 
+      display-name-key="Hide empty columns" 
+      description-key="When enabled, columns that contain no cards are not shown."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowCreateNew" 
+      display-name-key="Allow creating new records from board" 
+      description-key="When disabled, the add button on each column is hidden and new records cannot be created from the board."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="notificationPosition" 
       display-name-key="Notification Position" 
       description-key="Choose the position where the toast message should appear" 

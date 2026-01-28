@@ -45,7 +45,17 @@ const Board = () => {
     return context.parameters.hideViewBy?.raw
   },[context.parameters.hideViewBy])
 
-  const columnsContent = columns?.map((column) => (
+  const hideEmptyColumns = useMemo(() => {
+    return (context.parameters as { hideEmptyColumns?: { raw?: boolean } }).hideEmptyColumns?.raw === true;
+  }, [context.parameters]);
+
+  const visibleColumns = useMemo(() => {
+    if (!columns) return [];
+    if (!hideEmptyColumns) return columns;
+    return columns.filter((col) => (col.cards?.length ?? 0) > 0);
+  }, [columns, hideEmptyColumns]);
+
+  const columnsContent = visibleColumns.map((column) => (
     <Column key={column.id} column={column} />
   ));
 
