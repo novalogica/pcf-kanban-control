@@ -55,6 +55,20 @@ export const getColorFromInitials = (initials: string, colorPalette: PersonaInit
     return colorPalette[charSum % colorPalette.length];
 }
 
+/**
+ * Extracts the currency symbol from a formatted currency string (e.g. "1.234,56 €" or "$1,234.56").
+ * Used to display the sum in the same currency as the tiles.
+ */
+export const getCurrencySymbolFromFormatted = (formatted: string): string => {
+  if (!formatted || typeof formatted !== "string") return "€";
+  const trimmed = formatted.trim();
+  const atEnd = trimmed.match(/\s*([€$£¥¢]|\bEUR\b|\bUSD\b|\bGBP\b|\bCHF\b)\s*$/i);
+  if (atEnd?.[1]) return atEnd[1];
+  const atStart = trimmed.match(/^\s*([€$£¥¢]|\bEUR\b|\bUSD\b|\bGBP\b|\bCHF\b)\s*/i);
+  if (atStart?.[1]) return atStart[1];
+  return "€";
+};
+
 export const pluralizedLogicalNames = (logicalName: string) => {
     if (!logicalName) return '';
 

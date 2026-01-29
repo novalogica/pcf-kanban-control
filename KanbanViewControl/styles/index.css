@@ -24,6 +24,26 @@
   overflow-x: auto;
 }
 
+.columns-wrapper--full-width {
+  overflow-x: hidden;
+}
+
+.columns-wrapper--full-width .column-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.columns-wrapper--full-width .cards-wrapper {
+  max-width: none;
+  width: 100%;
+}
+
+.columns-wrapper--full-width .card-container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /** Container */
 .column-container {
   min-height: 200px;
@@ -62,11 +82,22 @@
   color: #3c3c3c;
 }
 
+.column-sum {
+  display: inline-block;
+  text-align: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  color: rgb(33, 78, 128);
+  font-weight: 600;
+  margin-right: 6px;
+  background-color: rgb(199, 224, 244);
+}
+
 .column-counter {
-  width: 16px;
+  min-width: 16px;
   height: 16px;
   text-align: center;
-  padding: 4px;
+  padding: 4px 8px;
   border-radius: 100%;
   color: rgb(102, 102, 102);
   background-color: rgb(206, 242, 206);
@@ -88,6 +119,7 @@
   align-items: center;
   gap: 16px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /** Card **/
@@ -104,6 +136,10 @@
   gap: 10px;
   cursor: grab;
   transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.card-container--highlight {
+  border-left: 4px solid var(--card-highlight-color, #ccc);
 }
 
 .card-container:hover {
@@ -298,6 +334,35 @@ body {
 
 .personaContainer:hover{
   text-decoration: underline;
+}
+
+/* Hide initials circle for lookup fields except Owner – hide and leave no space */
+.personaContainer--no-coin .ms-Persona-coin,
+.personaContainer--no-coin .ms-Persona-imageArea,
+.personaContainer--no-coin .ms-Persona-initials {
+  display: none !important;
+}
+/* Collapse first child of Persona (coin wrapper) completely */
+.personaContainer--no-coin .ms-Persona > *:first-child {
+  width: 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: none !important;
+}
+/* No indentation for text/details */
+.personaContainer--no-coin .ms-Persona-primary,
+.personaContainer--no-coin .ms-Persona-details,
+.personaContainer--no-coin .ms-Persona {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.personaContainer--owner .ms-Persona-coin {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
 }
 
 .user-badge{

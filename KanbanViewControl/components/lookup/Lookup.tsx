@@ -11,7 +11,9 @@ interface IProps {
   onOpenLookup: (entityName: string, id: string) => void
 }
 
-const colors = [
+const OWNER_LABELS = ["owner", "besitzer"]
+
+const colors: PersonaInitialsColor[] = [
   PersonaInitialsColor.lightBlue,
   PersonaInitialsColor.blue,
   PersonaInitialsColor.teal,
@@ -40,9 +42,12 @@ const personaContainer: React.CSSProperties = {
     gap: 4,
 }
 
+const isOwnerField = (label: string) =>
+  OWNER_LABELS.includes(label?.trim().toLowerCase() ?? "")
+
 export const Lookup = ({ onOpenLookup, info }: IProps) => {
   const { etn, id, name } = info.value as ComponentFramework.EntityReference
-
+  const showCoin = useMemo(() => isOwnerField(info.label), [info.label])
   const initials = useMemo(() => getInitials(name, false), [name])
 
   const onPersonaClicked = () => {
@@ -50,13 +55,14 @@ export const Lookup = ({ onOpenLookup, info }: IProps) => {
   }
 
   return (
-    <div style={personaContainer} className="personaContainer" onClick={onPersonaClicked}>
+    <div style={personaContainer} className={`personaContainer ${showCoin ? "personaContainer--owner" : "personaContainer--no-coin"}`} onClick={onPersonaClicked}>
         <Persona
           className="user-badge"
           text={name}
-          coinSize={22}
-          imageInitials={initials}
-          initialsColor={getColorFromInitials(initials, colors)}
+          coinSize={showCoin ? 22 : undefined}
+          imageInitials={showCoin ? initials : undefined}
+          initialsColor={showCoin ? getColorFromInitials(initials, colors) : undefined}
+          onRenderCoin={showCoin ? undefined : () => null}
           onRenderPrimaryText={(props?: IPersonaProps) => (
             <Text className="lookup-persona-name" variant="medium" nowrap>
               {props?.text}

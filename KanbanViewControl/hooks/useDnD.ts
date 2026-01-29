@@ -35,6 +35,13 @@ export const useDnD = (columns: ColumnItem[]) => {
     const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
     const sourceCard = sourceColumn?.cards?.find(i => i.id === itemId);
 
+    // Do not save when the card was only moved within the same column
+    if (sourceColumn?.id === destinationColumn?.id) {
+      movedCards = await moveCard(columns, sourceCard, result);
+      setColumns(movedCards ?? []);
+      return movedCards;
+    }
+
     movedCards = await moveCard(columns, sourceCard, result);
     setColumns(movedCards ?? [])
 

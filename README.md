@@ -25,11 +25,17 @@ All configurable properties from the Control Manifest:
 | Property | Type | Description |
 |----------|------|-------------|
 | **Default View By** | Text | Pre-selects a view in the "View type" dropdown by matching this value to the view label (e.g. view name or choice label). If set, the board loads with this view applied. |
-| **Filter out Business Process Flows** | Text | Provide an array of strings with the business process flow names to filter out. Those BPFs will not appear in the "View type" dropdown. |
+| **Filter out Business Process Flows** | Text | Array of strings with the business process flow names to filter out. Those BPFs will not appear in the "View type" dropdown. |
 | **Business Process Flow Step Order** | Text | JSON array to control the order of business process flow stages (e.g. `[{"id":"Develop","order":2},{"id":"Propose","order":1}]`). |
 | **Hide View By if default View By set?** | Yes/No | When **Yes**, the "View type" dropdown is hidden if a default view is configured. Use this for a fixed view without switching. |
 | **Allow moving cards** | Yes/No | When **No**, drag-and-drop is disabled; cards cannot be moved between columns. Clicking a card still opens the record. Default: **Yes**. |
 | **Hide empty columns** | Yes/No | When **Yes**, columns that contain no cards are not shown. Default: **No**. |
+| **Hide column field on card** | Yes/No | When **Yes**, the field used for column grouping (View By) is not displayed on the card to save space. Default: **No**. |
+| **Hidden fields on card** | Text | Field logical names that are loaded but not displayed on cards. JSON array (e.g. `["field1","field2"]`) or comma-separated list. |
+| **HTML fields on card** | Text | Field logical names whose content is rendered as HTML (not escaped). JSON array (e.g. `["field1","field2"]`). |
+| **Boolean field highlights** | Text | JSON array of objects with `logicalName` and `color`. Cards get a colored top border when the boolean field is **true**; the first matching option wins. The field must be included in the dataset columns. Example: `[{"logicalName":"ispriority","color":"#e81123"}]`. |
+| **Field widths on card** | Text | JSON array to set percentage width of fields on the card (e.g. `[{"logicalName":"description","width":100},{"logicalName":"estimatedvalue","width":50}]`). Width 100 = full width, 50 = half. Fields not listed use default width. |
+| **Expand board to full width** | Yes/No | When **Yes**, the board uses the full view width and columns scale proportionally. Default: **No**. |
 | **Allow creating new records from board** | Yes/No | When **No**, the add (+) button on each column header is hidden and new records cannot be created from the board. Default: **Yes**. |
 | **Notification Position** | Enum | Position where toast messages (e.g. save success/failure) appear. Options: **Top**, **Top Start**, **Top End**, **Bottom**, **Bottom Start**, **Bottom End**. Default: **Top End** (top-right). |
 
@@ -65,12 +71,35 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 - If the selected **View Type** is linked to a **business process flow**, the record will **not** move directly to another column. Instead, a popup will open, requiring a **manual stage update**.
 
 
-### Example - Business Process Flow Step Order (JSON string)
-   ```sh
+### Examples – JSON configuration options
+
+**Business Process Flow Step Order**
+   ```json
    [{"id":"Develop","order":2},{"id":"Propose","order":1},{"id":"Close","order":0}]
    ```
-You can set the JSON data in the input using the old interface 
-##### (View > Custom Controls > Kanban View Control > Business Process Flow Steps > Edit > Bind to a static value > Paste JSON)
+   You can set the JSON in the control config: *View > Custom Controls > Kanban View Control > Business Process Flow Step Order > Edit > Bind to a static value > Paste JSON*.
+
+**Hidden fields on card** (field logical names not shown on cards)
+   ```json
+   ["estimatedvalue","createdon","ownerid"]
+   ```
+   Or comma-separated: `estimatedvalue, createdon, ownerid`
+
+**Boolean field highlights** (colored top border when boolean is true; first match wins)
+   ```json
+   [{"logicalName":"ispriority","color":"#e81123"},{"logicalName":"isblocked","color":"#ffaa00"}]
+   ```
+   The boolean fields must be included in the dataset columns. Supported color formats: hex (e.g. `#ff0000`), rgb, or CSS color names.
+
+**Field widths on card** (percentage width per field; 100 = full width, 50 = half)
+   ```json
+   [{"logicalName":"description","width":100},{"logicalName":"estimatedvalue","width":50}]
+   ```
+
+**HTML fields on card** (render field content as HTML)
+   ```json
+   ["description","customhtmlfield"]
+   ```
 
 ## 📦 Deployment
 

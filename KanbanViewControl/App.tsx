@@ -129,8 +129,15 @@ const App = ({ context, notificationPosition }: IProps) => {
         const name = index === 0 ? "title" : col.name;
 
         const columnValue = getColumnValue(record, col);
-        return { ...acc, [name]: columnValue };
-      }, {});
+        let result: Record<string, unknown> = { ...acc, [name]: columnValue };
+        if (col.name === "estimatedvalue") {
+          const rawValue = record.getValue(col.name);
+          if (rawValue !== null && rawValue !== undefined) {
+            result = { ...result, estimatedvalueRaw: rawValue };
+          }
+        }
+        return result;
+      }, {} as Record<string, unknown>);
 
       return { id, ...columnValues };
     })

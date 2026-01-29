@@ -49,6 +49,10 @@ const Board = () => {
     return (context.parameters as { hideEmptyColumns?: { raw?: boolean } }).hideEmptyColumns?.raw === true;
   }, [context.parameters]);
 
+  const expandBoardToFullWidth = useMemo(() => {
+    return (context.parameters as { expandBoardToFullWidth?: { raw?: boolean } }).expandBoardToFullWidth?.raw === true;
+  }, [context.parameters]);
+
   const visibleColumns = useMemo(() => {
     if (!columns) return [];
     if (!hideEmptyColumns) return columns;
@@ -65,7 +69,7 @@ const Board = () => {
         !hideViews && <CommandBar />
       }
       <div className='kanban-container'>
-          <div className='columns-wrapper'>
+          <div className={`columns-wrapper${expandBoardToFullWidth ? ' columns-wrapper--full-width' : ''}`}>
             {allowCardMove ? (
               <DragDropContext onDragStart={handleDragStart} onDragEnd={handleCardDrag}>
                 {columnsContent}

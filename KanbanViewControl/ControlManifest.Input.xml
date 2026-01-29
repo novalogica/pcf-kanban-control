@@ -63,6 +63,60 @@
     />
 
     <property 
+      name="hideColumnFieldOnCard" 
+      display-name-key="Hide column field on card" 
+      description-key="When enabled, the field used for column grouping (View By) is not displayed on the card to save space."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="hiddenFieldsOnCard" 
+      display-name-key="Hidden fields on card" 
+      description-key="Field logical names that are loaded but not displayed on cards. JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="htmlFieldsOnCard" 
+      display-name-key="HTML fields on card" 
+      description-key="Field logical names whose content is rendered as HTML (not escaped). JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;])."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="booleanFieldHighlights" 
+      display-name-key="Boolean field highlights" 
+      description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;}]. Cards get a colored top border when the boolean field is true. First matching option wins."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="fieldWidthsOnCard" 
+      display-name-key="Field widths on card" 
+      description-key="JSON array to set percentage width of fields on the card (e.g. [{&quot;logicalName&quot;:&quot;description&quot;,&quot;width&quot;:100},{&quot;logicalName&quot;:&quot;estimatedvalue&quot;,&quot;width&quot;:50}]). Width 100 = full width, 50 = half, etc. Fields not listed use default width."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="expandBoardToFullWidth" 
+      display-name-key="Expand board to full width" 
+      description-key="When enabled, the board uses the full view width and columns scale proportionally."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="allowCreateNew" 
       display-name-key="Allow creating new records from board" 
       description-key="When disabled, the add button on each column is hidden and new records cannot be created from the board."

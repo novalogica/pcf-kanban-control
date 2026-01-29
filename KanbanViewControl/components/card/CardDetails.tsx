@@ -9,10 +9,17 @@ import { MultiType } from "../../interfaces/card.type";
 
 interface ICardInfoProps {
   id: UniqueIdentifier,
-  info: CardInfo
+  fieldName?: string,
+  info: CardInfo,
+  /** When true, the field value is rendered as HTML (not escaped). */
+  renderAsHtml?: boolean,
+  /** Percentage width of the field on the card (1–100). Applied via flex-basis to work with gap. */
+  widthPercent?: number,
 }
 
-const CardDetails = ({ info }: ICardInfoProps) => {
+const CARD_INFO_GAP_PX = 16;
+
+const CardDetails = ({ info, renderAsHtml = false, widthPercent }: ICardInfoProps) => {
   const { context, openFormWithLoading } = useContext(BoardContext);
 
   const onLookupClicked = (entityName: string, id: string) => {
@@ -28,14 +35,36 @@ const CardDetails = ({ info }: ICardInfoProps) => {
     }
   }
 
+  const isEmpty = isNullOrEmpty(info.value) || info.value === "Unallocated";
+
+  const flexStyle: React.CSSProperties | undefined = widthPercent != null
+    ? widthPercent >= 100
+      ? { flex: "0 0 100%", minWidth: 0 }
+      : { flex: `0 0 calc(${widthPercent}% - ${CARD_INFO_GAP_PX * (1 - widthPercent / 100)}px)`, minWidth: 0 }
+    : undefined;
+
   return ( 
-    <div className="card-info">
-      <Text className="card-info-label" variant="small">{info.label}</Text>
+    <div className="card-info" style={flexStyle}>
+      {!renderAsHtml && (
+        <Text className="card-info-label" variant="small">{info.label}</Text>
+      )}
       {
         isEntityReference(info.value) ? <Lookup info={info} onOpenLookup={onLookupClicked} />
-          : <Text className="card-text card-info-value" variant="medium">
-              {handleInfoValue(info.value)}
-            </Text>
+          : renderAsHtml
+            ? (
+                <div
+                  className="card-text card-info-value card-info-value--html"
+                  aria-label={info.label}
+                  dangerouslySetInnerHTML={{
+                    __html: isEmpty ? "" : String(info.value ?? ""),
+                  }}
+                />
+              )
+            : (
+                <Text className="card-text card-info-value" variant="medium">
+                  {handleInfoValue(info.value)}
+                </Text>
+              )
       }
     </div>
   );
