@@ -8,21 +8,19 @@ import { isNullOrEmpty } from "../../lib/utils";
 import NoResults from "../container/no-results";
 import { getItemStyle, getListStyle } from "../../lib/card-drag";
 import { BoardContext } from "../../context/board-context";
-import { useNavigation } from "../../hooks/useNavigation";
 
 const Column = ({ column }: { column: ColumnItem }) => {
-  const { context, draggingRef } = useContext(BoardContext);
-  const { openForm } = useNavigation(context);
+  const { context, draggingRef, openFormWithLoading } = useContext(BoardContext);
   const allowCardMove = ((context.parameters as unknown) as { allowCardMove?: { raw?: boolean } }).allowCardMove?.raw !== false;
   const hasCards = !isNullOrEmpty(column.cards) && column.cards!.length > 0;
 
   const handleCardWrapperClick = useCallback(
     (itemId: string | number) => () => {
       if (!draggingRef.current) {
-        openForm(context.parameters.dataset.getTargetEntityType(), String(itemId));
+        openFormWithLoading(context.parameters.dataset.getTargetEntityType(), String(itemId));
       }
     },
-    [context.parameters.dataset, draggingRef, openForm]
+    [context.parameters.dataset, draggingRef, openFormWithLoading]
   );
 
   if (!allowCardMove) {
@@ -70,7 +68,7 @@ const Column = ({ column }: { column: ColumnItem }) => {
                           onKeyDown={(e) => {
                             if ((e.key === "Enter" || e.key === " ") && !draggingRef.current) {
                               e.preventDefault();
-                              openForm(context.parameters.dataset.getTargetEntityType(), String(item.id));
+                              openFormWithLoading(context.parameters.dataset.getTargetEntityType(), String(item.id));
                             }
                           }}
                         >

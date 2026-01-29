@@ -5,7 +5,6 @@ import CardBody from "./CardBody";
 import { CardInfo, CardItem } from "../../interfaces";
 import { CardDetails, CardDetailsList } from "./CardDetails";
 import { useMemo, useCallback } from "react";
-import { useNavigation } from "../../hooks/useNavigation";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
 
@@ -15,12 +14,11 @@ interface IProps {
 }
 
 const Card = ({ item, draggable = true }: IProps) => {
-  const { context } = useContext(BoardContext);
-  const { openForm } = useNavigation(context);
+  const { context, openFormWithLoading } = useContext(BoardContext);
 
   const onCardClick = useCallback(() => {
-    openForm(context.parameters.dataset.getTargetEntityType(), item.id.toString());
-  }, [context, item.id, openForm]);
+    openFormWithLoading(context.parameters.dataset.getTargetEntityType(), item.id.toString());
+  }, [context, item.id, openFormWithLoading]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

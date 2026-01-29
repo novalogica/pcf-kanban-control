@@ -14,6 +14,10 @@ interface IBoardContext {
   selectedEntity: string | undefined,
   /** Ref: true while dragging; used to avoid opening form on card click after a drag */
   draggingRef: React.MutableRefObject<boolean>,
+  /** true while an entity form is being opened (popup); blocks further clicks and shows loading */
+  isOpeningEntity: boolean,
+  /** Opens entity form with loading state; prevents multiple opens */
+  openFormWithLoading: (entityName: string, id?: string) => Promise<void>,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

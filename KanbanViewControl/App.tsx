@@ -1,14 +1,16 @@
 import * as React from 'react';
 import { IInputs } from './generated/ManifestTypes';
 import { Board } from './components';
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 import { BoardContext } from './context/board-context';
 import { ColumnItem, ViewItem, ViewEntity } from './interfaces';
 import Loading from './components/container/loading';
 import { Toaster } from 'react-hot-toast';
 import { useDataverse } from './hooks/useDataverse';
+import { useNavigation } from './hooks/useNavigation';
 import { getColumnValue } from './lib/utils';
 import { unlocatedColumn } from './lib/constants';
+import { Spinner, SpinnerSize } from '@fluentui/react';
 
 interface IProps {
   context: ComponentFramework.Context<IInputs>,
@@ -22,9 +24,24 @@ const App = ({ context, notificationPosition }: IProps) => {
   const [views, setViews] = useState<ViewItem[]>([]);
   const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
+  const [isOpeningEntity, setIsOpeningEntity] = useState(false);
   const draggingRef = useRef(false);
+  const openingRef = useRef(false);
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context);
+  const { openForm } = useNavigation(context);
   const { dataset } = context.parameters;
+
+  const openFormWithLoading = useCallback(async (entityName: string, id?: string) => {
+    if (openingRef.current) return;
+    openingRef.current = true;
+    setIsOpeningEntity(true);
+    try {
+      await openForm(entityName, id);
+    } finally {
+      openingRef.current = false;
+      setIsOpeningEntity(false);
+    }
+  }, [openForm]);
 
   const handleViewChange = () => {
     if (activeView === undefined || activeView.columns === undefined)
@@ -126,16 +143,23 @@ const App = ({ context, notificationPosition }: IProps) => {
   }
 
   return (
-    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity, draggingRef }}>
+    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity, draggingRef, isOpeningEntity, openFormWithLoading }}>
+      <div className="app-content-wrapper">
         <Board />
-        <Toaster 
-          position={notificationPosition} 
-          reverseOrder={false} 
-          toastOptions={{
-            style: { borderRadius: 4, padding: 16 },
-            duration: 5000
-          }} 
-        />
+        {isOpeningEntity && (
+          <div className="opening-entity-overlay" aria-busy="true" aria-live="polite">
+            <Spinner label="Datensatz wird geöffnet..." size={SpinnerSize.large} />
+          </div>
+        )}
+      </div>
+      <Toaster 
+        position={notificationPosition} 
+        reverseOrder={false} 
+        toastOptions={{
+          style: { borderRadius: 4, padding: 16 },
+          duration: 5000
+        }} 
+      />
     </BoardContext.Provider>
   )
 }

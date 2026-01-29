@@ -278,6 +278,24 @@ body {
   height: 400px;
 }
 
+.app-content-wrapper {
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
+/* No z-index so host popup and backdrop render on top and cover the indicator. */
+.opening-entity-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.75);
+  pointer-events: auto;
+}
+
 .personaContainer:hover{
   text-decoration: underline;
 }

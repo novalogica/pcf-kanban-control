@@ -3,7 +3,6 @@ import { CardInfo, UniqueIdentifier } from "../../interfaces";
 import { Text } from "@fluentui/react/lib/Text";
 import { isEntityReference, isNullOrEmpty } from "../../lib/utils";
 import { Lookup } from "../lookup/Lookup";
-import { useNavigation } from "../../hooks/useNavigation";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
 import { MultiType } from "../../interfaces/card.type";
@@ -14,12 +13,11 @@ interface ICardInfoProps {
 }
 
 const CardDetails = ({ info }: ICardInfoProps) => {
-  const { context } = useContext(BoardContext);
-  const { openForm } = useNavigation(context);
+  const { context, openFormWithLoading } = useContext(BoardContext);
 
   const onLookupClicked = (entityName: string, id: string) => {
-    openForm(entityName, id)
-  }
+    openFormWithLoading(entityName, id);
+  };
 
   const handleInfoValue = (value: MultiType) => {
     switch(typeof value) {
