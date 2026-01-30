@@ -2,6 +2,11 @@ import { createContext } from "react";
 import { ColumnItem, ViewEntity, ViewItem } from "../interfaces";
 import { IInputs } from "../generated/ManifestTypes";
 
+export interface ConfigError {
+  property: string;
+  message: string;
+}
+
 interface IBoardContext {
   context: ComponentFramework.Context<IInputs>,
   activeView: ViewItem | undefined,
@@ -18,6 +23,10 @@ interface IBoardContext {
   isOpeningEntity: boolean,
   /** Opens entity form with loading state; prevents multiple opens */
   openFormWithLoading: (entityName: string, id?: string) => Promise<void>,
+  /** Gemeldete JSON-/Konfigurationsvalidierungsfehler (Property-Name + Meldung) */
+  configErrors: ConfigError[],
+  /** Meldet einen Konfigurationsfehler (z. B. ungültiges JSON); wird nur einmal pro Property/Meldung gespeichert */
+  reportConfigError: (property: string, message: string) => void,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

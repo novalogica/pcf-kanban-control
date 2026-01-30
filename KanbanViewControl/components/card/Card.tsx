@@ -30,7 +30,7 @@ function isBooleanTruthy(value: unknown): boolean {
 }
 
 const Card = ({ item, draggable = true }: IProps) => {
-  const { context, activeView, openFormWithLoading } = useContext(BoardContext);
+  const { context, activeView, openFormWithLoading, reportConfigError } = useContext(BoardContext);
 
   const onCardClick = useCallback(() => {
     openFormWithLoading(context.parameters.dataset.getTargetEntityType(), item.id.toString());
@@ -60,10 +60,13 @@ const Card = ({ item, draggable = true }: IProps) => {
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch {
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("hiddenFieldsOnCard", e instanceof Error ? e.message : String(e));
+      }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters.hiddenFieldsOnCard]);
+  }, [context.parameters.hiddenFieldsOnCard, reportConfigError]);
 
   const htmlFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { htmlFieldsOnCard?: { raw?: string } }).htmlFieldsOnCard?.raw?.trim();
@@ -75,10 +78,31 @@ const Card = ({ item, draggable = true }: IProps) => {
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch {
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("htmlFieldsOnCard", e instanceof Error ? e.message : String(e));
+      }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters]);
+  }, [context.parameters, reportConfigError]);
+
+  const hideLabelForFieldsOnCardSet = useMemo(() => {
+    const raw = (context.parameters as { hideLabelForFieldsOnCard?: { raw?: string } }).hideLabelForFieldsOnCard?.raw?.trim();
+    if (!raw) return new Set<string>();
+    try {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[")) {
+        const arr = JSON.parse(trimmed) as string[];
+        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("hideLabelForFieldsOnCard", e instanceof Error ? e.message : String(e));
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+  }, [context.parameters, reportConfigError]);
 
   const booleanFieldHighlights = useMemo((): BooleanFieldHighlightConfig[] => {
     const raw = (context.parameters as { booleanFieldHighlights?: { raw?: string } }).booleanFieldHighlights?.raw?.trim();
@@ -93,10 +117,11 @@ const Card = ({ item, draggable = true }: IProps) => {
           color: String(e.color).trim(),
         }))
         .filter((e) => e.logicalName && e.color);
-    } catch {
+    } catch (e) {
+      reportConfigError?.("booleanFieldHighlights", e instanceof Error ? e.message : String(e));
       return [];
     }
-  }, [context.parameters]);
+  }, [context.parameters, reportConfigError]);
 
   const fieldWidthsOnCardMap = useMemo((): Map<string, number> => {
     const raw = (context.parameters as { fieldWidthsOnCard?: { raw?: string } }).fieldWidthsOnCard?.raw?.trim();
@@ -113,10 +138,11 @@ const Card = ({ item, draggable = true }: IProps) => {
         }
       }
       return map;
-    } catch {
+    } catch (e) {
+      reportConfigError?.("fieldWidthsOnCard", e instanceof Error ? e.message : String(e));
       return new Map();
     }
-  }, [context.parameters]);
+  }, [context.parameters, reportConfigError]);
 
   const highlightColor = useMemo(() => {
     for (const { logicalName, color } of booleanFieldHighlights) {
@@ -164,6 +190,7 @@ const Card = ({ item, draggable = true }: IProps) => {
               fieldName={info[0] as string}
               info={info[1] as CardInfo}
               renderAsHtml={htmlFieldsOnCardSet.has(info[0] as string)}
+              hideLabel={hideLabelForFieldsOnCardSet.has(info[0] as string)}
               widthPercent={fieldWidthsOnCardMap.get(info[0] as string)}
             />
           ))}

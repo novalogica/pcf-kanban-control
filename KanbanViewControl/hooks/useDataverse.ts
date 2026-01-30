@@ -4,7 +4,9 @@ import { isNullOrEmpty, orderStages } from '../lib/utils';
 import { ViewEntity } from '../interfaces';
 import { XrmService } from './service';
 
-export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
+export type ConfigErrorReporter = (property: string, message: string) => void;
+
+export const useDataverse = (context: ComponentFramework.Context<IInputs>, onConfigError?: ConfigErrorReporter) => {
     const { parameters, webAPI } = context;
     const { dataset } = parameters;
     const entityName = useMemo(() => parameters.dataset.getTargetEntityType(), [])
@@ -45,7 +47,15 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
             )
 
             const filter = context.parameters.filteredBusinessProcessFlows?.raw ?? "";
-            const filterOutBusinessProcess = isNullOrEmpty(filter) ? undefined : JSON.parse(filter);
+            let filterOutBusinessProcess: string[] | undefined;
+            if (!isNullOrEmpty(filter)) {
+                try {
+                    filterOutBusinessProcess = JSON.parse(filter);
+                } catch (e) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    onConfigError?.("filteredBusinessProcessFlows", msg);
+                }
+            }
 
             const stepOrderConfigRaw = context.parameters.businessProcessFlowStepOrder?.raw ?? "";
             let stepOrderConfig: { id: string; order: number }[] | undefined;
@@ -54,7 +64,8 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>) => {
                 try {
                     stepOrderConfig = JSON.parse(stepOrderConfigRaw);
                 } catch (e) {
-                    console.log("Failed to parse businessProcessFlowStepOrder JSON configuration.", e);
+                    const msg = e instanceof Error ? e.message : String(e);
+                    onConfigError?.("businessProcessFlowStepOrder", msg);
                 }
             }
 

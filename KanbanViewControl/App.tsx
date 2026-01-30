@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { IInputs } from './generated/ManifestTypes';
 import { Board } from './components';
-import { useMemo, useState, useRef, useCallback } from 'react';
-import { BoardContext } from './context/board-context';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import { BoardContext, ConfigError } from './context/board-context';
 import { ColumnItem, ViewItem, ViewEntity } from './interfaces';
 import Loading from './components/container/loading';
 import { Toaster } from 'react-hot-toast';
@@ -25,9 +25,31 @@ const App = ({ context, notificationPosition }: IProps) => {
   const [selectedEntity, setSelectedEntity] = useState<string | undefined>();
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
   const [isOpeningEntity, setIsOpeningEntity] = useState(false);
+  const [configErrors, setConfigErrors] = useState<ConfigError[]>([]);
+  const reportedConfigErrorsRef = useRef<Set<string>>(new Set());
   const draggingRef = useRef(false);
   const openingRef = useRef(false);
-  const { getOptionSets, getBusinessProcessFlows } = useDataverse(context);
+
+  const reportConfigError = useCallback((property: string, message: string) => {
+    const key = `${property}\n${message}`;
+    if (reportedConfigErrorsRef.current.has(key)) return;
+    reportedConfigErrorsRef.current.add(key);
+    setConfigErrors((prev) => [...prev, { property, message }]);
+  }, []);
+
+  useEffect(() => {
+    reportedConfigErrorsRef.current.clear();
+    setConfigErrors([]);
+  }, [
+    context.parameters.filteredBusinessProcessFlows?.raw,
+    context.parameters.businessProcessFlowStepOrder?.raw,
+    (context.parameters as { hiddenFieldsOnCard?: { raw?: string } }).hiddenFieldsOnCard?.raw,
+    (context.parameters as { htmlFieldsOnCard?: { raw?: string } }).htmlFieldsOnCard?.raw,
+    (context.parameters as { booleanFieldHighlights?: { raw?: string } }).booleanFieldHighlights?.raw,
+    (context.parameters as { fieldWidthsOnCard?: { raw?: string } }).fieldWidthsOnCard?.raw,
+  ]);
+
+  const { getOptionSets, getBusinessProcessFlows } = useDataverse(context, reportConfigError);
   const { openForm } = useNavigation(context);
   const { dataset } = context.parameters;
 
@@ -127,6 +149,11 @@ const App = ({ context, notificationPosition }: IProps) => {
         }
 
         const name = index === 0 ? "title" : col.name;
+        const hasDisplayName = col.displayName != null && String(col.displayName).trim() !== "";
+
+        if (!hasDisplayName) {
+          return { ...acc };
+        }
 
         const columnValue = getColumnValue(record, col);
         let result: Record<string, unknown> = { ...acc, [name]: columnValue };
@@ -150,8 +177,20 @@ const App = ({ context, notificationPosition }: IProps) => {
   }
 
   return (
-    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity, draggingRef, isOpeningEntity, openFormWithLoading }}>
+    <BoardContext.Provider value={{ context, views, activeView, setActiveView, columns, setColumns, activeViewEntity, setActiveViewEntity, selectedEntity, draggingRef, isOpeningEntity, openFormWithLoading, configErrors, reportConfigError }}>
       <div className="app-content-wrapper">
+        {configErrors.length > 0 && (
+          <div className="config-errors-banner" role="alert">
+            <strong>Konfigurationsfehler:</strong>
+            <ul>
+              {configErrors.map((err, i) => (
+                <li key={i}>
+                  <strong>{err.property}</strong>: {err.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <Board />
         {isOpeningEntity && (
           <div className="opening-entity-overlay" aria-busy="true" aria-live="polite">

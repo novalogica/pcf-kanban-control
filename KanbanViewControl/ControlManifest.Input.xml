@@ -90,6 +90,15 @@
     />
 
     <property 
+      name="hideLabelForFieldsOnCard" 
+      display-name-key="Hide label for fields on card" 
+      description-key="Field logical names for which the label is hidden on the card. JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="booleanFieldHighlights" 
       display-name-key="Boolean field highlights" 
       description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;}]. Cards get a colored top border when the boolean field is true. First matching option wins."
