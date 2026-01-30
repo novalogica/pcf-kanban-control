@@ -218,7 +218,7 @@ const App = ({ context, notificationPosition }: IProps) => {
       <div className="app-content-wrapper">
         {configErrors.length > 0 && (
           <div className="config-errors-banner" role="alert">
-            <strong>Konfigurationsfehler:</strong>
+            <strong>Configuration errors:</strong>
             <ul>
               {configErrors.map((err, i) => (
                 <li key={i}>
@@ -231,7 +231,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         <Board />
         {isOpeningEntity && (
           <div className="opening-entity-overlay" aria-busy="true" aria-live="polite">
-            <Spinner label="Datensatz wird geöffnet..." size={SpinnerSize.large} />
+            <Spinner label="Opening record..." size={SpinnerSize.large} />
           </div>
         )}
       </div>

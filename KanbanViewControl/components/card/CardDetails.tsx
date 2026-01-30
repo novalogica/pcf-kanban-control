@@ -48,8 +48,8 @@ const CardDetails = ({ info, renderAsHtml = false, hideLabel = false, widthPerce
   useEffect(() => {
     if (!renderAsHtml || !htmlHostRef.current) return;
     const host = htmlHostRef.current;
-    // Mit mode: "open" liefert host.shadowRoot beim erneuten Effect-Lauf (z. B. nach Popup-Öffnung)
-    // den bestehenden Shadow zurück – sonst würde attachShadow erneut aufgerufen und den Fehler auslösen.
+    // With mode: "open", host.shadowRoot returns the existing shadow on re-run (e.g. after popup open);
+    // otherwise attachShadow would be called again and trigger an error.
     let shadow = host.shadowRoot;
     if (!shadow) {
       shadow = host.attachShadow({ mode: "open" });

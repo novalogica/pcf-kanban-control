@@ -23,9 +23,9 @@ interface IBoardContext {
   isOpeningEntity: boolean,
   /** Opens entity form with loading state; prevents multiple opens */
   openFormWithLoading: (entityName: string, id?: string) => Promise<void>,
-  /** Gemeldete JSON-/Konfigurationsvalidierungsfehler (Property-Name + Meldung) */
+  /** Reported JSON/configuration validation errors (property name + message) */
   configErrors: ConfigError[],
-  /** Meldet einen Konfigurationsfehler (z. B. ungültiges JSON); wird nur einmal pro Property/Meldung gespeichert */
+  /** Reports a configuration error (e.g. invalid JSON); stored only once per property/message */
   reportConfigError: (property: string, message: string) => void,
 }
 
