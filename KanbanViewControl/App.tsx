@@ -70,6 +70,7 @@ const App = ({ context, notificationPosition }: IProps) => {
   const [configErrors, setConfigErrors] = useState<ConfigError[]>([]);
   const [quickFilterValues, setQuickFilterValuesState] = useState<Record<string, string | null>>({});
   const [quickFilterOptions, setQuickFilterOptions] = useState<Record<string, IDropdownOption[]>>({});
+  const [searchKeyword, setSearchKeyword] = useState("");
   const reportedConfigErrorsRef = useRef<Set<string>>(new Set());
   const draggingRef = useRef(false);
   const openingRef = useRef(false);
@@ -157,7 +158,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     }
     setQuickFilterOptions(optionsByField);
 
-    const filteredCards = allCards.filter((card: any) => {
+    let filteredCards = allCards.filter((card: any) => {
       for (const cfg of quickFilterFieldsConfig) {
         const selected = quickFilterValues[cfg.key];
         if (selected == null || selected === "") continue;
@@ -170,6 +171,19 @@ const App = ({ context, notificationPosition }: IProps) => {
       }
       return true;
     });
+
+    const searchTrimmed = searchKeyword.trim().toLowerCase();
+    if (searchTrimmed) {
+      filteredCards = filteredCards.filter((card: any) => {
+        const parts: string[] = [];
+        for (const key of Object.keys(card)) {
+          if (key === "id" || key === "column") continue;
+          parts.push(getQuickFilterComparableValue(card[key]));
+        }
+        const searchableText = parts.join(" ").toLowerCase();
+        return searchableText.includes(searchTrimmed);
+      });
+    }
 
     let activeColumns = activeView?.columns ?? [];
     if (
@@ -192,6 +206,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     quickFilterFieldsParsed,
     quickFilterFieldsConfig,
     quickFilterValues,
+    searchKeyword,
     dataset.records,
   ]);
 
@@ -330,6 +345,8 @@ const App = ({ context, notificationPosition }: IProps) => {
         quickFilterValues,
         setQuickFilterValue,
         quickFilterOptions,
+        searchKeyword,
+        setSearchKeyword,
       }}
     >
       <div className="app-content-wrapper">

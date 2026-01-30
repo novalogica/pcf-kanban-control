@@ -12,13 +12,13 @@ const QuickFilters = () => {
     quickFilterValues,
     setQuickFilterValue,
     quickFilterOptions,
+    searchKeyword,
+    setSearchKeyword,
   } = useContext(BoardContext);
 
-  if (!quickFilterFieldsConfig?.length) return null;
-
   return (
-    <div className="kanban-quick-filters" role="group" aria-label="Schnellfilter">
-      {quickFilterFieldsConfig.map((cfg) => {
+    <div className="kanban-quick-filters" role="group" aria-label="Schnellfilter und Suche">
+      {quickFilterFieldsConfig?.map((cfg) => {
         const options = quickFilterOptions[cfg.key] ?? [
           { key: QUICK_FILTER_ALL_KEY, text: "(Alle)" },
         ];
@@ -44,6 +44,16 @@ const QuickFilters = () => {
           />
         );
       })}
+      <div className="kanban-quick-filters-search">
+        <input
+          type="search"
+          className="kanban-quick-filters-search-input"
+          placeholder="In allen Feldern suchen…"
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          aria-label="Suche in allen Kartenfeldern"
+        />
+      </div>
     </div>
   );
 };

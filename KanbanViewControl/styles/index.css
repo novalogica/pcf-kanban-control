@@ -326,6 +326,38 @@
   text-overflow: clip;
 }
 
+.kanban-quick-filters-search {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-end;
+}
+
+.kanban-quick-filters-search-input {
+  min-width: 220px;
+  max-width: 320px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #323130;
+  background-color: #fff;
+  outline: none;
+}
+
+.kanban-quick-filters-search-input::placeholder {
+  color: #605e5c;
+}
+
+.kanban-quick-filters-search-input:hover {
+  border-color: #c8c6c4;
+}
+
+.kanban-quick-filters-search-input:focus {
+  border-color: #0078d4;
+  box-shadow: 0 0 0 1px #0078d4;
+}
+
 /** Command Bar */
 .kanban-commandar-bar {
   width: 100%;

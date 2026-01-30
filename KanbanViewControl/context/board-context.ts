@@ -41,6 +41,10 @@ interface IBoardContext {
   setQuickFilterValue: (field: string, value: string | null) => void,
   /** Quick filter: options per field (distinct values from data) */
   quickFilterOptions: Record<string, IDropdownOption[]>,
+  /** Eigene Volltext-Suche: Suchbegriff für alle Kartenfelder */
+  searchKeyword: string,
+  /** Suchbegriff setzen; leeres string = keine Suche */
+  setSearchKeyword: (value: string) => void,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);
