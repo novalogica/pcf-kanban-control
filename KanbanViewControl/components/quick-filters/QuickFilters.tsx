@@ -1,10 +1,11 @@
 import * as React from "react";
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { BoardContext } from "../../context/board-context";
 import KanbanDropdown from "../dropdown/Dropdown";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 
 const QUICK_FILTER_ALL_KEY = "__all__";
+const SEARCH_DEBOUNCE_MS = 250;
 
 const QuickFilters = () => {
   const {
@@ -15,6 +16,19 @@ const QuickFilters = () => {
     searchKeyword,
     setSearchKeyword,
   } = useContext(BoardContext);
+
+  const [inputValue, setInputValue] = useState(searchKeyword);
+
+  useEffect(() => {
+    setInputValue(searchKeyword);
+  }, [searchKeyword]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchKeyword(inputValue);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [inputValue, setSearchKeyword]);
 
   return (
     <div className="kanban-quick-filters" role="group" aria-label="Schnellfilter und Suche">
@@ -49,8 +63,8 @@ const QuickFilters = () => {
           type="search"
           className="kanban-quick-filters-search-input"
           placeholder="In allen Feldern suchen…"
-          value={searchKeyword}
-          onChange={(e) => setSearchKeyword(e.target.value)}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
           aria-label="Suche in allen Kartenfeldern"
         />
       </div>
