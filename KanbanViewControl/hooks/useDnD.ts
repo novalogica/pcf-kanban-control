@@ -4,15 +4,13 @@ import { DropResult } from "@hello-pangea/dnd";
 import { BoardContext } from '../context/board-context';
 import { useContext } from 'react';
 import toast from "react-hot-toast";
-import { useNavigation } from "./useNavigation";
 import { moveCard } from "../lib/card-drag";
 
 export type ColumnId = ColumnItem[][number]["id"];
 
 export const useDnD = (columns: ColumnItem[]) => {
-  const { context, activeView, setColumns } = useContext(BoardContext);
+  const { context, activeView, setColumns, openFormWithLoading } = useContext(BoardContext);
   const { updateRecord } = useDataverse(context);
-  const { openForm } = useNavigation(context);
   
   const onDragEnd = async (result: DropResult, record: any) => {
     if (result.destination == null) {
@@ -21,7 +19,7 @@ export const useDnD = (columns: ColumnItem[]) => {
 
     if(activeView?.type === "BPF"){
       try {
-        await openForm(record.entityName, record.id)
+        await openFormWithLoading(record.entityName, record.id)
       } catch (e: any) {
         toast.error(e.message);
       } finally {
@@ -36,6 +34,13 @@ export const useDnD = (columns: ColumnItem[]) => {
     const sourceColumn = columns.find(c => c.id == result.source.droppableId);
     const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
     const sourceCard = sourceColumn?.cards?.find(i => i.id === itemId);
+
+    // Do not save when the card was only moved within the same column
+    if (sourceColumn?.id === destinationColumn?.id) {
+      movedCards = await moveCard(columns, sourceCard, result);
+      setColumns(movedCards ?? []);
+      return movedCards;
+    }
 
     movedCards = await moveCard(columns, sourceCard, result);
     setColumns(movedCards ?? [])

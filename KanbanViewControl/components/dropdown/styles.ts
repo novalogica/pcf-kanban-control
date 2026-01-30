@@ -7,7 +7,7 @@ export const dropdownStyles: Partial<IDropdownStyles> = {
     justifyContent: 'start'
   },
   dropdown: { 
-      width: 200,
+      width: 'auto',
       textAlign: 'left',
       border: 'none'
   },

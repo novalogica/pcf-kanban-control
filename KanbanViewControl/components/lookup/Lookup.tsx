@@ -7,11 +7,13 @@ import { CardInfo } from "../../interfaces";
 import { getColorFromInitials } from "../../lib/utils";
 
 interface IProps {
-  info: CardInfo
-  onOpenLookup: (entityName: string, id: string) => void
+  info: CardInfo;
+  onOpenLookup: (entityName: string, id: string) => void;
+  /** When true, render as Persona (image/initials); otherwise as simple link. */
+  displayAsPersona?: boolean;
 }
 
-const colors = [
+const colors: PersonaInitialsColor[] = [
   PersonaInitialsColor.lightBlue,
   PersonaInitialsColor.blue,
   PersonaInitialsColor.teal,
@@ -28,29 +30,41 @@ const colors = [
   PersonaInitialsColor.warmGray,
   PersonaInitialsColor.coolGray,
   PersonaInitialsColor.cyan,
-]
+];
 
 const personaContainer: React.CSSProperties = {
-    display: 'flex', 
-    flexDirection: 'column', 
-    alignItems: 'start', 
-    fontSize: '12px', 
-    color: '#115ea3',
-    cursor: 'pointer',
-    gap: 4,
-}
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "start",
+  fontSize: "12px",
+  color: "#115ea3",
+  cursor: "pointer",
+  gap: 4,
+};
 
-export const Lookup = ({ onOpenLookup, info }: IProps) => {
-  const { etn, id, name } = info.value as ComponentFramework.EntityReference
+export const Lookup = ({ onOpenLookup, info, displayAsPersona = false }: IProps) => {
+  const { etn, id, name } = info.value as ComponentFramework.EntityReference;
+  const initials = useMemo(() => getInitials(name, false), [name]);
 
-  const initials = useMemo(() => getInitials(name, false), [name])
+  const handleClick = () => {
+    etn && onOpenLookup(etn, id.guid);
+  };
 
-  const onPersonaClicked = () => {
-    etn && onOpenLookup(etn, id.guid)
-  }
-
-  return (
-    <div style={personaContainer} className="personaContainer" onClick={onPersonaClicked}>
+  if (displayAsPersona) {
+    return (
+      <div
+        style={personaContainer}
+        className="personaContainer personaContainer--with-coin"
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
         <Persona
           className="user-badge"
           text={name}
@@ -63,6 +77,17 @@ export const Lookup = ({ onOpenLookup, info }: IProps) => {
             </Text>
           )}
         />
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="card-text card-info-value card-info-value--link"
+      onClick={handleClick}
+    >
+      {name}
+    </button>
   );
 };
