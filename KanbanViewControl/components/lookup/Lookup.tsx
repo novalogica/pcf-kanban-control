@@ -7,11 +7,11 @@ import { CardInfo } from "../../interfaces";
 import { getColorFromInitials } from "../../lib/utils";
 
 interface IProps {
-  info: CardInfo
-  onOpenLookup: (entityName: string, id: string) => void
+  info: CardInfo;
+  onOpenLookup: (entityName: string, id: string) => void;
+  /** When true, render as Persona (image/initials); otherwise as simple link. */
+  displayAsPersona?: boolean;
 }
-
-const OWNER_LABELS = ["owner", "besitzer"]
 
 const colors: PersonaInitialsColor[] = [
   PersonaInitialsColor.lightBlue,
@@ -30,45 +30,64 @@ const colors: PersonaInitialsColor[] = [
   PersonaInitialsColor.warmGray,
   PersonaInitialsColor.coolGray,
   PersonaInitialsColor.cyan,
-]
+];
 
 const personaContainer: React.CSSProperties = {
-    display: 'flex', 
-    flexDirection: 'column', 
-    alignItems: 'start', 
-    fontSize: '12px', 
-    color: '#115ea3',
-    cursor: 'pointer',
-    gap: 4,
-}
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "start",
+  fontSize: "12px",
+  color: "#115ea3",
+  cursor: "pointer",
+  gap: 4,
+};
 
-const isOwnerField = (label: string) =>
-  OWNER_LABELS.includes(label?.trim().toLowerCase() ?? "")
+export const Lookup = ({ onOpenLookup, info, displayAsPersona = false }: IProps) => {
+  const { etn, id, name } = info.value as ComponentFramework.EntityReference;
+  const initials = useMemo(() => getInitials(name, false), [name]);
 
-export const Lookup = ({ onOpenLookup, info }: IProps) => {
-  const { etn, id, name } = info.value as ComponentFramework.EntityReference
-  const showCoin = useMemo(() => isOwnerField(info.label), [info.label])
-  const initials = useMemo(() => getInitials(name, false), [name])
+  const handleClick = () => {
+    etn && onOpenLookup(etn, id.guid);
+  };
 
-  const onPersonaClicked = () => {
-    etn && onOpenLookup(etn, id.guid)
-  }
-
-  return (
-    <div style={personaContainer} className={`personaContainer ${showCoin ? "personaContainer--owner" : "personaContainer--no-coin"}`} onClick={onPersonaClicked}>
+  if (displayAsPersona) {
+    return (
+      <div
+        style={personaContainer}
+        className="personaContainer personaContainer--with-coin"
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
         <Persona
           className="user-badge"
           text={name}
-          coinSize={showCoin ? 22 : undefined}
-          imageInitials={showCoin ? initials : undefined}
-          initialsColor={showCoin ? getColorFromInitials(initials, colors) : undefined}
-          onRenderCoin={showCoin ? undefined : () => null}
+          coinSize={22}
+          imageInitials={initials}
+          initialsColor={getColorFromInitials(initials, colors)}
           onRenderPrimaryText={(props?: IPersonaProps) => (
             <Text className="lookup-persona-name" variant="medium" nowrap>
               {props?.text}
             </Text>
           )}
         />
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="card-text card-info-value card-info-value--link"
+      onClick={handleClick}
+    >
+      {name}
+    </button>
   );
 };

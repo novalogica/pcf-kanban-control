@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useContext, useMemo } from "react";
-import { CommandBar, Column } from "..";
+import { CommandBar, Column, QuickFilters } from "..";
 import {
   DragDropContext,
   DropResult,
@@ -77,6 +77,7 @@ const Board = () => {
 
   return (
     <div className="main-container">
+      <QuickFilters />
       {!hideViews && <CommandBar />}
       <div className="kanban-container">
         <div className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}`}>

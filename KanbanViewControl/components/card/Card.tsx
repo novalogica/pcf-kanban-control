@@ -8,9 +8,13 @@ import { useMemo, useCallback } from "react";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
 
+export type HighlightType = "left" | "right" | "cornerTopRight" | "cornerBottomRight";
+
 export interface BooleanFieldHighlightConfig {
   logicalName: string;
   color: string;
+  /** Highlight type: left border, right border, or diagonal corner (top-right / bottom-right). Default "left". First match per type wins. */
+  type?: HighlightType;
 }
 
 export interface FieldWidthConfig {
@@ -23,10 +27,19 @@ interface IProps {
   draggable?: boolean;
 }
 
-function isBooleanTruthy(value: unknown): boolean {
-  if (value === true || value === 1) return true;
-  if (typeof value === "string" && /^(1|true|yes|ja)$/i.test(value.trim())) return true;
-  return false;
+/** Treats empty as false, any value as true. Works for any field type (boolean, text, lookup, etc.). */
+function isFieldFilled(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === "string" && value.trim() === "") return false;
+  if (typeof value === "object" && "value" in value) {
+    const v = (value as CardInfo).value;
+    if (v == null) return false;
+    if (typeof v === "string" && v.trim() === "") return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    return true;
+  }
+  if (Array.isArray(value) && value.length === 0) return false;
+  return true;
 }
 
 const Card = ({ item, draggable = true }: IProps) => {
@@ -110,12 +123,18 @@ const Card = ({ item, draggable = true }: IProps) => {
     try {
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return [];
+      const validTypes: HighlightType[] = ["left", "right", "cornerTopRight", "cornerBottomRight"];
       return arr
         .filter((e: unknown) => e && typeof e === "object" && "logicalName" in e && "color" in e)
-        .map((e: { logicalName: string; color: string }) => ({
-          logicalName: String(e.logicalName).trim(),
-          color: String(e.color).trim(),
-        }))
+        .map((e: { logicalName: string; color: string; type?: string }) => {
+          const typeRaw = e.type != null ? String(e.type).trim() : "left";
+          const type = validTypes.includes(typeRaw as HighlightType) ? (typeRaw as HighlightType) : "left";
+          return {
+            logicalName: String(e.logicalName).trim(),
+            color: String(e.color).trim(),
+            type,
+          };
+        })
         .filter((e) => e.logicalName && e.color);
     } catch (e) {
       reportConfigError?.("booleanFieldHighlights", e instanceof Error ? e.message : String(e));
@@ -144,14 +163,37 @@ const Card = ({ item, draggable = true }: IProps) => {
     }
   }, [context.parameters, reportConfigError]);
 
-  const highlightColor = useMemo(() => {
-    for (const { logicalName, color } of booleanFieldHighlights) {
+  const lookupFieldsAsPersonaOnCardSet = useMemo(() => {
+    const raw = (context.parameters as { lookupFieldsAsPersonaOnCard?: { raw?: string } }).lookupFieldsAsPersonaOnCard?.raw?.trim();
+    if (!raw) return new Set<string>();
+    try {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[")) {
+        const arr = JSON.parse(trimmed) as string[];
+        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("lookupFieldsAsPersonaOnCard", e instanceof Error ? e.message : String(e));
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+  }, [context.parameters, reportConfigError]);
+
+  const highlights = useMemo(() => {
+    const result: { left?: string; right?: string; cornerTopRight?: string; cornerBottomRight?: string } = {};
+    const done = { left: false, right: false, cornerTopRight: false, cornerBottomRight: false };
+    for (const { logicalName, color, type = "left" } of booleanFieldHighlights) {
+      if (done[type]) continue;
       const field = item[logicalName];
       if (field == null) continue;
       const value = field && typeof field === "object" && "value" in field ? (field as CardInfo).value : field;
-      if (isBooleanTruthy(value)) return color;
+      if (!isFieldFilled(value)) continue;
+      result[type] = color;
+      done[type] = true;
     }
-    return undefined;
+    return result;
   }, [item, booleanFieldHighlights]);
 
   const columnFieldKey = activeView?.key;
@@ -167,15 +209,36 @@ const Card = ({ item, draggable = true }: IProps) => {
 
   const isClickable = !draggable;
 
+  const hasAnyHighlight = highlights.left ?? highlights.right ?? highlights.cornerTopRight ?? highlights.cornerBottomRight;
+  const highlightClass =
+    (highlights.left ? " card-container--highlight-left" : "") +
+    (highlights.right ? " card-container--highlight-right" : "") +
+    (highlights.cornerTopRight ? " card-container--highlight-corner-top-right" : "") +
+    (highlights.cornerBottomRight ? " card-container--highlight-corner-bottom-right" : "");
+  const highlightStyle = hasAnyHighlight
+    ? {
+        ...(highlights.left && { ["--card-highlight-left" as string]: highlights.left }),
+        ...(highlights.right && { ["--card-highlight-right" as string]: highlights.right }),
+        ...(highlights.cornerTopRight && { ["--card-highlight-corner-top-right" as string]: highlights.cornerTopRight }),
+        ...(highlights.cornerBottomRight && { ["--card-highlight-corner-bottom-right" as string]: highlights.cornerBottomRight }),
+      }
+    : undefined;
+
   return (
     <div
-      className={`card-container${draggable ? "" : " no-drag"}${highlightColor ? " card-container--highlight" : ""}`}
+      className={`card-container${draggable ? "" : " no-drag"}${highlightClass}`}
       role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? onCardClick : undefined}
       onKeyDown={isClickable ? onKeyDown : undefined}
-      style={highlightColor ? { ["--card-highlight-color" as string]: highlightColor } : undefined}
+      style={highlightStyle}
     >
+      {(highlights.cornerTopRight ?? highlights.cornerBottomRight) && (
+        <>
+          {highlights.cornerTopRight && <span className="card-corner-highlight card-corner-highlight--top-right" aria-hidden />}
+          {highlights.cornerBottomRight && <span className="card-corner-highlight card-corner-highlight--bottom-right" aria-hidden />}
+        </>
+      )}
       <CardHeader>
         <Text className="card-title" nowrap>
           {item?.title?.value}
@@ -192,6 +255,7 @@ const Card = ({ item, draggable = true }: IProps) => {
               renderAsHtml={htmlFieldsOnCardSet.has(info[0] as string)}
               hideLabel={hideLabelForFieldsOnCardSet.has(info[0] as string)}
               widthPercent={fieldWidthsOnCardMap.get(info[0] as string)}
+              lookupAsPersona={lookupFieldsAsPersonaOnCardSet.has(info[0] as string)}
             />
           ))}
         </CardDetailsList>

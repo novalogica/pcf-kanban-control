@@ -20,13 +20,28 @@ interface ICardInfoProps {
   hideLabel?: boolean,
   /** Percentage width of the field on the card (1–100). Applied via flex-basis to work with gap. */
   widthPercent?: number,
+  /** When true and value is a lookup, render as Persona (image/initials); otherwise as simple link. */
+  lookupAsPersona?: boolean,
 }
 
 const CARD_INFO_GAP_PX = 16;
 
-const CardDetails = ({ info, renderAsHtml = false, hideLabel = false, widthPercent }: ICardInfoProps) => {
+/** PCF/Dataverse column data types that should be rendered as clickable mailto/tel links. */
+const EMAIL_DATA_TYPES = ["Email", "email"];
+const PHONE_DATA_TYPES = ["Phone", "phone"];
+
+function getColumnDataType(dataset: { columns?: { name: string; dataType?: string }[] } | undefined, fieldName: string | undefined): string | undefined {
+  if (!fieldName || !dataset?.columns) return undefined;
+  const col = dataset.columns.find((c) => c.name === fieldName);
+  return col?.dataType;
+}
+
+const CardDetails = ({ id, fieldName, info, renderAsHtml = false, hideLabel = false, widthPercent, lookupAsPersona = false }: ICardInfoProps) => {
   const { context, openFormWithLoading } = useContext(BoardContext);
   const htmlHostRef = useRef<HTMLDivElement>(null);
+  const columnDataType = getColumnDataType(context.parameters?.dataset as { columns?: { name: string; dataType?: string }[] }, fieldName);
+  const isEmailField = columnDataType != null && EMAIL_DATA_TYPES.includes(columnDataType);
+  const isPhoneField = columnDataType != null && PHONE_DATA_TYPES.includes(columnDataType);
 
   const onLookupClicked = (entityName: string, id: string) => {
     openFormWithLoading(entityName, id);
@@ -44,6 +59,12 @@ const CardDetails = ({ info, renderAsHtml = false, hideLabel = false, widthPerce
   const isEmpty = isNullOrEmpty(info.value) || info.value === "Unallocated";
   const hasLabel = info.label != null && String(info.label).trim() !== "";
   const htmlContent = isEmpty ? "" : String(info.value ?? "");
+  const displayText = isEntityReference(info.value) ? "" : (renderAsHtml ? "" : String(handleInfoValue(info.value)));
+  const rawValue = typeof info.value === "string" ? info.value.trim() : String(info.value ?? "").trim();
+  const linkHref = rawValue !== "" && (isEmailField || isPhoneField)
+    ? (isEmailField ? `mailto:${rawValue}` : `tel:${rawValue}`)
+    : undefined;
+  const onLinkClick = (e: React.MouseEvent) => e.stopPropagation();
 
   useEffect(() => {
     if (!renderAsHtml || !htmlHostRef.current) return;
@@ -79,7 +100,7 @@ const CardDetails = ({ info, renderAsHtml = false, hideLabel = false, widthPerce
         <Text className="card-info-label" variant="small">{info.label}</Text>
       )}
       {
-        isEntityReference(info.value) ? <Lookup info={info} onOpenLookup={onLookupClicked} />
+        isEntityReference(info.value) ? <Lookup info={info} onOpenLookup={onLookupClicked} displayAsPersona={lookupAsPersona} />
           : renderAsHtml
             ? (
                 <div
@@ -88,11 +109,23 @@ const CardDetails = ({ info, renderAsHtml = false, hideLabel = false, widthPerce
                   aria-label={info.label}
                 />
               )
-            : (
-                <Text className="card-text card-info-value" variant="medium">
-                  {handleInfoValue(info.value)}
-                </Text>
-              )
+            : linkHref
+              ? (
+                  <a
+                    className="card-text card-info-value card-info-value--link"
+                    href={linkHref}
+                    onClick={onLinkClick}
+                    rel="noopener noreferrer"
+                    aria-label={info.label ? (isEmailField ? `E-Mail: ${displayText}` : `Anrufen: ${displayText}`) : undefined}
+                  >
+                    {displayText}
+                  </a>
+                )
+              : (
+                  <Text className="card-text card-info-value" variant="medium">
+                    {handleInfoValue(info.value)}
+                  </Text>
+                )
       }
     </div>
   );

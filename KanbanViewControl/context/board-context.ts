@@ -1,10 +1,16 @@
 import { createContext } from "react";
 import { ColumnItem, ViewEntity, ViewItem } from "../interfaces";
 import { IInputs } from "../generated/ManifestTypes";
+import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 
 export interface ConfigError {
   property: string;
   message: string;
+}
+
+export interface QuickFilterFieldConfig {
+  key: string;
+  text: string;
 }
 
 interface IBoardContext {
@@ -27,6 +33,14 @@ interface IBoardContext {
   configErrors: ConfigError[],
   /** Reports a configuration error (e.g. invalid JSON); stored only once per property/message */
   reportConfigError: (property: string, message: string) => void,
+  /** Quick filter: fields configured for filtering (from backend) */
+  quickFilterFieldsConfig: QuickFilterFieldConfig[],
+  /** Quick filter: current selected value per field (display value for comparison) */
+  quickFilterValues: Record<string, string | null>,
+  /** Quick filter: set selected value for a field; null = no filter */
+  setQuickFilterValue: (field: string, value: string | null) => void,
+  /** Quick filter: options per field (distinct values from data) */
+  quickFilterOptions: Record<string, IDropdownOption[]>,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

@@ -100,8 +100,8 @@
 
     <property 
       name="booleanFieldHighlights" 
-      display-name-key="Boolean field highlights" 
-      description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;}]. Cards get a colored top border when the boolean field is true. First matching option wins."
+      display-name-key="Field highlights" 
+      description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;,&quot;type&quot;:&quot;left&quot;}]. Any field type (boolean, text, lookup, etc.). Empty = no highlight, filled = highlight. Optional type: left (default), right, cornerTopRight, cornerBottomRight. left/right = colored border; corner = diagonal corner mark. First match per type wins."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
@@ -111,6 +111,24 @@
       name="fieldWidthsOnCard" 
       display-name-key="Field widths on card" 
       description-key="JSON array to set percentage width of fields on the card (e.g. [{&quot;logicalName&quot;:&quot;description&quot;,&quot;width&quot;:100},{&quot;logicalName&quot;:&quot;estimatedvalue&quot;,&quot;width&quot;:50}]). Width 100 = full width, 50 = half, etc. Fields not listed use default width."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="lookupFieldsAsPersonaOnCard" 
+      display-name-key="Lookup fields as Persona on card" 
+      description-key="Field logical names for which lookup values are shown with image/initials (Persona style). Other lookup fields are shown as a simple link. JSON array (e.g. [&quot;ownerid&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="quickFilterFields" 
+      display-name-key="Quick filter fields" 
+      description-key="Field logical names to show as quick filter dropdowns. Supports OptionSet, Lookup, and text fields (text fields with fixed values are shown as dropdowns with occurring values). JSON array (e.g. [&quot;statuscode&quot;,&quot;my_text_field&quot;]) or comma-separated list. Only fields present in the dataset can be used."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"

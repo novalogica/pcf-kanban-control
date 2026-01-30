@@ -13,6 +13,10 @@ interface IProps {
 const KanbanDropdown = ({ label, placeholder, selectedOption, options, onOptionSelected }: IProps) => {
   const [selectedItem, setSelectedItem] = React.useState<IDropdownOption | undefined>(selectedOption);
 
+  React.useEffect(() => {
+    setSelectedItem(selectedOption);
+  }, [selectedOption?.key, selectedOption?.text]);
+
   const onChange = (_: React.FormEvent<HTMLDivElement>, item?: IDropdownOption): void => {
     if(!item) {
       return;

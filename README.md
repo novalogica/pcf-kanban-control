@@ -48,7 +48,7 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 | **Hidden fields on card** | Text | Field **logical names** that are loaded with the dataset but **not shown** on cards. Use to fetch data (e.g. for lookups) without displaying it. **JSON array** (e.g. `["field1","field2"]`) or **comma-separated** list. Invalid JSON falls back to comma parsing. |
 | **HTML fields on card** | Text | Field **logical names** whose value is rendered as **HTML** (not escaped). Use for rich text or formatted content. **JSON array** or comma-separated list. Only use with trusted data to avoid XSS. Invalid JSON falls back to comma parsing. |
 | **Hide label for fields on card** | Text | Field **logical names** for which the **label** is hidden on the card; only the value is shown. **JSON array** or comma-separated list. Useful for compact layouts. Invalid JSON falls back to comma parsing. |
-| **Boolean field highlights** | Text | **JSON array** of `{"logicalName":"fieldname","color":"#hex"}`. When the boolean field is **true** (or 1 / "true" / "yes"), the card gets a **colored top border**; the **first** matching entry wins. Fields must be in the dataset columns. Supports hex, rgb, or CSS color names. Invalid JSON is reported. Example: `[{"logicalName":"ispriority","color":"#e81123"}]`. |
+| **Boolean field highlights** | Text | **JSON array** of `{"logicalName":"fieldname","color":"#hex","type":"left"}`. When the boolean field is **true** (or 1 / "true" / "yes"), the card gets a highlight; **first match per type** wins. Optional **type**: `left` (default) = colored left border, `right` = colored right border, `cornerTopRight` / `cornerBottomRight` = diagonal corner mark. Fields must be in the dataset columns. Invalid JSON is reported. Example: `[{"logicalName":"ispriority","color":"#e81123","type":"left"},{"logicalName":"isurgent","color":"#ff0","type":"cornerTopRight"}]`. |
 | **Field widths on card** | Text | **JSON array** of `{"logicalName":"fieldname","width":number}`. Sets **percentage width** of fields on the card (100 = full width, 50 = half). Fields not listed use the default width. Invalid JSON is reported. Example: `[{"logicalName":"description","width":100},{"logicalName":"estimatedvalue","width":50}]`. |
 
 ### Notifications
@@ -127,11 +127,11 @@ If a JSON property (e.g. **Filter out Business Process Flows**, **Business Proce
    ```
    Or comma-separated. Reduces visual clutter on the card.
 
-**Boolean field highlights** (colored top border when boolean is true; first match wins)
+**Boolean field highlights** (highlight when boolean is true; first match **per type** wins)
    ```json
-   [{"logicalName":"ispriority","color":"#e81123"},{"logicalName":"isblocked","color":"#ffaa00"}]
+   [{"logicalName":"ispriority","color":"#e81123","type":"left"},{"logicalName":"isblocked","color":"#ffaa00","type":"right"},{"logicalName":"isurgent","color":"#ff0","type":"cornerTopRight"}]
    ```
-   Fields must be in the dataset columns. Supported colors: hex (`#ff0000`), rgb, or CSS color names.
+   Optional **type**: `left` (default), `right`, `cornerTopRight`, `cornerBottomRight`. Fields must be in the dataset columns. Supported colors: hex (`#ff0000`), rgb, or CSS color names.
 
 **Field widths on card** (percentage width; 100 = full width, 50 = half)
    ```json
