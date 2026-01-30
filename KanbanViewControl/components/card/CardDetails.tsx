@@ -48,9 +48,11 @@ const CardDetails = ({ info, renderAsHtml = false, hideLabel = false, widthPerce
   useEffect(() => {
     if (!renderAsHtml || !htmlHostRef.current) return;
     const host = htmlHostRef.current;
+    // Mit mode: "open" liefert host.shadowRoot beim erneuten Effect-Lauf (z. B. nach Popup-Öffnung)
+    // den bestehenden Shadow zurück – sonst würde attachShadow erneut aufgerufen und den Fehler auslösen.
     let shadow = host.shadowRoot;
     if (!shadow) {
-      shadow = host.attachShadow({ mode: "closed" });
+      shadow = host.attachShadow({ mode: "open" });
       const slot = document.createElement("div");
       slot.className = SHADOW_HTML_SLOT_CLASS;
       shadow.appendChild(slot);
