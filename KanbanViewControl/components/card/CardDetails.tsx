@@ -99,7 +99,7 @@ const CardDetails = ({ id, fieldName, info, renderAsHtml = false, hideLabel = fa
     : undefined;
 
   return ( 
-    <div className="card-info" style={flexStyle}>
+    <div className="card-info" style={flexStyle} data-field-logical-name={fieldName ?? undefined}>
       {!hideLabel && (
         <Text className="card-info-label" variant="small">{info.label}</Text>
       )}

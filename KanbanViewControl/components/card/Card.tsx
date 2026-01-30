@@ -42,6 +42,12 @@ function looksLikeBoolean(value: unknown): boolean {
   return false;
 }
 
+/** For related fields (e.g. a_xxx.telephone1) returns the part after the last dot; otherwise the full name. Used to match config by short name (e.g. telephone1). */
+function getFieldNameSuffixForMatch(fieldName: string): string {
+  const lastDot = fieldName.lastIndexOf(".");
+  return lastDot >= 0 ? fieldName.slice(lastDot + 1) : fieldName;
+}
+
 /** True if the value is non-empty (for non-boolean fields: "has a value" = highlight). */
 function hasValue(value: unknown): boolean {
   if (value == null) return false;
@@ -292,20 +298,24 @@ const Card = ({ item, draggable = true }: IProps) => {
       </CardHeader>
       <CardBody>
         <CardDetailsList>
-          {cardDetails?.map((info) => (
-            <CardDetails
-              key={`${info[0]}-${item.id}`}
-              id={item.id}
-              fieldName={info[0] as string}
-              info={info[1] as CardInfo}
-              renderAsHtml={htmlFieldsOnCardSet.has(info[0] as string)}
-              hideLabel={hideLabelForFieldsOnCardSet.has(info[0] as string)}
-              widthPercent={fieldWidthsOnCardMap.get(info[0] as string)}
-              lookupAsPersona={lookupFieldsAsPersonaOnCardSet.has(info[0] as string)}
-              asEmailLink={emailFieldsOnCardSet.has(info[0] as string)}
-              asPhoneLink={phoneFieldsOnCardSet.has(info[0] as string)}
-            />
-          ))}
+          {cardDetails?.map((info) => {
+            const fieldKey = info[0] as string;
+            const fieldSuffix = getFieldNameSuffixForMatch(fieldKey);
+            return (
+              <CardDetails
+                key={`${fieldKey}-${item.id}`}
+                id={item.id}
+                fieldName={fieldKey}
+                info={info[1] as CardInfo}
+                renderAsHtml={htmlFieldsOnCardSet.has(fieldKey)}
+                hideLabel={hideLabelForFieldsOnCardSet.has(fieldKey)}
+                widthPercent={fieldWidthsOnCardMap.get(fieldKey)}
+                lookupAsPersona={lookupFieldsAsPersonaOnCardSet.has(fieldKey)}
+                asEmailLink={emailFieldsOnCardSet.has(fieldKey) || emailFieldsOnCardSet.has(fieldSuffix)}
+                asPhoneLink={phoneFieldsOnCardSet.has(fieldKey) || phoneFieldsOnCardSet.has(fieldSuffix)}
+              />
+            );
+          })}
         </CardDetailsList>
       </CardBody>
     </div>

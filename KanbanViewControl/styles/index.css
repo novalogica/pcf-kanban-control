@@ -153,8 +153,8 @@
 
 .card-corner-highlight {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   right: 0;
   pointer-events: none;
 }
