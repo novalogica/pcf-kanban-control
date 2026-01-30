@@ -159,14 +159,17 @@
   pointer-events: none;
 }
 
+/* Folded-corner look: diagonal fills the corner (right angle at card corner). Radius matches card. */
 .card-corner-highlight--top-right {
   top: 0;
+  border-top-right-radius: 10px;
   background: linear-gradient(225deg, var(--card-highlight-corner-top-right, #ccc) 50%, transparent 50%);
 }
 
 .card-corner-highlight--bottom-right {
   bottom: 0;
-  background: linear-gradient(45deg, var(--card-highlight-corner-bottom-right, #ccc) 50%, transparent 50%);
+  border-bottom-right-radius: 10px;
+  background: linear-gradient(135deg, transparent 50%, var(--card-highlight-corner-bottom-right, #ccc) 50%);
 }
 
 .card-container:hover {

@@ -27,17 +27,26 @@ interface IProps {
   draggable?: boolean;
 }
 
-/** Treats empty as false, any value as true. Works for any field type (boolean, text, lookup, etc.). */
-function isFieldFilled(value: unknown): boolean {
+/** Only true for boolean-like truthy values. False, 0, "false", "no" etc. do not count as true. */
+function isBooleanTruthy(value: unknown): boolean {
+  if (value === true || value === 1) return true;
+  if (typeof value === "string" && /^(1|true|yes|ja)$/i.test(value.trim())) return true;
+  return false;
+}
+
+/** True if value looks like a boolean (type or common string/number representations). */
+function looksLikeBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return true;
+  if (value === 0 || value === 1) return true;
+  if (typeof value === "string" && /^(0|1|true|false|yes|no|ja|nein)$/i.test(value.trim())) return true;
+  return false;
+}
+
+/** True if the value is non-empty (for non-boolean fields: "has a value" = highlight). */
+function hasValue(value: unknown): boolean {
   if (value == null) return false;
   if (typeof value === "string" && value.trim() === "") return false;
-  if (typeof value === "object" && "value" in value) {
-    const v = (value as CardInfo).value;
-    if (v == null) return false;
-    if (typeof v === "string" && v.trim() === "") return false;
-    if (Array.isArray(v) && v.length === 0) return false;
-    return true;
-  }
+  if (typeof value === "object" && "value" in value) return hasValue((value as CardInfo).value);
   if (Array.isArray(value) && value.length === 0) return false;
   return true;
 }
@@ -181,6 +190,42 @@ const Card = ({ item, draggable = true }: IProps) => {
     }
   }, [context.parameters, reportConfigError]);
 
+  const emailFieldsOnCardSet = useMemo(() => {
+    const raw = (context.parameters as { emailFieldsOnCard?: { raw?: string } }).emailFieldsOnCard?.raw?.trim();
+    if (!raw) return new Set<string>();
+    try {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[")) {
+        const arr = JSON.parse(trimmed) as string[];
+        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("emailFieldsOnCard", e instanceof Error ? e.message : String(e));
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+  }, [context.parameters, reportConfigError]);
+
+  const phoneFieldsOnCardSet = useMemo(() => {
+    const raw = (context.parameters as { phoneFieldsOnCard?: { raw?: string } }).phoneFieldsOnCard?.raw?.trim();
+    if (!raw) return new Set<string>();
+    try {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[")) {
+        const arr = JSON.parse(trimmed) as string[];
+        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("phoneFieldsOnCard", e instanceof Error ? e.message : String(e));
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+  }, [context.parameters, reportConfigError]);
+
   const highlights = useMemo(() => {
     const result: { left?: string; right?: string; cornerTopRight?: string; cornerBottomRight?: string } = {};
     const done = { left: false, right: false, cornerTopRight: false, cornerBottomRight: false };
@@ -189,7 +234,8 @@ const Card = ({ item, draggable = true }: IProps) => {
       const field = item[logicalName];
       if (field == null) continue;
       const value = field && typeof field === "object" && "value" in field ? (field as CardInfo).value : field;
-      if (!isFieldFilled(value)) continue;
+      const matches = looksLikeBoolean(value) ? isBooleanTruthy(value) : hasValue(value);
+      if (!matches) continue;
       result[type] = color;
       done[type] = true;
     }
@@ -256,6 +302,8 @@ const Card = ({ item, draggable = true }: IProps) => {
               hideLabel={hideLabelForFieldsOnCardSet.has(info[0] as string)}
               widthPercent={fieldWidthsOnCardMap.get(info[0] as string)}
               lookupAsPersona={lookupFieldsAsPersonaOnCardSet.has(info[0] as string)}
+              asEmailLink={emailFieldsOnCardSet.has(info[0] as string)}
+              asPhoneLink={phoneFieldsOnCardSet.has(info[0] as string)}
             />
           ))}
         </CardDetailsList>

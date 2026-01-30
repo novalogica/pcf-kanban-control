@@ -126,6 +126,24 @@
     />
 
     <property 
+      name="emailFieldsOnCard" 
+      display-name-key="E-Mail fields on card (as link)" 
+      description-key="Field logical names that are shown as clickable mailto links (e.g. from related contact). Use for fields that display e-mail but have type SingleLine.Text. JSON array (e.g. [&quot;parentcontactid_emailaddress1&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="phoneFieldsOnCard" 
+      display-name-key="Phone fields on card (as link)" 
+      description-key="Field logical names that are shown as clickable tel links (e.g. from related contact). Use for fields that display phone numbers but have type SingleLine.Text. JSON array (e.g. [&quot;parentcontactid_telephone1&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="quickFilterFields" 
       display-name-key="Quick filter fields" 
       description-key="Field logical names to show as quick filter dropdowns. Supports OptionSet, Lookup, and text fields (text fields with fixed values are shown as dropdowns with occurring values). JSON array (e.g. [&quot;statuscode&quot;,&quot;my_text_field&quot;]) or comma-separated list. Only fields present in the dataset can be used."
