@@ -61,7 +61,7 @@ function hasValue(value: unknown): boolean {
   return true;
 }
 
-/** Maximale Mausbewegung (px), unter der ein Ereignis noch als Klick gilt. Darüber = Textmarkierung/Drag, Karte nicht öffnen. */
+/** Max mouse movement (px) below which an event still counts as a click. Above = text selection/drag, card does not open. */
 const CLICK_MOVE_THRESHOLD_PX = 5;
 
 const Card = ({ item, draggable = true }: IProps) => {

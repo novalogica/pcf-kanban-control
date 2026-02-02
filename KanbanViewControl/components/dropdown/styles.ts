@@ -12,7 +12,7 @@ export const dropdownStyles: Partial<IDropdownStyles> = {
       border: 'none'
   },
   title: {
-    /* Feste Höhe inkl. Border (32 + 2px) verhindert Layout-Versatz bei open/focus */
+    /* Fixed height including border (32 + 2px) prevents layout shift on open/focus */
     minHeight: 34,
     height: 34,
     boxSizing: 'border-box',

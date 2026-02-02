@@ -11,7 +11,7 @@ export interface ConfigError {
 export interface QuickFilterFieldConfig {
   key: string;
   text: string;
-  /** true = Multiselect-Filter (alle außer Boolean); false = Einzelauswahl (Boolean) */
+  /** true = multiselect filter (all except Boolean); false = single select (Boolean) */
   isMultiselect: boolean;
 }
 
@@ -20,7 +20,7 @@ export interface SortFieldConfig {
   text: string;
 }
 
-/** Filter-Preset aus JSON-Konfiguration: id, Anzeigename, Feld -> Filterwert(e). Wert pro Feld: string (Einzelwert) oder string[] (Multiselect). */
+/** Filter preset from JSON config: id, display label, field -> filter value(s). Value per field: string (single) or string[] (multiselect). */
 export interface FilterPresetConfig {
   id: string;
   label: string;
@@ -53,31 +53,31 @@ interface IBoardContext {
   clearConfigError: (property: string) => void,
   /** Quick filter: fields configured for filtering (from backend) */
   quickFilterFieldsConfig: QuickFilterFieldConfig[],
-  /** Quick filter: current value per field. Multiselect-Felder: string[] | null; Boolean: string | null */
+  /** Quick filter: current value per field. Multiselect fields: string[] | null; Boolean: string | null */
   quickFilterValues: Record<string, string | string[] | null>,
-  /** Quick filter: set value for a field; null = no filter. Multiselect: string[] | null, sonst string | null */
+  /** Quick filter: set value for a field; null = no filter. Multiselect: string[] | null, otherwise string | null */
   setQuickFilterValue: (field: string, value: string | string[] | null) => void,
   /** Quick filter: options per field (distinct values from data) */
   quickFilterOptions: Record<string, IDropdownOption[]>,
-  /** Eigene Volltext-Suche: Suchbegriff für alle Kartenfelder */
+  /** Custom full-text search: search term for all card fields */
   searchKeyword: string,
-  /** Suchbegriff setzen; leeres string = keine Suche */
+  /** Set search term; empty string = no search */
   setSearchKeyword: (value: string) => void,
-  /** Sortierung: konfigurierte Felder zur Auswahl */
+  /** Sort: configured fields to choose from */
   sortFieldsConfig: SortFieldConfig[],
-  /** aktuell gewähltes Sortierfeld (logicalName) oder null = keine Sortierung */
+  /** Currently selected sort field (logicalName) or null = no sort */
   sortByField: string | null,
-  /** Sortierfeld setzen */
+  /** Set sort field */
   setSortByField: (field: string | null) => void,
-  /** Sortierrichtung: aufsteigend / absteigend */
+  /** Sort direction: ascending / descending */
   sortDirection: SortDirection,
-  /** Sortierrichtung setzen */
+  /** Set sort direction */
   setSortDirection: (dir: SortDirection) => void,
-  /** Filter-Presets aus Konfiguration (JSON) */
+  /** Filter presets from config (JSON) */
   filterPresetsConfig: FilterPresetConfig[],
-  /** aktuell gewähltes Filter-Preset (id) oder null = kein Preset */
+  /** Currently selected filter preset (id) or null = no preset */
   selectedFilterPresetId: string | null,
-  /** Preset auswählen und Filter anwenden; null = Preset abwählen (Filter bleiben unverändert) */
+  /** Select preset and apply filters; null = deselect preset (filters remain unchanged) */
   applyFilterPreset: (presetId: string | null) => void,
 }
 

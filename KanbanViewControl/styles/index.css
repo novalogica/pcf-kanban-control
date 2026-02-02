@@ -47,7 +47,7 @@
   box-sizing: border-box;
 }
 
-/** Container */
+/* Container */
 .column-container {
   min-height: 200px;
   max-height: 100vh;
@@ -289,7 +289,7 @@
   width: 100%;
   box-sizing: border-box;
 }
-/* Wrapper für E-Mail/Telefon-Links: begrenzt Breite zuverlässig, damit Ellipsis greift */
+/* Wrapper for email/phone links: reliably limits width so ellipsis applies */
 .card-info--ellipsis .card-info-value-ellipsis-wrap {
   min-width: 0;
   overflow: hidden;
@@ -312,7 +312,7 @@
   max-width: 100%;
 }
 
-/* Lookup als einfacher Link – gleiche Höhe wie andere card-info-value */
+/* Lookup as simple link – same height as other card-info-value */
 .card-info-value--link {
   all: unset;
   font: inherit;
@@ -330,7 +330,7 @@
   outline-offset: 2px;
 }
 
-/* Lookup als Persona (Bild/Initialen) – konfigurierbar pro Feld */
+/* Lookup as Persona (image/initials) – configurable per field */
 .personaContainer {
   align-self: flex-start;
 }
@@ -366,11 +366,6 @@
   padding: 12px 16px;
   background-color: #fafafa;
   border-bottom: 1px solid #edebe9;
-  /* Feste Höhe (nicht nur min-height) verhindert, dass die Zeile beim Öffnen eines Dropdowns wächst und andere Filter nach unten schiebt */
-  height: 88px;
-  min-height: 88px;
-  box-sizing: border-box;
-  overflow: visible;
 }
 
 .kanban-quick-filters .kanban-dropdown {
@@ -378,7 +373,7 @@
   flex-direction: column;
   align-items: stretch;
   min-width: 200px;
-  gap: 4px;
+  gap: 0;
 }
 
 .kanban-quick-filters .kanban-dropdown .ms-Dropdown-title {
@@ -386,7 +381,7 @@
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
-  /* Reservierter 1px-Rahmen verhindert Layout-Versatz, wenn ein anderes Dropdown geöffnet wird */
+  /* Reserved 1px border prevents layout shift when another dropdown opens */
   border: 1px solid transparent;
   box-sizing: border-box;
 }
@@ -501,7 +496,7 @@
 }
 
 .kanban-dropdown .ms-Dropdown-title {
-  /* Transparenter 1px-Rahmen hält die Höhe bei open/focus konstant (kein 1px-Versatz) */
+  /* Transparent 1px border keeps height constant on open/focus (no 1px shift) */
   border: 1px solid transparent !important;
   box-sizing: border-box;
 }

@@ -19,19 +19,19 @@ const QUICK_FILTER_EMPTY_KEY = "__empty__";
 const QUICK_FILTERS_STORAGE_PREFIX = "pcf-kanban-quickfilters";
 
 /**
- * Filter-Presets: JSON-Konfiguration über Komponenten-Property "Filter presets" (filterPresets).
- * Format: Array von { id: string, label: string, filters: Record<fieldLogicalName, filterValue> }.
- * filterValue muss den Werten in den Quick-Filter-Dropdowns entsprechen.
+ * Filter presets: JSON configuration via component property "Filter presets" (filterPresets).
+ * Format: Array of { id: string, label: string, filters: Record<fieldLogicalName, filterValue> }.
+ * filterValue must match the values in the quick filter dropdowns.
  *
- * Platzhalter für aktuellen Benutzer (z. B. bei ownerid für "Meine Opportunities"):
- * In filters den Wert "{{currentUser}}" verwenden – wird zur Laufzeit durch den Anzeigenamen
- * des eingeloggten Benutzers ersetzt (Dataverse systemuser.fullname).
+ * Placeholder for current user (e.g. for ownerid in "My Opportunities"):
+ * Use "{{currentUser}}" in filters – replaced at runtime by the display name
+ * of the signed-in user (Dataverse systemuser.fullname).
  *
- * Beispiel für die Property im Formular-Editor:
- * [{"id":"open","label":"Offen","filters":{"statuscode":"1"}},{"id":"my-opportunities","label":"Meine Opportunities","filters":{"ownerid":"{{currentUser}}"}}]
+ * Example for the property in the form editor:
+ * [{"id":"open","label":"Open","filters":{"statuscode":"1"}},{"id":"my-opportunities","label":"My Opportunities","filters":{"ownerid":"{{currentUser}}"}}]
  */
 
-/** Platzhalter in Filter-Presets: wird durch den Anzeigenamen des aktuellen Benutzers ersetzt (z. B. für ownerid). */
+/** Placeholder in filter presets: replaced by the current user's display name (e.g. for ownerid). */
 const FILTER_PRESET_PLACEHOLDER_CURRENT_USER = "{{currentUser}}";
 
 interface StoredQuickFilters {
@@ -85,6 +85,27 @@ function getQuickFilterComparableValue(fieldValue: unknown): string {
   return String(fieldValue);
 }
 
+interface DefaultSortConfig {
+  field: string | null;
+  direction: SortDirection;
+}
+
+function parseDefaultSort(raw: string | undefined): DefaultSortConfig {
+  if (!raw?.trim()) return { field: null, direction: "asc" };
+  try {
+    const o = JSON.parse(raw.trim()) as { field?: string; direction?: string };
+    const field =
+      o?.field != null && typeof o.field === "string" && o.field.trim()
+        ? o.field.trim()
+        : null;
+    const direction =
+      o?.direction === "desc" || o?.direction === "asc" ? o.direction : "asc";
+    return { field, direction };
+  } catch {
+    return { field: null, direction: "asc" };
+  }
+}
+
 function parseQuickFilterFieldsRaw(
   raw: string | undefined,
   reportError: (property: string, message: string) => void,
@@ -120,7 +141,7 @@ interface IProps {
 }
 
 const App = ({ context, notificationPosition }: IProps) => {
-  // View-ID für Local-Storage-Scope: Schnellfilter pro View getrennt speichern
+  // View ID for local storage scope: store quick filters per view separately
   const viewId = (context.parameters?.dataset as { getViewId?: () => string })?.getViewId?.() ?? "";
   const quickFiltersStorageKey =
     viewId ? `${QUICK_FILTERS_STORAGE_PREFIX}-${viewId}` : null;
@@ -145,16 +166,41 @@ const App = ({ context, notificationPosition }: IProps) => {
       ? (loadStoredQuickFilters(quickFiltersStorageKey)?.searchKeyword ?? "")
       : ""
   );
-  const [sortByField, setSortByField] = useState<string | null>(() =>
-    quickFiltersStorageKey
-      ? (loadStoredQuickFilters(quickFiltersStorageKey)?.sortByField ?? null)
-      : null
+  const defaultSortConfig = useMemo(
+    () =>
+      parseDefaultSort(
+        (context.parameters as { defaultSort?: { raw?: string } }).defaultSort?.raw
+      ),
+    [(context.parameters as { defaultSort?: { raw?: string } }).defaultSort?.raw]
   );
-  const [sortDirection, setSortDirection] = useState<SortDirection>(() =>
-    quickFiltersStorageKey
-      ? (loadStoredQuickFilters(quickFiltersStorageKey)?.sortDirection ?? "asc")
-      : "asc"
-  );
+
+  const sortFieldsParamForInit = (context.parameters as { sortFields?: { raw?: string } })
+    .sortFields?.raw;
+  const defaultSortFieldValid = useMemo(() => {
+    if (!defaultSortConfig.field) return null;
+    const list = parseQuickFilterFieldsRaw(
+      sortFieldsParamForInit,
+      () => {},
+      () => {},
+      "sortFields"
+    );
+    return list.includes(defaultSortConfig.field!) ? defaultSortConfig.field : null;
+  }, [defaultSortConfig.field, sortFieldsParamForInit]);
+
+  const [sortByField, setSortByField] = useState<string | null>(() => {
+    const stored = quickFiltersStorageKey
+      ? loadStoredQuickFilters(quickFiltersStorageKey)
+      : null;
+    if (stored?.sortByField != null) return stored.sortByField;
+    return defaultSortFieldValid;
+  });
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    const stored = quickFiltersStorageKey
+      ? loadStoredQuickFilters(quickFiltersStorageKey)
+      : null;
+    if (stored?.sortByField != null) return stored.sortDirection;
+    return defaultSortFieldValid ? defaultSortConfig.direction : "asc";
+  });
   const [selectedFilterPresetId, setSelectedFilterPresetId] = useState<string | null>(() =>
     quickFiltersStorageKey
       ? (loadStoredQuickFilters(quickFiltersStorageKey)?.selectedFilterPresetId ?? null)
@@ -184,8 +230,8 @@ const App = ({ context, notificationPosition }: IProps) => {
   const { openForm } = useNavigation(context);
   const { dataset } = context.parameters;
 
-  // Schlüssel für Refresh: Bei jedem Render aus aktuellen Records ableiten, damit
-  // nach dataset.refresh() die Anzeige aktualisiert wird (auch wenn PCF dieselbe Referenz liefert).
+  // Key for refresh: derived from current records on each render so that
+  // after dataset.refresh() the display updates (even when PCF returns the same reference).
   const datasetRecordsKey =
     `${Object.keys(dataset.records).length}-${Object.keys(dataset.records).sort().slice(0, 100).join(",")}`;
 
@@ -201,8 +247,8 @@ const App = ({ context, notificationPosition }: IProps) => {
     [sortFieldsParam, reportConfigError, clearConfigError]
   );
 
-  // JSON-Konfiguration Filter-Presets: aus Komponenten-Property "Filter presets" (filterPresets).
-  // Muss in der View-/Formular-Konfiguration der Komponente auf einen statischen Wert (JSON-Array) gesetzt werden.
+  // Filter presets JSON config: from component property "Filter presets" (filterPresets).
+  // Must be set to a static value (JSON array) in the view/form configuration of the component.
   const params = context.parameters as unknown as Record<string, { raw?: string } | undefined>;
   const filterPresetsParamRaw =
     params.filterPresets?.raw ?? params["filterPresets"]?.raw;
@@ -324,11 +370,11 @@ const App = ({ context, notificationPosition }: IProps) => {
       }
       const preset = filterPresetsConfig.find((p) => p.id === presetId);
       if (preset) {
-        // Nur die im Preset definierten Filter setzen, alle anderen leeren
         setQuickFilterValuesState(() => {
           const next: Record<string, string | string[] | null> = {};
           for (const cfg of quickFilterFieldsConfig) {
-            const raw = preset.filters[cfg.key];
+            const logicalName = cfg.key.includes(".") ? cfg.key.slice(cfg.key.lastIndexOf(".") + 1) : cfg.key;
+            const raw = preset.filters[cfg.key] ?? preset.filters[logicalName];
             if (raw === undefined) {
               next[cfg.key] = null;
             } else {
@@ -368,7 +414,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     filterPresetsParam,
   ]);
 
-  // Anzeigenamen des aktuellen Benutzers laden (für Platzhalter {{currentUser}} in Filter-Presets)
+  // Load current user display name (for {{currentUser}} placeholder in filter presets)
   useEffect(() => {
     const userSettings = (context as { userSettings?: { userId?: string } }).userSettings;
     const userId = userSettings?.userId;
@@ -382,7 +428,7 @@ const App = ({ context, notificationPosition }: IProps) => {
       .catch(() => setCurrentUserDisplayName(null));
   }, [context]);
 
-  // Preset mit {{currentUser}} erneut anwenden, sobald der Benutzername geladen ist
+  // Re-apply preset with {{currentUser}} once the user name is loaded
   useEffect(() => {
     if (!currentUserDisplayName || !selectedFilterPresetId) return;
     const preset = filterPresetsConfig.find((p) => p.id === selectedFilterPresetId);
@@ -393,15 +439,15 @@ const App = ({ context, notificationPosition }: IProps) => {
     if (!Object.values(preset.filters).some(hasPlaceholder)) return;
     setQuickFilterValuesState((prev) => {
       const next = { ...prev };
-      for (const key of Object.keys(preset.filters)) {
-        const val = preset.filters[key];
+      for (const cfg of quickFilterFieldsConfig) {
+        const logicalName = cfg.key.includes(".") ? cfg.key.slice(cfg.key.lastIndexOf(".") + 1) : cfg.key;
+        const val = preset.filters[cfg.key] ?? preset.filters[logicalName];
         if (val === FILTER_PRESET_PLACEHOLDER_CURRENT_USER) {
-          next[key] = currentUserDisplayName;
+          next[cfg.key] = cfg.isMultiselect ? [currentUserDisplayName] : currentUserDisplayName;
         } else if (Array.isArray(val) && val.includes(FILTER_PRESET_PLACEHOLDER_CURRENT_USER)) {
-          const cfg = quickFilterFieldsConfig.find((c) => c.key === key);
-          next[key] = val.map((v) => (v === FILTER_PRESET_PLACEHOLDER_CURRENT_USER ? currentUserDisplayName : v));
-          if (!cfg?.isMultiselect && next[key] && Array.isArray(next[key])) {
-            next[key] = (next[key] as string[])[0] ?? null;
+          next[cfg.key] = val.map((v) => (v === FILTER_PRESET_PLACEHOLDER_CURRENT_USER ? currentUserDisplayName : v));
+          if (!cfg.isMultiselect && next[cfg.key] && Array.isArray(next[cfg.key])) {
+            next[cfg.key] = (next[cfg.key] as string[])[0] ?? null;
           }
         }
       }
@@ -409,7 +455,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     });
   }, [currentUserDisplayName, selectedFilterPresetId, filterPresetsConfig, quickFilterFieldsConfig]);
 
-  // Bei View-Wechsel (andere Dataverse-View): gespeicherte Schnellfilter für diesen View laden
+  // On view change (different Dataverse view): load stored quick filters for this view
   useEffect(() => {
     if (!quickFiltersStorageKey) return;
     if (prevViewIdRef.current !== null && prevViewIdRef.current !== viewId) {
@@ -425,7 +471,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     prevViewIdRef.current = viewId;
   }, [viewId, quickFiltersStorageKey]);
 
-  // Schnellfilter bei Änderung in Local Storage speichern (nur für aktuellen View)
+  // Persist quick filters to local storage on change (only for current view)
   useEffect(() => {
     if (!quickFiltersStorageKey) return;
     try {
@@ -440,7 +486,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         })
       );
     } catch {
-      // Local Storage voll oder nicht verfügbar
+      // Local storage full or not available
     }
   }, [quickFiltersStorageKey, quickFilterValues, searchKeyword, sortByField, sortDirection, selectedFilterPresetId]);
 
