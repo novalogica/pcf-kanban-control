@@ -8,7 +8,7 @@ import Loading from "./components/container/loading";
 import { Toaster } from "react-hot-toast";
 import { useDataverse } from "./hooks/useDataverse";
 import { useNavigation } from "./hooks/useNavigation";
-import { getColumnValue } from "./lib/utils";
+import { getColumnValue, isBooleanColumnDataType } from "./lib/utils";
 import { unlocatedColumn } from "./lib/constants";
 import { Spinner, SpinnerSize } from "@fluentui/react";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -35,7 +35,7 @@ const QUICK_FILTERS_STORAGE_PREFIX = "pcf-kanban-quickfilters";
 const FILTER_PRESET_PLACEHOLDER_CURRENT_USER = "{{currentUser}}";
 
 interface StoredQuickFilters {
-  quickFilterValues: Record<string, string | null>;
+  quickFilterValues: Record<string, string | string[] | null>;
   searchKeyword: string;
   sortByField: string | null;
   sortDirection: SortDirection;
@@ -56,7 +56,7 @@ function loadStoredQuickFilters(storageKey: string): StoredQuickFilters | null {
     return {
       quickFilterValues:
         qfv && typeof qfv === "object" && qfv !== null && !Array.isArray(qfv)
-          ? (qfv as Record<string, string | null>)
+          ? (qfv as Record<string, string | string[] | null>)
           : {},
       searchKeyword: typeof parsed.searchKeyword === "string" ? parsed.searchKeyword : "",
       sortByField:
@@ -133,7 +133,7 @@ const App = ({ context, notificationPosition }: IProps) => {
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
   const [isOpeningEntity, setIsOpeningEntity] = useState(false);
   const [configErrors, setConfigErrors] = useState<ConfigError[]>([]);
-  const [quickFilterValues, setQuickFilterValuesState] = useState<Record<string, string | null>>(
+  const [quickFilterValues, setQuickFilterValuesState] = useState<Record<string, string | string[] | null>>(
     () =>
       quickFiltersStorageKey
         ? (loadStoredQuickFilters(quickFiltersStorageKey)?.quickFilterValues ?? {})
@@ -230,7 +230,14 @@ const App = ({ context, notificationPosition }: IProps) => {
           label: String(e.label),
           filters: typeof e.filters === "object" && e.filters !== null && !Array.isArray(e.filters)
             ? Object.fromEntries(
-                Object.entries(e.filters).map(([k, v]) => [k, v != null ? String(v) : ""])
+                Object.entries(e.filters).map(([k, v]) => [
+                  k,
+                  Array.isArray(v)
+                    ? (v as unknown[]).map((x) => (x != null ? String(x) : ""))
+                    : v != null
+                      ? String(v)
+                      : "",
+                ])
               )
             : {},
         }));
@@ -264,13 +271,15 @@ const App = ({ context, notificationPosition }: IProps) => {
 
   const quickFilterFieldsConfig = useMemo((): QuickFilterFieldConfig[] => {
     if (!dataset?.columns) return [];
+    const colWithType = dataset.columns as { name: string; displayName?: string; dataType?: string }[];
     return quickFilterFieldsParsed
       .map((name) => {
-        const col = dataset.columns.find((c) => c.name === name);
+        const col = colWithType.find((c) => c.name === name);
         if (!col) return null;
         const displayName =
           fieldDisplayNamesOnCardMap.get(col.name) ?? col.displayName ?? col.name;
-        return { key: col.name, text: displayName };
+        const isMultiselect = !isBooleanColumnDataType(col.dataType);
+        return { key: col.name, text: displayName, isMultiselect };
       })
       .filter((c): c is QuickFilterFieldConfig => c !== null);
   }, [dataset?.columns, quickFilterFieldsParsed, fieldDisplayNamesOnCardMap]);
@@ -288,9 +297,15 @@ const App = ({ context, notificationPosition }: IProps) => {
       .filter((c): c is SortFieldConfig => c !== null);
   }, [dataset?.columns, sortFieldsParsed, fieldDisplayNamesOnCardMap]);
 
-  const setQuickFilterValue = useCallback((field: string, value: string | null) => {
+  const setQuickFilterValue = useCallback((field: string, value: string | string[] | null) => {
     setSelectedFilterPresetId(null);
-    setQuickFilterValuesState((prev) => ({ ...prev, [field]: value === QUICK_FILTER_ALL_KEY ? null : value }));
+    const normalized =
+      value === QUICK_FILTER_ALL_KEY
+        ? null
+        : Array.isArray(value) && value.length === 0
+          ? null
+          : value;
+    setQuickFilterValuesState((prev) => ({ ...prev, [field]: normalized }));
   }, []);
 
   const applyFilterPreset = useCallback(
@@ -299,7 +314,7 @@ const App = ({ context, notificationPosition }: IProps) => {
       if (!presetId) {
         // "(Kein Preset)": alle Quick-Filter leeren
         setQuickFilterValuesState(() => {
-          const next: Record<string, string | null> = {};
+          const next: Record<string, string | string[] | null> = {};
           for (const cfg of quickFilterFieldsConfig) {
             next[cfg.key] = null;
           }
@@ -311,17 +326,21 @@ const App = ({ context, notificationPosition }: IProps) => {
       if (preset) {
         // Nur die im Preset definierten Filter setzen, alle anderen leeren
         setQuickFilterValuesState(() => {
-          const next: Record<string, string | null> = {};
+          const next: Record<string, string | string[] | null> = {};
           for (const cfg of quickFilterFieldsConfig) {
             const raw = preset.filters[cfg.key];
             if (raw === undefined) {
               next[cfg.key] = null;
             } else {
-              let value = raw || null;
-              if (value === FILTER_PRESET_PLACEHOLDER_CURRENT_USER) {
-                value = currentUserDisplayName;
+              const arr = Array.isArray(raw) ? raw : [raw];
+              const withPlaceholder = arr.map((v) =>
+                v === FILTER_PRESET_PLACEHOLDER_CURRENT_USER ? (currentUserDisplayName ?? "") : String(v)
+              );
+              if (cfg.isMultiselect) {
+                next[cfg.key] = withPlaceholder.filter(Boolean).length ? withPlaceholder.filter(Boolean) : null;
+              } else {
+                next[cfg.key] = withPlaceholder[0] ?? null;
               }
-              next[cfg.key] = value;
             }
           }
           return next;
@@ -367,17 +386,28 @@ const App = ({ context, notificationPosition }: IProps) => {
   useEffect(() => {
     if (!currentUserDisplayName || !selectedFilterPresetId) return;
     const preset = filterPresetsConfig.find((p) => p.id === selectedFilterPresetId);
-    if (!preset || !Object.values(preset.filters).includes(FILTER_PRESET_PLACEHOLDER_CURRENT_USER)) return;
+    if (!preset) return;
+    const hasPlaceholder = (v: string | string[]) =>
+      v === FILTER_PRESET_PLACEHOLDER_CURRENT_USER ||
+      (Array.isArray(v) && v.includes(FILTER_PRESET_PLACEHOLDER_CURRENT_USER));
+    if (!Object.values(preset.filters).some(hasPlaceholder)) return;
     setQuickFilterValuesState((prev) => {
       const next = { ...prev };
       for (const key of Object.keys(preset.filters)) {
-        if (preset.filters[key] === FILTER_PRESET_PLACEHOLDER_CURRENT_USER) {
+        const val = preset.filters[key];
+        if (val === FILTER_PRESET_PLACEHOLDER_CURRENT_USER) {
           next[key] = currentUserDisplayName;
+        } else if (Array.isArray(val) && val.includes(FILTER_PRESET_PLACEHOLDER_CURRENT_USER)) {
+          const cfg = quickFilterFieldsConfig.find((c) => c.key === key);
+          next[key] = val.map((v) => (v === FILTER_PRESET_PLACEHOLDER_CURRENT_USER ? currentUserDisplayName : v));
+          if (!cfg?.isMultiselect && next[key] && Array.isArray(next[key])) {
+            next[key] = (next[key] as string[])[0] ?? null;
+          }
         }
       }
       return next;
     });
-  }, [currentUserDisplayName, selectedFilterPresetId, filterPresetsConfig]);
+  }, [currentUserDisplayName, selectedFilterPresetId, filterPresetsConfig, quickFilterFieldsConfig]);
 
   // Bei View-Wechsel (andere Dataverse-View): gespeicherte Schnellfilter für diesen View laden
   useEffect(() => {
@@ -454,12 +484,22 @@ const App = ({ context, notificationPosition }: IProps) => {
     let filteredCards = allCards.filter((card: any) => {
       for (const cfg of quickFilterFieldsConfig) {
         const selected = quickFilterValues[cfg.key];
-        if (selected == null || selected === "") continue;
         const cardVal = getQuickFilterComparableValue(card[cfg.key]);
-        if (selected === QUICK_FILTER_EMPTY_KEY) {
-          if (cardVal !== "") return false;
-        } else if (cardVal !== selected) {
-          return false;
+        if (cfg.isMultiselect) {
+          const arr = Array.isArray(selected) ? selected : null;
+          if (!arr || arr.length === 0) continue;
+          if (arr.includes(QUICK_FILTER_EMPTY_KEY)) {
+            if (cardVal !== "") return false;
+          } else if (!arr.includes(cardVal)) {
+            return false;
+          }
+        } else {
+          if (selected == null || selected === "") continue;
+          if (selected === QUICK_FILTER_EMPTY_KEY) {
+            if (cardVal !== "") return false;
+          } else if (cardVal !== selected) {
+            return false;
+          }
         }
       }
       return true;

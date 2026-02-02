@@ -11,6 +11,8 @@ export interface ConfigError {
 export interface QuickFilterFieldConfig {
   key: string;
   text: string;
+  /** true = Multiselect-Filter (alle außer Boolean); false = Einzelauswahl (Boolean) */
+  isMultiselect: boolean;
 }
 
 export interface SortFieldConfig {
@@ -18,11 +20,11 @@ export interface SortFieldConfig {
   text: string;
 }
 
-/** Filter-Preset aus JSON-Konfiguration: id, Anzeigename, Feld -> Filterwert */
+/** Filter-Preset aus JSON-Konfiguration: id, Anzeigename, Feld -> Filterwert(e). Wert pro Feld: string (Einzelwert) oder string[] (Multiselect). */
 export interface FilterPresetConfig {
   id: string;
   label: string;
-  filters: Record<string, string>;
+  filters: Record<string, string | string[]>;
 }
 
 export type SortDirection = "asc" | "desc";
@@ -51,10 +53,10 @@ interface IBoardContext {
   clearConfigError: (property: string) => void,
   /** Quick filter: fields configured for filtering (from backend) */
   quickFilterFieldsConfig: QuickFilterFieldConfig[],
-  /** Quick filter: current selected value per field (display value for comparison) */
-  quickFilterValues: Record<string, string | null>,
-  /** Quick filter: set selected value for a field; null = no filter */
-  setQuickFilterValue: (field: string, value: string | null) => void,
+  /** Quick filter: current value per field. Multiselect-Felder: string[] | null; Boolean: string | null */
+  quickFilterValues: Record<string, string | string[] | null>,
+  /** Quick filter: set value for a field; null = no filter. Multiselect: string[] | null, sonst string | null */
+  setQuickFilterValue: (field: string, value: string | string[] | null) => void,
   /** Quick filter: options per field (distinct values from data) */
   quickFilterOptions: Record<string, IDropdownOption[]>,
   /** Eigene Volltext-Suche: Suchbegriff für alle Kartenfelder */

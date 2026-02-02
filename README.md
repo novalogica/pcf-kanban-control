@@ -64,8 +64,8 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 
 | Property | Type | Description |
 |----------|------|-------------|
-| **Quick filter fields** | Text | Field **logical names** to show as **quick filter dropdowns** above the board. Use the **exact column name** from the dataset (e.g. `ownerid` for the entity, or `a_xxx.ownerid` for linked-entity columns so you can configure both separately). **JSON array** (e.g. `["statuscode","ownerid","a_c66099806c8349a18e63498da795a1a6.ownerid"]`) or comma-separated list. Only fields present in the dataset can be used. Invalid JSON falls back to comma parsing. |
-| **Filter presets** | Text | **JSON array** of filter presets shown in a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. Filter values must match the values shown in the quick filter dropdowns. Use placeholder **`{{currentUser}}`** for the current user (e.g. `ownerid: "{{currentUser}}"` for "Meine Opportunities"); replaced at runtime by the user's display name (Dataverse systemuser.fullname). Invalid JSON is reported. **The Filter-Preset dropdown is only shown if this property is set** in the view/form control configuration (e.g. View > Edit > select the Kanban control column > **Filter presets** > set to a static value with the JSON array). |
+| **Quick filter fields** | Text | Field **logical names** to show as **quick filter dropdowns** above the board. All fields except **Boolean** are **multiselect** filters; Boolean fields remain single-select. Use the **exact column name** from the dataset (e.g. `ownerid` for the entity, or `a_xxx.ownerid` for linked-entity columns). **JSON array** (e.g. `["statuscode","ownerid","a_c66099806c8349a18e63498da795a1a6.ownerid"]`) or comma-separated list. Only fields present in the dataset can be used. Invalid JSON falls back to comma parsing. |
+| **Filter presets** | Text | **JSON array** of filter presets shown in a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. For **multiselect** quick filter fields use an array: `"fieldLogicalName": ["value1","value2"]`; for Boolean use a single value. Filter values must match the values shown in the quick filter dropdowns. Use placeholder **`{{currentUser}}`** for the current user (e.g. `ownerid: "{{currentUser}}"` for "Meine Opportunities"); replaced at runtime by the user's display name (Dataverse systemuser.fullname). Invalid JSON is reported. **The Filter-Preset dropdown is only shown if this property is set** in the view/form control configuration. |
 | **Sort fields** | Text | Field **logical names** available for **custom sorting** (dropdown next to search). **JSON array** (e.g. `["createdon","estimatedvalue"]`) or comma-separated list. Only fields present in the dataset can be used. Ascending/descending is selectable in the UI. Invalid JSON falls back to comma parsing. |
 
 ### Notifications
@@ -131,10 +131,11 @@ If a JSON property contains invalid JSON, the control shows a **Configuration er
    ```json
    [
      {"id":"open","label":"Offen","filters":{"statuscode":"1"}},
-     {"id":"my-opportunities","label":"Meine Opportunities","filters":{"ownerid":"{{currentUser}}"}}
+     {"id":"my-opportunities","label":"Meine Opportunities","filters":{"ownerid":"{{currentUser}}"}},
+     {"id":"multi-status","label":"Mehrere Status","filters":{"statuscode":["1","2","3"]}}
    ]
    ```
-   - `filters`: field logical name → value as shown in the quick filter dropdown.
+   - `filters`: field logical name → single value (Boolean/single-select) or **array of values** (multiselect quick filter fields). Values must match the quick filter dropdown labels.
    - **Placeholder `{{currentUser}}`**: use for the current user (e.g. `ownerid`). Replaced at runtime by the logged-in user's display name (Dataverse systemuser.fullname). Ideal for presets like "Meine Opportunities" or "Meine Fälle".
 
 **Hidden fields on card** (loaded but not displayed)
@@ -199,7 +200,7 @@ If a JSON property contains invalid JSON, the control shows a **Configuration er
 **Maximum column width** (number as text)
    Set e.g. `500` or `800`. Valid range 200–2000. Leave empty for no limit.
 
-**Quick filter fields** (dropdown filters above the board)
+**Quick filter fields** (dropdown filters above the board; multiselect except for Boolean fields)
    ```json
    ["statuscode","prioritycode","ownerid"]
    ```

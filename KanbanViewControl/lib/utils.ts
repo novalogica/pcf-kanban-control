@@ -17,6 +17,14 @@ export const isNullOrEmpty = (value: unknown) => {
  * getrennt konfigurierbar sind.
  */
 
+/** PCF/Dataverse column data types for Boolean/Yes-No fields (single-select only, no multiselect). */
+export const BOOLEAN_COLUMN_DATA_TYPES = ["Boolean", "boolean", "TwoOptions", "twooptions"];
+
+/** True if the column dataType is Boolean/TwoOptions (Yes-No); use for single-select vs multiselect (e.g. quick filters). */
+export function isBooleanColumnDataType(dataType: string | undefined): boolean {
+  return dataType != null && BOOLEAN_COLUMN_DATA_TYPES.includes(dataType);
+}
+
 /** Returns the part before the last dot (linked-entity alias), or null if there is no dot. Use to inspect or distinguish columns that share the same attribute name (e.g. ownerid vs a_xxx.ownerid). */
 export function getFieldNamePrefixBeforeDot(fieldName: string): string | null {
     const lastDot = fieldName.lastIndexOf(".");

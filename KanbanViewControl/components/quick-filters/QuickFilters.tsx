@@ -49,20 +49,42 @@ const QuickFilters = () => {
   return (
     <div className="kanban-quick-filters" role="group" aria-label="Schnellfilter und Suche">
       {quickFilterFieldsConfig?.map((cfg) => {
-        const options = quickFilterOptions[cfg.key] ?? [
+        const rawOptions = quickFilterOptions[cfg.key] ?? [
           { key: QUICK_FILTER_ALL_KEY, text: "(Alle)" },
         ];
         const selectedValue = quickFilterValues[cfg.key] ?? null;
-        const selectedOption = selectedValue
-          ? options.find((o) => o.key === selectedValue) ?? options[0]
-          : options[0];
 
+        if (cfg.isMultiselect) {
+          const options = rawOptions.filter((o) => o.key !== QUICK_FILTER_ALL_KEY);
+          const selectedKeys = Array.isArray(selectedValue)
+            ? selectedValue
+            : selectedValue
+              ? [String(selectedValue)]
+              : [];
+          return (
+            <KanbanDropdown
+              key={cfg.key}
+              label={cfg.text}
+              placeholder="(Alle)"
+              options={options}
+              multiSelect
+              selectedKeys={selectedKeys}
+              onSelectionChange={(keys) => {
+                setQuickFilterValue(cfg.key, keys.length ? keys : null);
+              }}
+            />
+          );
+        }
+
+        const selectedOption = selectedValue
+          ? rawOptions.find((o) => o.key === selectedValue) ?? rawOptions[0]
+          : rawOptions[0];
         return (
           <KanbanDropdown
             key={cfg.key}
             label={cfg.text}
             placeholder="(Alle)"
-            options={options}
+            options={rawOptions}
             selectedOption={selectedOption as IDropdownOption}
             onOptionSelected={(option) => {
               const key = option.key;
