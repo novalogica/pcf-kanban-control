@@ -10,10 +10,10 @@ export const isNullOrEmpty = (value: unknown) => {
 
 /**
  * Format bei verknüpften Entitäten (Linked Entity): Spaltenname = "Alias.Attributname",
- * z. B. "a_c66099806c8349a18e63498da795a1a6.ownerid". Der Teil vor dem Punkt ist der
- * Linked-Entity-Alias (von Dataverse/Power Apps vergeben, i. d. R. pro View/Relation
+ * z. B. "a_c66099806c8349a18e63498da795a1a6.ownerid". Der Teil vor dem Punkt ist der
+ * Linked-Entity-Alias (von Dataverse/Power Apps vergeben, i. d. R. pro View/Relation
  * konstant). Konfiguration (Quick filter, Sort, Filter presets, Feld-Labels etc.) erfolgt
- * ausschließlich über den vollen Spaltennamen, damit z. B. ownerid und a_xxx.ownerid
+ * ausschließlich über den vollen Spaltennamen, damit z. B. ownerid und a_xxx.ownerid
  * getrennt konfigurierbar sind.
  */
 
