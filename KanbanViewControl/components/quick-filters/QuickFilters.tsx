@@ -7,6 +7,7 @@ import type { SortDirection } from "../../context/board-context";
 
 const QUICK_FILTER_ALL_KEY = "__all__";
 const SORT_NONE_KEY = "__sort_none__";
+const FILTER_PRESET_NONE_KEY = "__filter_preset_none__";
 const SORT_KEY_SEP = ":";
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -27,6 +28,9 @@ const QuickFilters = () => {
     setSortByField,
     sortDirection,
     setSortDirection,
+    filterPresetsConfig,
+    selectedFilterPresetId,
+    applyFilterPreset,
   } = useContext(BoardContext);
 
   const [inputValue, setInputValue] = useState(searchKeyword);
@@ -105,6 +109,29 @@ const QuickFilters = () => {
                   setSortByField(field);
                   setSortDirection(dir === "asc" || dir === "desc" ? dir : "asc");
                 }
+              }}
+            />
+          </div>
+        )}
+        {filterPresetsConfig.length > 0 && (
+          <div className="kanban-quick-filters-preset">
+            <KanbanDropdown
+              label="Filter-Preset"
+              placeholder="(Kein Preset)"
+              options={[
+                { key: FILTER_PRESET_NONE_KEY, text: "(Kein Preset)" },
+                ...filterPresetsConfig.map((p) => ({ key: p.id, text: p.label })),
+              ]}
+              selectedOption={
+                selectedFilterPresetId
+                  ? filterPresetsConfig.find((p) => p.id === selectedFilterPresetId)
+                    ? { key: selectedFilterPresetId, text: filterPresetsConfig.find((p) => p.id === selectedFilterPresetId)!.label }
+                    : { key: FILTER_PRESET_NONE_KEY, text: "(Kein Preset)" }
+                  : { key: FILTER_PRESET_NONE_KEY, text: "(Kein Preset)" }
+              }
+              onOptionSelected={(option) => {
+                const key = String(option.key);
+                applyFilterPreset(key === FILTER_PRESET_NONE_KEY ? null : key);
               }}
             />
           </div>

@@ -40,6 +40,7 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 | **Hide empty columns** | Yes/No | When **Yes**, columns that currently have no cards are hidden. The board only shows columns that contain at least one record. Default: **No**. |
 | **Expand board to full width** | Yes/No | When **Yes**, the board uses the full available width and columns scale proportionally. When **No**, the board keeps a fixed layout. Default: **No**. |
 | **Minimum column width** | Text | Minimum width of each column in **pixels** (number as text, e.g. `300` or `400`). Also applies when "Expand board to full width" is enabled; horizontal scrolling is used if needed. Leave empty for default (400). |
+| **Maximum column width** | Text | Maximum width of each column (and cards) in **pixels** (e.g. `500` or `800`). Valid range 200–2000. Leave empty for no limit. |
 | **Allow creating new records from board** | Yes/No | When **No**, the add (+) button on each column header is hidden and users cannot create records from the board. Default: **Yes**. |
 
 ### Card content & appearance
@@ -63,7 +64,8 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 
 | Property | Type | Description |
 |----------|------|-------------|
-| **Quick filter fields** | Text | Field **logical names** to show as **quick filter dropdowns** above the board. Supports OptionSet, Lookup, and text fields (text fields with fixed values are shown as dropdowns with occurring values). **JSON array** (e.g. `["statuscode","my_text_field"]`) or comma-separated list. Only fields present in the dataset can be used. Invalid JSON falls back to comma parsing. |
+| **Quick filter fields** | Text | Field **logical names** to show as **quick filter dropdowns** above the board. Use the **exact column name** from the dataset (e.g. `ownerid` for the entity, or `a_xxx.ownerid` for linked-entity columns so you can configure both separately). **JSON array** (e.g. `["statuscode","ownerid","a_c66099806c8349a18e63498da795a1a6.ownerid"]`) or comma-separated list. Only fields present in the dataset can be used. Invalid JSON falls back to comma parsing. |
+| **Filter presets** | Text | **JSON array** of filter presets shown in a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. Filter values must match the values shown in the quick filter dropdowns. Use placeholder **`{{currentUser}}`** for the current user (e.g. `ownerid: "{{currentUser}}"` for "Meine Opportunities"); replaced at runtime by the user's display name (Dataverse systemuser.fullname). Invalid JSON is reported. **The Filter-Preset dropdown is only shown if this property is set** in the view/form control configuration (e.g. View > Edit > select the Kanban control column > **Filter presets** > set to a static value with the JSON array). |
 | **Sort fields** | Text | Field **logical names** available for **custom sorting** (dropdown next to search). **JSON array** (e.g. `["createdon","estimatedvalue"]`) or comma-separated list. Only fields present in the dataset can be used. Ascending/descending is selectable in the UI. Invalid JSON falls back to comma parsing. |
 
 ### Notifications
@@ -106,7 +108,7 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 
 ### Configuration errors
 
-If a JSON property contains invalid JSON, the control shows a **Configuration errors** banner above the board with the property name and error message. Properties that are validated as JSON: **Filter out Business Process Flows**, **Business Process Flow Step Order**, **Field display names on card**, **Field highlights**, **Field widths on card**. For **Quick filter fields** and **Sort fields**, an error is only reported when the value starts with `[` but is not valid JSON; otherwise comma-separated parsing is used. Fix the value in the control configuration to clear the banner.
+If a JSON property contains invalid JSON, the control shows a **Configuration errors** banner above the board with the property name and error message. Properties that are validated as JSON: **Filter out Business Process Flows**, **Business Process Flow Step Order**, **Field display names on card**, **Field highlights**, **Field widths on card**, **Filter presets**. For **Quick filter fields** and **Sort fields**, an error is only reported when the value starts with `[` but is not valid JSON; otherwise comma-separated parsing is used. Fix the value in the control configuration to clear the banner.
 
 ### Examples – JSON configuration options
 
@@ -124,6 +126,16 @@ If a JSON property contains invalid JSON, the control shows a **Configuration er
    [{"id":"Develop","order":2},{"id":"Propose","order":1},{"id":"Close","order":0}]
    ```
    Use the stage **display name** as `id`. Set in the control config: *View > Custom Controls > Kanban View Control > Business Process Flow Step Order > Edit > Bind to a static value > Paste JSON*.
+
+**Filter presets** (dropdown next to sorting; selection persisted per view)
+   ```json
+   [
+     {"id":"open","label":"Offen","filters":{"statuscode":"1"}},
+     {"id":"my-opportunities","label":"Meine Opportunities","filters":{"ownerid":"{{currentUser}}"}}
+   ]
+   ```
+   - `filters`: field logical name → value as shown in the quick filter dropdown.
+   - **Placeholder `{{currentUser}}`**: use for the current user (e.g. `ownerid`). Replaced at runtime by the logged-in user's display name (Dataverse systemuser.fullname). Ideal for presets like "Meine Opportunities" or "Meine Fälle".
 
 **Hidden fields on card** (loaded but not displayed)
    ```json
@@ -183,6 +195,9 @@ If a JSON property contains invalid JSON, the control shows a **Configuration er
 
 **Minimum column width** (number as text)
    Set e.g. `300` or `400`. Leave empty for default (400).
+
+**Maximum column width** (number as text)
+   Set e.g. `500` or `800`. Valid range 200–2000. Leave empty for no limit.
 
 **Quick filter fields** (dropdown filters above the board)
    ```json

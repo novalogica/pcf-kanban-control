@@ -2,13 +2,13 @@ import * as React from "react";
 import { IInputs } from "./generated/ManifestTypes";
 import { Board } from "./components";
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
-import { BoardContext, ConfigError, QuickFilterFieldConfig, SortFieldConfig, SortDirection } from "./context/board-context";
+import { BoardContext, ConfigError, QuickFilterFieldConfig, SortFieldConfig, SortDirection, FilterPresetConfig } from "./context/board-context";
 import { ColumnItem, ViewItem, ViewEntity } from "./interfaces";
 import Loading from "./components/container/loading";
 import { Toaster } from "react-hot-toast";
 import { useDataverse } from "./hooks/useDataverse";
 import { useNavigation } from "./hooks/useNavigation";
-import { getColumnValue, getFieldNameSuffixForMatch } from "./lib/utils";
+import { getColumnValue } from "./lib/utils";
 import { unlocatedColumn } from "./lib/constants";
 import { Spinner, SpinnerSize } from "@fluentui/react";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -18,11 +18,28 @@ const QUICK_FILTER_ALL_KEY = "__all__";
 const QUICK_FILTER_EMPTY_KEY = "__empty__";
 const QUICK_FILTERS_STORAGE_PREFIX = "pcf-kanban-quickfilters";
 
+/**
+ * Filter-Presets: JSON-Konfiguration über Komponenten-Property "Filter presets" (filterPresets).
+ * Format: Array von { id: string, label: string, filters: Record<fieldLogicalName, filterValue> }.
+ * filterValue muss den Werten in den Quick-Filter-Dropdowns entsprechen.
+ *
+ * Platzhalter für aktuellen Benutzer (z. B. bei ownerid für "Meine Opportunities"):
+ * In filters den Wert "{{currentUser}}" verwenden – wird zur Laufzeit durch den Anzeigenamen
+ * des eingeloggten Benutzers ersetzt (Dataverse systemuser.fullname).
+ *
+ * Beispiel für die Property im Formular-Editor:
+ * [{"id":"open","label":"Offen","filters":{"statuscode":"1"}},{"id":"my-opportunities","label":"Meine Opportunities","filters":{"ownerid":"{{currentUser}}"}}]
+ */
+
+/** Platzhalter in Filter-Presets: wird durch den Anzeigenamen des aktuellen Benutzers ersetzt (z. B. für ownerid). */
+const FILTER_PRESET_PLACEHOLDER_CURRENT_USER = "{{currentUser}}";
+
 interface StoredQuickFilters {
   quickFilterValues: Record<string, string | null>;
   searchKeyword: string;
   sortByField: string | null;
   sortDirection: SortDirection;
+  selectedFilterPresetId: string | null;
 }
 
 function loadStoredQuickFilters(storageKey: string): StoredQuickFilters | null {
@@ -32,6 +49,10 @@ function loadStoredQuickFilters(storageKey: string): StoredQuickFilters | null {
     const parsed = JSON.parse(raw) as Record<string, unknown> | null;
     if (!parsed || typeof parsed !== "object") return null;
     const qfv = parsed.quickFilterValues;
+    const presetId =
+      parsed.selectedFilterPresetId !== undefined && parsed.selectedFilterPresetId !== null
+        ? String(parsed.selectedFilterPresetId)
+        : null;
     return {
       quickFilterValues:
         qfv && typeof qfv === "object" && qfv !== null && !Array.isArray(qfv)
@@ -46,6 +67,7 @@ function loadStoredQuickFilters(storageKey: string): StoredQuickFilters | null {
         parsed.sortDirection === "asc" || parsed.sortDirection === "desc"
           ? (parsed.sortDirection as SortDirection)
           : "asc",
+      selectedFilterPresetId: presetId,
     };
   } catch {
     return null;
@@ -65,19 +87,22 @@ function getQuickFilterComparableValue(fieldValue: unknown): string {
 
 function parseQuickFilterFieldsRaw(
   raw: string | undefined,
-  reportError: (property: string, message: string) => void
+  reportError: (property: string, message: string) => void,
+  clearError: (property: string) => void,
+  propertyName: string
 ): string[] {
   if (!raw?.trim()) return [];
   const trimmed = raw.trim();
   try {
     if (trimmed.startsWith("[")) {
       const arr = JSON.parse(trimmed) as unknown;
+      clearError(propertyName);
       return Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : [];
     }
     return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
   } catch (e) {
     if (trimmed.startsWith("[")) {
-      reportError("quickFilterFields", e instanceof Error ? e.message : String(e));
+      reportError(propertyName, e instanceof Error ? e.message : String(e));
     }
     return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
   }
@@ -130,6 +155,12 @@ const App = ({ context, notificationPosition }: IProps) => {
       ? (loadStoredQuickFilters(quickFiltersStorageKey)?.sortDirection ?? "asc")
       : "asc"
   );
+  const [selectedFilterPresetId, setSelectedFilterPresetId] = useState<string | null>(() =>
+    quickFiltersStorageKey
+      ? (loadStoredQuickFilters(quickFiltersStorageKey)?.selectedFilterPresetId ?? null)
+      : null
+  );
+  const [currentUserDisplayName, setCurrentUserDisplayName] = useState<string | null>(null);
   const reportedConfigErrorsRef = useRef<Set<string>>(new Set());
   const prevViewIdRef = useRef<string | null>(null);
   const draggingRef = useRef(false);
@@ -139,10 +170,17 @@ const App = ({ context, notificationPosition }: IProps) => {
     const key = `${property}\n${message}`;
     if (reportedConfigErrorsRef.current.has(key)) return;
     reportedConfigErrorsRef.current.add(key);
-    setConfigErrors((prev) => [...prev, { property, message }]);
+    setConfigErrors((prev) => [...prev.filter((e) => e.property !== property), { property, message }]);
   }, []);
 
-  const { getOptionSets, getBusinessProcessFlows } = useDataverse(context, reportConfigError);
+  const clearConfigError = useCallback((property: string) => {
+    setConfigErrors((prev) => prev.filter((e) => e.property !== property));
+    for (const key of reportedConfigErrorsRef.current) {
+      if (key.startsWith(`${property}\n`)) reportedConfigErrorsRef.current.delete(key);
+    }
+  }, []);
+
+  const { getOptionSets, getBusinessProcessFlows } = useDataverse(context, reportConfigError, clearConfigError);
   const { openForm } = useNavigation(context);
   const { dataset } = context.parameters;
 
@@ -153,15 +191,54 @@ const App = ({ context, notificationPosition }: IProps) => {
 
   const quickFilterFieldsParam = (context.parameters as { quickFilterFields?: { raw?: string } }).quickFilterFields?.raw;
   const quickFilterFieldsParsed = useMemo(
-    () => parseQuickFilterFieldsRaw(quickFilterFieldsParam, reportConfigError),
-    [quickFilterFieldsParam, reportConfigError]
+    () => parseQuickFilterFieldsRaw(quickFilterFieldsParam, reportConfigError, clearConfigError, "quickFilterFields"),
+    [quickFilterFieldsParam, reportConfigError, clearConfigError]
   );
 
   const sortFieldsParam = (context.parameters as { sortFields?: { raw?: string } }).sortFields?.raw;
   const sortFieldsParsed = useMemo(
-    () => parseQuickFilterFieldsRaw(sortFieldsParam, reportConfigError),
-    [sortFieldsParam, reportConfigError]
+    () => parseQuickFilterFieldsRaw(sortFieldsParam, reportConfigError, clearConfigError, "sortFields"),
+    [sortFieldsParam, reportConfigError, clearConfigError]
   );
+
+  // JSON-Konfiguration Filter-Presets: aus Komponenten-Property "Filter presets" (filterPresets).
+  // Muss in der View-/Formular-Konfiguration der Komponente auf einen statischen Wert (JSON-Array) gesetzt werden.
+  const params = context.parameters as unknown as Record<string, { raw?: string } | undefined>;
+  const filterPresetsParamRaw =
+    params.filterPresets?.raw ?? params["filterPresets"]?.raw;
+  const filterPresetsParam =
+    typeof filterPresetsParamRaw === "string" ? filterPresetsParamRaw.trim() : "";
+  const filterPresetsConfig = useMemo((): FilterPresetConfig[] => {
+    if (!filterPresetsParam) return [];
+    try {
+      const arr = JSON.parse(filterPresetsParam) as unknown;
+      if (!Array.isArray(arr)) return [];
+      clearConfigError("filterPresets");
+      return arr
+        .filter((e): e is FilterPresetConfig => {
+          if (!e || typeof e !== "object") return false;
+          const id = (e as Record<string, unknown>).id;
+          const label = (e as Record<string, unknown>).label;
+          const filters = (e as Record<string, unknown>).filters;
+          if (typeof id !== "string" || !String(id).trim()) return false;
+          if (typeof label !== "string") return false;
+          if (filters == null || typeof filters !== "object" || Array.isArray(filters)) return false;
+          return true;
+        })
+        .map((e) => ({
+          id: String(e.id).trim(),
+          label: String(e.label),
+          filters: typeof e.filters === "object" && e.filters !== null && !Array.isArray(e.filters)
+            ? Object.fromEntries(
+                Object.entries(e.filters).map(([k, v]) => [k, v != null ? String(v) : ""])
+              )
+            : {},
+        }));
+    } catch (e) {
+      reportConfigError("filterPresets", e instanceof Error ? e.message : String(e));
+      return [];
+    }
+  }, [filterPresetsParam, reportConfigError, clearConfigError]);
 
   const fieldDisplayNamesOnCardMap = useMemo((): Map<string, string> => {
     const raw = (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw?.trim();
@@ -169,6 +246,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     try {
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return new Map();
+      clearConfigError("fieldDisplayNamesOnCard");
       const map = new Map<string, string>();
       for (const e of arr) {
         if (e && typeof e === "object" && "logicalName" in e && "displayName" in e) {
@@ -182,21 +260,16 @@ const App = ({ context, notificationPosition }: IProps) => {
       reportConfigError("fieldDisplayNamesOnCard", e instanceof Error ? e.message : String(e));
       return new Map();
     }
-  }, [(context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw, reportConfigError]);
+  }, [(context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw, reportConfigError, clearConfigError]);
 
   const quickFilterFieldsConfig = useMemo((): QuickFilterFieldConfig[] => {
     if (!dataset?.columns) return [];
     return quickFilterFieldsParsed
       .map((name) => {
-        const col = dataset.columns.find(
-          (c) => c.name === name || getFieldNameSuffixForMatch(c.name) === name
-        );
+        const col = dataset.columns.find((c) => c.name === name);
         if (!col) return null;
         const displayName =
-          fieldDisplayNamesOnCardMap.get(col.name) ??
-          fieldDisplayNamesOnCardMap.get(getFieldNameSuffixForMatch(col.name)) ??
-          col.displayName ??
-          col.name;
+          fieldDisplayNamesOnCardMap.get(col.name) ?? col.displayName ?? col.name;
         return { key: col.name, text: displayName };
       })
       .filter((c): c is QuickFilterFieldConfig => c !== null);
@@ -206,27 +279,60 @@ const App = ({ context, notificationPosition }: IProps) => {
     if (!dataset?.columns) return [];
     return sortFieldsParsed
       .map((name) => {
-        const col = dataset.columns.find(
-          (c) => c.name === name || getFieldNameSuffixForMatch(c.name) === name
-        );
+        const col = dataset.columns.find((c) => c.name === name);
         if (!col) return null;
         const displayName =
-          fieldDisplayNamesOnCardMap.get(col.name) ??
-          fieldDisplayNamesOnCardMap.get(getFieldNameSuffixForMatch(col.name)) ??
-          col.displayName ??
-          col.name;
+          fieldDisplayNamesOnCardMap.get(col.name) ?? col.displayName ?? col.name;
         return { key: col.name, text: displayName };
       })
       .filter((c): c is SortFieldConfig => c !== null);
   }, [dataset?.columns, sortFieldsParsed, fieldDisplayNamesOnCardMap]);
 
   const setQuickFilterValue = useCallback((field: string, value: string | null) => {
+    setSelectedFilterPresetId(null);
     setQuickFilterValuesState((prev) => ({ ...prev, [field]: value === QUICK_FILTER_ALL_KEY ? null : value }));
   }, []);
 
+  const applyFilterPreset = useCallback(
+    (presetId: string | null) => {
+      setSelectedFilterPresetId(presetId);
+      if (!presetId) {
+        // "(Kein Preset)": alle Quick-Filter leeren
+        setQuickFilterValuesState(() => {
+          const next: Record<string, string | null> = {};
+          for (const cfg of quickFilterFieldsConfig) {
+            next[cfg.key] = null;
+          }
+          return next;
+        });
+        return;
+      }
+      const preset = filterPresetsConfig.find((p) => p.id === presetId);
+      if (preset) {
+        // Nur die im Preset definierten Filter setzen, alle anderen leeren
+        setQuickFilterValuesState(() => {
+          const next: Record<string, string | null> = {};
+          for (const cfg of quickFilterFieldsConfig) {
+            const raw = preset.filters[cfg.key];
+            if (raw === undefined) {
+              next[cfg.key] = null;
+            } else {
+              let value = raw || null;
+              if (value === FILTER_PRESET_PLACEHOLDER_CURRENT_USER) {
+                value = currentUserDisplayName;
+              }
+              next[cfg.key] = value;
+            }
+          }
+          return next;
+        });
+      }
+    },
+    [filterPresetsConfig, quickFilterFieldsConfig, currentUserDisplayName]
+  );
+
   useEffect(() => {
     reportedConfigErrorsRef.current.clear();
-    setConfigErrors([]);
   }, [
     context.parameters.filteredBusinessProcessFlows?.raw,
     context.parameters.businessProcessFlowStepOrder?.raw,
@@ -240,7 +346,38 @@ const App = ({ context, notificationPosition }: IProps) => {
     (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw,
     (context.parameters as { quickFilterFields?: { raw?: string } }).quickFilterFields?.raw,
     (context.parameters as { sortFields?: { raw?: string } }).sortFields?.raw,
+    filterPresetsParam,
   ]);
+
+  // Anzeigenamen des aktuellen Benutzers laden (für Platzhalter {{currentUser}} in Filter-Presets)
+  useEffect(() => {
+    const userSettings = (context as { userSettings?: { userId?: string } }).userSettings;
+    const userId = userSettings?.userId;
+    if (!userId || !context.webAPI) return;
+    context.webAPI
+      .retrieveRecord("systemuser", userId, "?$select=fullname")
+      .then((user: { fullname?: string }) => {
+        const name = user?.fullname;
+        setCurrentUserDisplayName(typeof name === "string" ? name : null);
+      })
+      .catch(() => setCurrentUserDisplayName(null));
+  }, [context]);
+
+  // Preset mit {{currentUser}} erneut anwenden, sobald der Benutzername geladen ist
+  useEffect(() => {
+    if (!currentUserDisplayName || !selectedFilterPresetId) return;
+    const preset = filterPresetsConfig.find((p) => p.id === selectedFilterPresetId);
+    if (!preset || !Object.values(preset.filters).includes(FILTER_PRESET_PLACEHOLDER_CURRENT_USER)) return;
+    setQuickFilterValuesState((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(preset.filters)) {
+        if (preset.filters[key] === FILTER_PRESET_PLACEHOLDER_CURRENT_USER) {
+          next[key] = currentUserDisplayName;
+        }
+      }
+      return next;
+    });
+  }, [currentUserDisplayName, selectedFilterPresetId, filterPresetsConfig]);
 
   // Bei View-Wechsel (andere Dataverse-View): gespeicherte Schnellfilter für diesen View laden
   useEffect(() => {
@@ -252,6 +389,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         setSearchKeyword(stored.searchKeyword);
         setSortByField(stored.sortByField);
         setSortDirection(stored.sortDirection);
+        setSelectedFilterPresetId(stored.selectedFilterPresetId);
       }
     }
     prevViewIdRef.current = viewId;
@@ -268,12 +406,13 @@ const App = ({ context, notificationPosition }: IProps) => {
           searchKeyword,
           sortByField,
           sortDirection,
+          selectedFilterPresetId,
         })
       );
     } catch {
       // Local Storage voll oder nicht verfügbar
     }
-  }, [quickFiltersStorageKey, quickFilterValues, searchKeyword, sortByField, sortDirection]);
+  }, [quickFiltersStorageKey, quickFilterValues, searchKeyword, sortByField, sortDirection, selectedFilterPresetId]);
 
   const openFormWithLoading = useCallback(async (entityName: string, id?: string) => {
     if (openingRef.current) return;
@@ -376,14 +515,22 @@ const App = ({ context, notificationPosition }: IProps) => {
             } else if (bNum !== null) {
               cmp = 1;
             } else {
-              const va = getQuickFilterComparableValue(a[sortByField]);
-              const vb = getQuickFilterComparableValue(b[sortByField]);
-              cmp = va.localeCompare(vb, undefined, { numeric: true });
+              cmp = 0;
             }
           } else {
             const va = getQuickFilterComparableValue(a[sortByField]);
             const vb = getQuickFilterComparableValue(b[sortByField]);
-            cmp = va.localeCompare(vb, undefined, { numeric: true });
+            const aEmpty = va == null || String(va).trim() === "";
+            const bEmpty = vb == null || String(vb).trim() === "";
+            if (aEmpty && bEmpty) {
+              cmp = 0;
+            } else if (aEmpty) {
+              cmp = 1;
+            } else if (bEmpty) {
+              cmp = -1;
+            } else {
+              cmp = String(va).localeCompare(String(vb), undefined, { numeric: true });
+            }
           }
           return sortDirection === "asc" ? cmp : -cmp;
         });
@@ -503,9 +650,7 @@ const App = ({ context, notificationPosition }: IProps) => {
 
         const cardData = { id, ...columnValues } as Record<string, unknown>;
         for (const fieldName of quickFilterFieldsList) {
-          const col = dataset.columns.find(
-            (c) => c.name === fieldName || getFieldNameSuffixForMatch(c.name) === fieldName
-          );
+          const col = dataset.columns.find((c) => c.name === fieldName);
           if (col && !(col.name in cardData)) {
             cardData[col.name] = getColumnValue(record, col);
           }
@@ -537,6 +682,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         openFormWithLoading,
         configErrors,
         reportConfigError,
+        clearConfigError,
         quickFilterFieldsConfig,
         quickFilterValues,
         setQuickFilterValue,
@@ -548,6 +694,9 @@ const App = ({ context, notificationPosition }: IProps) => {
         setSortByField,
         sortDirection,
         setSortDirection,
+        filterPresetsConfig,
+        selectedFilterPresetId,
+        applyFilterPreset,
       }}
     >
       <div className="app-content-wrapper">

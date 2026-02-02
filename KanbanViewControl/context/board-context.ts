@@ -18,6 +18,13 @@ export interface SortFieldConfig {
   text: string;
 }
 
+/** Filter-Preset aus JSON-Konfiguration: id, Anzeigename, Feld -> Filterwert */
+export interface FilterPresetConfig {
+  id: string;
+  label: string;
+  filters: Record<string, string>;
+}
+
 export type SortDirection = "asc" | "desc";
 
 interface IBoardContext {
@@ -40,6 +47,8 @@ interface IBoardContext {
   configErrors: ConfigError[],
   /** Reports a configuration error (e.g. invalid JSON); stored only once per property/message */
   reportConfigError: (property: string, message: string) => void,
+  /** Clears reported errors for a property (e.g. when parse succeeds after fix) */
+  clearConfigError: (property: string) => void,
   /** Quick filter: fields configured for filtering (from backend) */
   quickFilterFieldsConfig: QuickFilterFieldConfig[],
   /** Quick filter: current selected value per field (display value for comparison) */
@@ -62,6 +71,12 @@ interface IBoardContext {
   sortDirection: SortDirection,
   /** Sortierrichtung setzen */
   setSortDirection: (dir: SortDirection) => void,
+  /** Filter-Presets aus Konfiguration (JSON) */
+  filterPresetsConfig: FilterPresetConfig[],
+  /** aktuell gewähltes Filter-Preset (id) oder null = kein Preset */
+  selectedFilterPresetId: string | null,
+  /** Preset auswählen und Filter anwenden; null = Preset abwählen (Filter bleiben unverändert) */
+  applyFilterPreset: (presetId: string | null) => void,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

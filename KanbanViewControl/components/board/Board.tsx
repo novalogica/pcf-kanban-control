@@ -73,6 +73,14 @@ const Board = () => {
     return n;
   }, [context.parameters]);
 
+  const maxColumnWidthPx = useMemo(() => {
+    const raw = (context.parameters as { maxColumnWidth?: { raw?: string } }).maxColumnWidth?.raw;
+    if (raw == null || String(raw).trim() === "") return undefined;
+    const n = parseInt(String(raw).trim(), 10);
+    if (Number.isNaN(n) || n < 200 || n > 2000) return undefined;
+    return n;
+  }, [context.parameters]);
+
   const visibleColumns = useMemo(() => {
     if (!columns) return [];
     if (!hideEmptyColumns) return columns;
@@ -90,7 +98,10 @@ const Board = () => {
       <div className="kanban-container">
         <div
           className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}`}
-          style={minColumnWidthPx != null ? ({ "--min-column-width": `${minColumnWidthPx}px` } as React.CSSProperties) : undefined}
+          style={{
+            ...(minColumnWidthPx != null ? { "--min-column-width": `${minColumnWidthPx}px` } : {}),
+            ...(maxColumnWidthPx != null ? { "--max-column-width": `${maxColumnWidthPx}px` } : {}),
+          } as React.CSSProperties}
         >
           {allowCardMove ? (
             <DragDropContext onDragStart={handleDragStart} onDragEnd={handleCardDrag}>

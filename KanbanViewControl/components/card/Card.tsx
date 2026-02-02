@@ -4,10 +4,9 @@ import CardHeader from "./CardHeader";
 import CardBody from "./CardBody";
 import { CardInfo, CardItem } from "../../interfaces";
 import { CardDetails, CardDetailsList } from "./CardDetails";
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useRef } from "react";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
-import { getFieldNameSuffixForMatch } from "../../lib/utils";
 
 export type HighlightType = "left" | "right" | "cornerTopRight" | "cornerBottomRight";
 
@@ -43,14 +42,14 @@ function looksLikeBoolean(value: unknown): boolean {
   return false;
 }
 
-/** True if the config set contains the field (by full name or by suffix after the last dot). Use for all field-based config sets. */
+/** True if the config set contains the field (by full column name). Use for all field-based config sets. */
 function setMatchesField(set: Set<string>, fieldName: string): boolean {
-  return set.has(fieldName) || set.has(getFieldNameSuffixForMatch(fieldName));
+  return set.has(fieldName);
 }
 
-/** Returns the value for the field from the map (by full name or by suffix). Use for all field-based config maps. */
+/** Returns the value for the field from the map (by full column name). Use for all field-based config maps. */
 function mapGetByField<K>(map: Map<string, K>, fieldName: string): K | undefined {
-  return map.get(fieldName) ?? map.get(getFieldNameSuffixForMatch(fieldName));
+  return map.get(fieldName);
 }
 
 /** True if the value is non-empty (for non-boolean fields: "has a value" = highlight). */
@@ -62,12 +61,38 @@ function hasValue(value: unknown): boolean {
   return true;
 }
 
+/** Maximale Mausbewegung (px), unter der ein Ereignis noch als Klick gilt. Darüber = Textmarkierung/Drag, Karte nicht öffnen. */
+const CLICK_MOVE_THRESHOLD_PX = 5;
+
 const Card = ({ item, draggable = true }: IProps) => {
-  const { context, activeView, openFormWithLoading, reportConfigError } = useContext(BoardContext);
+  const { context, activeView, openFormWithLoading, reportConfigError, clearConfigError } = useContext(BoardContext);
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const onCardClick = useCallback(() => {
     openFormWithLoading(context.parameters.dataset.getTargetEntityType(), item.id.toString());
   }, [context, item.id, openFormWithLoading]);
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!draggable) {
+      mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+    }
+  }, [draggable]);
+
+  const onCardClickWithMoveCheck = useCallback(
+    (e: React.MouseEvent) => {
+      if (!draggable && mouseDownPosRef.current) {
+        const dx = e.clientX - mouseDownPosRef.current.x;
+        const dy = e.clientY - mouseDownPosRef.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        mouseDownPosRef.current = null;
+        if (distance > CLICK_MOVE_THRESHOLD_PX) {
+          return;
+        }
+      }
+      onCardClick();
+    },
+    [draggable, onCardClick]
+  );
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -90,6 +115,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("hiddenFieldsOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -99,7 +125,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters.hiddenFieldsOnCard, reportConfigError]);
+  }, [context.parameters.hiddenFieldsOnCard, reportConfigError, clearConfigError]);
 
   const htmlFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { htmlFieldsOnCard?: { raw?: string } }).htmlFieldsOnCard?.raw?.trim();
@@ -108,6 +134,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("htmlFieldsOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -117,7 +144,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const hideLabelForFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { hideLabelForFieldsOnCard?: { raw?: string } }).hideLabelForFieldsOnCard?.raw?.trim();
@@ -126,6 +153,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("hideLabelForFieldsOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -135,7 +163,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const booleanFieldHighlights = useMemo((): BooleanFieldHighlightConfig[] => {
     const raw = (context.parameters as { booleanFieldHighlights?: { raw?: string } }).booleanFieldHighlights?.raw?.trim();
@@ -143,6 +171,7 @@ const Card = ({ item, draggable = true }: IProps) => {
     try {
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return [];
+      clearConfigError?.("booleanFieldHighlights");
       const validTypes: HighlightType[] = ["left", "right", "cornerTopRight", "cornerBottomRight"];
       return arr
         .filter((e: unknown) => e && typeof e === "object" && "logicalName" in e && "color" in e)
@@ -160,7 +189,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       reportConfigError?.("booleanFieldHighlights", e instanceof Error ? e.message : String(e));
       return [];
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const fieldWidthsOnCardMap = useMemo((): Map<string, number> => {
     const raw = (context.parameters as { fieldWidthsOnCard?: { raw?: string } }).fieldWidthsOnCard?.raw?.trim();
@@ -168,6 +197,7 @@ const Card = ({ item, draggable = true }: IProps) => {
     try {
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return new Map();
+      clearConfigError?.("fieldWidthsOnCard");
       const map = new Map<string, number>();
       for (const e of arr) {
         if (e && typeof e === "object" && "logicalName" in e && "width" in e) {
@@ -181,7 +211,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       reportConfigError?.("fieldWidthsOnCard", e instanceof Error ? e.message : String(e));
       return new Map();
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const lookupFieldsAsPersonaOnCardSet = useMemo(() => {
     const raw = (context.parameters as { lookupFieldsAsPersonaOnCard?: { raw?: string } }).lookupFieldsAsPersonaOnCard?.raw?.trim();
@@ -190,6 +220,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("lookupFieldsAsPersonaOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -199,7 +230,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const lookupFieldsPersonaIconOnlyOnCardSet = useMemo(() => {
     const raw = (context.parameters as { lookupFieldsPersonaIconOnlyOnCard?: { raw?: string } }).lookupFieldsPersonaIconOnlyOnCard?.raw?.trim();
@@ -208,6 +239,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("lookupFieldsPersonaIconOnlyOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -217,7 +249,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const emailFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { emailFieldsOnCard?: { raw?: string } }).emailFieldsOnCard?.raw?.trim();
@@ -226,6 +258,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("emailFieldsOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -235,7 +268,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const phoneFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { phoneFieldsOnCard?: { raw?: string } }).phoneFieldsOnCard?.raw?.trim();
@@ -244,6 +277,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("phoneFieldsOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -253,7 +287,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const ellipsisFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { ellipsisFieldsOnCard?: { raw?: string } }).ellipsisFieldsOnCard?.raw?.trim();
@@ -262,6 +296,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const trimmed = raw.trim();
       if (trimmed.startsWith("[")) {
         const arr = JSON.parse(trimmed) as string[];
+        clearConfigError?.("ellipsisFieldsOnCard");
         return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
@@ -271,7 +306,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       }
       return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const fieldDisplayNamesOnCardMap = useMemo((): Map<string, string> => {
     const raw = (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw?.trim();
@@ -279,6 +314,7 @@ const Card = ({ item, draggable = true }: IProps) => {
     try {
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return new Map();
+      clearConfigError?.("fieldDisplayNamesOnCard");
       const map = new Map<string, string>();
       for (const e of arr) {
         if (e && typeof e === "object" && "logicalName" in e && "displayName" in e) {
@@ -292,7 +328,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       reportConfigError?.("fieldDisplayNamesOnCard", e instanceof Error ? e.message : String(e));
       return new Map();
     }
-  }, [context.parameters, reportConfigError]);
+  }, [context.parameters, reportConfigError, clearConfigError]);
 
   const highlights = useMemo(() => {
     const result: { left?: string; right?: string; cornerTopRight?: string; cornerBottomRight?: string } = {};
@@ -300,7 +336,7 @@ const Card = ({ item, draggable = true }: IProps) => {
     const itemKeys = Object.keys(item);
     for (const { logicalName, color, type = "left" } of booleanFieldHighlights) {
       if (done[type]) continue;
-      const itemKey = itemKeys.find((k) => k === logicalName || getFieldNameSuffixForMatch(k) === logicalName);
+      const itemKey = itemKeys.find((k) => k === logicalName);
       if (itemKey == null) continue;
       const field = item[itemKey];
       if (field == null) continue;
@@ -346,7 +382,8 @@ const Card = ({ item, draggable = true }: IProps) => {
       className={`card-container${draggable ? "" : " no-drag"}${highlightClass}`}
       role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
-      onClick={isClickable ? onCardClick : undefined}
+      onMouseDown={isClickable ? onMouseDown : undefined}
+      onClick={isClickable ? onCardClickWithMoveCheck : undefined}
       onKeyDown={isClickable ? onKeyDown : undefined}
       style={highlightStyle}
     >

@@ -173,7 +173,7 @@
     <property 
       name="quickFilterFields" 
       display-name-key="Quick filter fields" 
-      description-key="Field logical names to show as quick filter dropdowns. Supports OptionSet, Lookup, and text fields (text fields with fixed values are shown as dropdowns with occurring values). JSON array (e.g. [&quot;statuscode&quot;,&quot;my_text_field&quot;]) or comma-separated list. Only fields present in the dataset can be used."
+      description-key="Field logical names to show as quick filter dropdowns. Use the exact column name from the dataset (e.g. ownerid for entity, or a_xxx.ownerid for linked-entity columns). Supports OptionSet, Lookup, and text fields. JSON array (e.g. [&quot;statuscode&quot;,&quot;ownerid&quot;,&quot;a_c66099806c8349a18e63498da795a1a6.ownerid&quot;]) or comma-separated list. Only fields present in the dataset can be used."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
@@ -183,6 +183,15 @@
       name="sortFields" 
       display-name-key="Sort fields" 
       description-key="Field logical names available for custom sorting (dropdown next to search). JSON array (e.g. [&quot;createdon&quot;,&quot;estimatedvalue&quot;]) or comma-separated list. Only fields present in the dataset can be used. Ascending/descending is selectable in the UI."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="filterPresets" 
+      display-name-key="Filter presets" 
+      description-key="JSON array of filter presets shown in a dropdown next to sorting. Each preset: { &quot;id&quot;: &quot;unique-id&quot;, &quot;label&quot;: &quot;Display name&quot;, &quot;filters&quot;: { &quot;fieldLogicalName&quot;: &quot;filterValue&quot; } }. Filter values must match the values shown in the quick filter dropdowns. Use placeholder &quot;{{currentUser}}&quot; for the current user (e.g. ownerid for Meine Opportunities); replaced at runtime by the current user display name (Dataverse systemuser.fullname). Example: [{ &quot;id&quot;: &quot;my-opportunities&quot;, &quot;label&quot;: &quot;Meine Opportunities&quot;, &quot;filters&quot;: { &quot;ownerid&quot;: &quot;{{currentUser}}&quot; } }]."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
@@ -201,6 +210,15 @@
       name="minColumnWidth" 
       display-name-key="Minimum column width" 
       description-key="Minimum width of each column in pixels. Also applies when &quot;Expand board to full width&quot; is enabled; horizontal scrolling is used if needed. Leave empty for default (400)."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="maxColumnWidth" 
+      display-name-key="Maximum column width" 
+      description-key="Maximum width of each column (and cards) in pixels. Leave empty for no limit."
       of-type="SingleLine.Text" 
       usage="input" 
       required="false"

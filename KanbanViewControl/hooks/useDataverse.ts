@@ -5,8 +5,9 @@ import { ViewEntity } from '../interfaces';
 import { XrmService } from './service';
 
 export type ConfigErrorReporter = (property: string, message: string) => void;
+export type ClearConfigError = (property: string) => void;
 
-export const useDataverse = (context: ComponentFramework.Context<IInputs>, onConfigError?: ConfigErrorReporter) => {
+export const useDataverse = (context: ComponentFramework.Context<IInputs>, onConfigError?: ConfigErrorReporter, clearConfigError?: ClearConfigError) => {
     const { parameters, webAPI } = context;
     const { dataset } = parameters;
     const entityName = useMemo(() => parameters.dataset.getTargetEntityType(), [])
@@ -51,6 +52,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
             if (!isNullOrEmpty(filter)) {
                 try {
                     filterOutBusinessProcess = JSON.parse(filter);
+                    clearConfigError?.("filteredBusinessProcessFlows");
                 } catch (e) {
                     const msg = e instanceof Error ? e.message : String(e);
                     onConfigError?.("filteredBusinessProcessFlows", msg);
@@ -63,6 +65,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
             if (!isNullOrEmpty(stepOrderConfigRaw)) {
                 try {
                     stepOrderConfig = JSON.parse(stepOrderConfigRaw);
+                    clearConfigError?.("businessProcessFlowStepOrder");
                 } catch (e) {
                     const msg = e instanceof Error ? e.message : String(e);
                     onConfigError?.("businessProcessFlowStepOrder", msg);

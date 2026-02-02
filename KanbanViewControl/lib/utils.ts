@@ -8,10 +8,20 @@ export const isNullOrEmpty = (value: unknown) => {
     return false;
 }
 
-/** For related fields (e.g. a_xxx.telephone1) returns the part after the last dot; otherwise the full name. Used to match config by short name (e.g. telephone1). */
-export function getFieldNameSuffixForMatch(fieldName: string): string {
+/**
+ * Format bei verknüpften Entitäten (Linked Entity): Spaltenname = "Alias.Attributname",
+ * z. B. "a_c66099806c8349a18e63498da795a1a6.ownerid". Der Teil vor dem Punkt ist der
+ * Linked-Entity-Alias (von Dataverse/Power Apps vergeben, i. d. R. pro View/Relation
+ * konstant). Konfiguration (Quick filter, Sort, Filter presets, Feld-Labels etc.) erfolgt
+ * ausschließlich über den vollen Spaltennamen, damit z. B. ownerid und a_xxx.ownerid
+ * getrennt konfigurierbar sind.
+ */
+
+/** Returns the part before the last dot (linked-entity alias), or null if there is no dot. Use to inspect or distinguish columns that share the same attribute name (e.g. ownerid vs a_xxx.ownerid). */
+export function getFieldNamePrefixBeforeDot(fieldName: string): string | null {
     const lastDot = fieldName.lastIndexOf(".");
-    return lastDot >= 0 ? fieldName.slice(lastDot + 1) : fieldName;
+    if (lastDot <= 0) return null;
+    return fieldName.slice(0, lastDot);
 }
 
 export const getColumnValue = (

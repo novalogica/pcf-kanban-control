@@ -33,6 +33,7 @@
 .columns-wrapper--full-width .column-container {
   flex: 1;
   min-width: var(--min-column-width, 400px);
+  max-width: var(--max-column-width, none);
 }
 
 .columns-wrapper--full-width .cards-wrapper {
@@ -51,6 +52,7 @@
   min-height: 200px;
   max-height: 100vh;
   min-width: var(--min-column-width, 400px);
+  max-width: var(--max-column-width, none);
   display: flex;
   flex-direction: column;
   justify-content: start;
@@ -175,8 +177,8 @@
 }
 
 .card-container:hover {
-  box-shadow: 0px 2px 12px -2px rgba(0,0,0,0.18);
-  background-color: #fafafa;
+  box-shadow: 0px 4px 16px -2px rgba(0,0,0,0.22);
+  background-color: #eaeaea;
 }
 
 .card-container.no-drag {
@@ -184,8 +186,8 @@
 }
 
 .card-container.no-drag:hover {
-  box-shadow: 0px 2px 12px -2px rgba(0,0,0,0.18);
-  background-color: #fafafa;
+  box-shadow: 0px 4px 16px -2px rgba(0,0,0,0.22);
+  background-color: #eaeaea;
 }
 
 .card-header-container {
@@ -364,6 +366,11 @@
   padding: 12px 16px;
   background-color: #fafafa;
   border-bottom: 1px solid #edebe9;
+  /* Feste Höhe (nicht nur min-height) verhindert, dass die Zeile beim Öffnen eines Dropdowns wächst und andere Filter nach unten schiebt */
+  height: 88px;
+  min-height: 88px;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 .kanban-quick-filters .kanban-dropdown {
@@ -379,6 +386,12 @@
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+  /* Reservierter 1px-Rahmen verhindert Layout-Versatz, wenn ein anderes Dropdown geöffnet wird */
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+.kanban-quick-filters .kanban-dropdown .ms-Dropdown.is-open .ms-Dropdown-title {
+  border-width: 1px;
 }
 
 .kanban-quick-filters-right {
@@ -401,6 +414,19 @@
 }
 
 .kanban-quick-filters-sort .kanban-dropdown {
+  min-width: 160px;
+}
+
+.kanban-quick-filters-preset {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.kanban-quick-filters-preset .kanban-dropdown {
   min-width: 160px;
 }
 
@@ -475,7 +501,9 @@
 }
 
 .kanban-dropdown .ms-Dropdown-title {
-  border: none !important;
+  /* Transparenter 1px-Rahmen hält die Höhe bei open/focus konstant (kein 1px-Versatz) */
+  border: 1px solid transparent !important;
+  box-sizing: border-box;
 }
 
 .kanban-dropdown .ms-Dropdown .is-open {

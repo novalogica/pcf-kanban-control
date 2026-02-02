@@ -11,6 +11,12 @@ export const dropdownStyles: Partial<IDropdownStyles> = {
       textAlign: 'left',
       border: 'none'
   },
+  title: {
+    /* Feste Höhe inkl. Border (32 + 2px) verhindert Layout-Versatz bei open/focus */
+    minHeight: 34,
+    height: 34,
+    boxSizing: 'border-box',
+  },
   label: {
       color: '#595959',
       textAlign: 'left',
