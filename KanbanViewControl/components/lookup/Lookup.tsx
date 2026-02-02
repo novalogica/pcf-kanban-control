@@ -11,6 +11,8 @@ interface IProps {
   onOpenLookup: (entityName: string, id: string) => void;
   /** When true, render as Persona (image/initials); otherwise as simple link. */
   displayAsPersona?: boolean;
+  /** When true and displayAsPersona is true, show only the icon/initials (no text). */
+  personaIconOnly?: boolean;
 }
 
 const colors: PersonaInitialsColor[] = [
@@ -42,7 +44,7 @@ const personaContainer: React.CSSProperties = {
   gap: 4,
 };
 
-export const Lookup = ({ onOpenLookup, info, displayAsPersona = false }: IProps) => {
+export const Lookup = ({ onOpenLookup, info, displayAsPersona = false, personaIconOnly = false }: IProps) => {
   const { etn, id, name } = info.value as ComponentFramework.EntityReference;
   const initials = useMemo(() => getInitials(name, false), [name]);
 
@@ -51,13 +53,16 @@ export const Lookup = ({ onOpenLookup, info, displayAsPersona = false }: IProps)
   };
 
   if (displayAsPersona) {
+    const iconOnly = personaIconOnly;
     return (
       <div
         style={personaContainer}
-        className="personaContainer personaContainer--with-coin"
+        className={"personaContainer personaContainer--with-coin" + (iconOnly ? " personaContainer--iconOnly" : "")}
         onClick={handleClick}
         role="button"
         tabIndex={0}
+        title={iconOnly ? name : undefined}
+        aria-label={iconOnly ? name : undefined}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -71,7 +76,7 @@ export const Lookup = ({ onOpenLookup, info, displayAsPersona = false }: IProps)
           coinSize={22}
           imageInitials={initials}
           initialsColor={getColorFromInitials(initials, colors)}
-          onRenderPrimaryText={(props?: IPersonaProps) => (
+          onRenderPrimaryText={iconOnly ? () => null : (props?: IPersonaProps) => (
             <Text className="lookup-persona-name" variant="medium" nowrap>
               {props?.text}
             </Text>

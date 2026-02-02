@@ -11,7 +11,8 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 - Dynamically shows columns based on the selected view.
 - Supports **business process flows** and **Choice** columns.
 - Drag-and-drop functionality.
-- Lookup column support.
+- Lookup column support (including Persona-style display).
+- **Quick filter** dropdowns and **custom sort** fields (configurable).
 - Toast notifications for value updates.
 
 ## 🚀 Usage
@@ -38,6 +39,7 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 | **Allow moving cards** | Yes/No | When **No**, drag-and-drop is disabled; cards cannot be moved between columns. Clicking a card still opens the record. Useful for read-only or approval boards. Default: **Yes**. |
 | **Hide empty columns** | Yes/No | When **Yes**, columns that currently have no cards are hidden. The board only shows columns that contain at least one record. Default: **No**. |
 | **Expand board to full width** | Yes/No | When **Yes**, the board uses the full available width and columns scale proportionally. When **No**, the board keeps a fixed layout. Default: **No**. |
+| **Minimum column width** | Text | Minimum width of each column in **pixels** (number as text, e.g. `300` or `400`). Also applies when "Expand board to full width" is enabled; horizontal scrolling is used if needed. Leave empty for default (400). |
 | **Allow creating new records from board** | Yes/No | When **No**, the add (+) button on each column header is hidden and users cannot create records from the board. Default: **Yes**. |
 
 ### Card content & appearance
@@ -48,10 +50,21 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 | **Hidden fields on card** | Text | Field **logical names** that are loaded with the dataset but **not shown** on cards. Use to fetch data (e.g. for lookups) without displaying it. **JSON array** (e.g. `["field1","field2"]`) or **comma-separated** list. Invalid JSON falls back to comma parsing. |
 | **HTML fields on card** | Text | Field **logical names** whose value is rendered as **HTML** (not escaped). Use for rich text or formatted content. **JSON array** or comma-separated list. Only use with trusted data to avoid XSS. Invalid JSON falls back to comma parsing. |
 | **Hide label for fields on card** | Text | Field **logical names** for which the **label** is hidden on the card; only the value is shown. **JSON array** or comma-separated list. Useful for compact layouts. Invalid JSON falls back to comma parsing. |
-| **Boolean field highlights** | Text | **JSON array** of `{"logicalName":"fieldname","color":"#hex","type":"left"}`. When the boolean field is **true** (or 1 / "true" / "yes"), the card gets a highlight; **first match per type** wins. Optional **type**: `left` (default) = colored left border, `right` = colored right border, `cornerTopRight` / `cornerBottomRight` = diagonal corner mark. Fields must be in the dataset columns. Invalid JSON is reported. Example: `[{"logicalName":"ispriority","color":"#e81123","type":"left"},{"logicalName":"isurgent","color":"#ff0","type":"cornerTopRight"}]`. |
+| **Field display names on card** | Text | **JSON array** of `{"logicalName":"fieldname","displayName":"Label"}`. Assigns custom display names (labels) to fields on the card. Fields not listed keep their dataset display name. Invalid JSON is reported. Example: `[{"logicalName":"estimatedvalue","displayName":"Wert"}]`. |
+| **Field highlights** | Text | **JSON array** of `{"logicalName":"fieldname","color":"#hex","type":"left"}`. For any field type: **empty**/falsy = no highlight, **filled**/truthy = highlight. **First match per type** wins. Optional **type**: `left` (default) = colored left border, `right` = colored right border, `cornerTopRight` / `cornerBottomRight` = diagonal corner mark. Fields must be in the dataset columns. Invalid JSON is reported. Example: `[{"logicalName":"ispriority","color":"#e81123","type":"left"},{"logicalName":"isurgent","color":"#ff0","type":"cornerTopRight"}]`. |
 | **Field widths on card** | Text | **JSON array** of `{"logicalName":"fieldname","width":number}`. Sets **percentage width** of fields on the card (100 = full width, 50 = half). Fields not listed use the default width. Invalid JSON is reported. Example: `[{"logicalName":"description","width":100},{"logicalName":"estimatedvalue","width":50}]`. |
+| **Lookup fields as Persona on card** | Text | Field **logical names** for which lookup values are shown with **image/initials (Persona style)**. Other lookup fields are shown as a simple link. **JSON array** (e.g. `["ownerid"]`) or comma-separated list. |
+| **Lookup Persona icon only on card** | Text | Field **logical names** for which Persona is shown **icon/initials only** (no text). Only applies to fields also listed in **Lookup fields as Persona on card**. **JSON array** or comma-separated list. |
 | **E-Mail fields on card (as link)** | Text | Field **logical names** that are shown as **clickable mailto links** (e.g. E-Mail of related contact). Use when the field displays an e-mail but has type SingleLine.Text in the dataset. **JSON array** (e.g. `["parentcontactid_emailaddress1"]`) or comma-separated list. |
 | **Phone fields on card (as link)** | Text | Field **logical names** that are shown as **clickable tel links** (e.g. phone of related contact). Use when the field displays a phone number but has type SingleLine.Text in the dataset. **JSON array** (e.g. `["parentcontactid_telephone1"]`) or comma-separated list. |
+| **Ellipsis fields on card** | Text | Field **logical names** for which the value is shown with **text-overflow: ellipsis** (single line, overflow hidden with …). Other fields use multi-line clamp. **JSON array** or comma-separated list. |
+
+### Filters & sorting
+
+| Property | Type | Description |
+|----------|------|-------------|
+| **Quick filter fields** | Text | Field **logical names** to show as **quick filter dropdowns** above the board. Supports OptionSet, Lookup, and text fields (text fields with fixed values are shown as dropdowns with occurring values). **JSON array** (e.g. `["statuscode","my_text_field"]`) or comma-separated list. Only fields present in the dataset can be used. Invalid JSON falls back to comma parsing. |
+| **Sort fields** | Text | Field **logical names** available for **custom sorting** (dropdown next to search). **JSON array** (e.g. `["createdon","estimatedvalue"]`) or comma-separated list. Only fields present in the dataset can be used. Ascending/descending is selectable in the UI. Invalid JSON falls back to comma parsing. |
 
 ### Notifications
 
@@ -93,7 +106,7 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 
 ### Configuration errors
 
-If a JSON property (e.g. **Filter out Business Process Flows**, **Business Process Flow Step Order**, **Boolean field highlights**, **Field widths on card**) contains invalid JSON, the control shows a **Configuration errors** banner above the board with the property name and error message. Fix the value in the control configuration to clear the banner.
+If a JSON property contains invalid JSON, the control shows a **Configuration errors** banner above the board with the property name and error message. Properties that are validated as JSON: **Filter out Business Process Flows**, **Business Process Flow Step Order**, **Field display names on card**, **Field highlights**, **Field widths on card**. For **Quick filter fields** and **Sort fields**, an error is only reported when the value starts with `[` but is not valid JSON; otherwise comma-separated parsing is used. Fix the value in the control configuration to clear the banner.
 
 ### Examples – JSON configuration options
 
@@ -129,7 +142,13 @@ If a JSON property (e.g. **Filter out Business Process Flows**, **Business Proce
    ```
    Or comma-separated. Reduces visual clutter on the card.
 
-**Boolean field highlights** (highlight when boolean is true; first match **per type** wins)
+**Field display names on card** (custom labels for fields)
+   ```json
+   [{"logicalName":"estimatedvalue","displayName":"Wert"},{"logicalName":"description","displayName":"Beschreibung"}]
+   ```
+   The display name is shown as the field label on the card.
+
+**Field highlights** (highlight when field has a value; first match **per type** wins; any field type: boolean, text, lookup, etc.)
    ```json
    [{"logicalName":"ispriority","color":"#e81123","type":"left"},{"logicalName":"isblocked","color":"#ffaa00","type":"right"},{"logicalName":"isurgent","color":"#ff0","type":"cornerTopRight"}]
    ```
@@ -140,6 +159,42 @@ If a JSON property (e.g. **Filter out Business Process Flows**, **Business Proce
    [{"logicalName":"description","width":100},{"logicalName":"estimatedvalue","width":50}]
    ```
    Fields not listed keep the default width.
+
+**Lookup fields as Persona on card** (show lookup as image/initials)
+   ```json
+   ["ownerid","primarycontactid"]
+   ```
+   Or comma-separated. Use **Lookup Persona icon only on card** for icon/initials only (no text).
+
+**Ellipsis fields on card** (single line with …; other fields use multi-line clamp)
+   ```json
+   ["description","title"]
+   ```
+   Or comma-separated.
+
+**E-Mail fields on card (as link)** / **Phone fields on card (as link)**
+   ```json
+   ["parentcontactid_emailaddress1"]
+   ```
+   ```json
+   ["parentcontactid_telephone1"]
+   ```
+   Or comma-separated. Use for fields that display e-mail/phone but have type SingleLine.Text in the dataset.
+
+**Minimum column width** (number as text)
+   Set e.g. `300` or `400`. Leave empty for default (400).
+
+**Quick filter fields** (dropdown filters above the board)
+   ```json
+   ["statuscode","prioritycode","ownerid"]
+   ```
+   Or comma-separated. Only fields in the dataset can be used.
+
+**Sort fields** (custom sort dropdown next to search)
+   ```json
+   ["createdon","estimatedvalue","title"]
+   ```
+   Or comma-separated. Ascending/descending is selectable in the UI.
 
 ## 📦 Deployment
 

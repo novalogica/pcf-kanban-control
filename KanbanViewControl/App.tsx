@@ -2,13 +2,13 @@ import * as React from "react";
 import { IInputs } from "./generated/ManifestTypes";
 import { Board } from "./components";
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
-import { BoardContext, ConfigError, QuickFilterFieldConfig } from "./context/board-context";
+import { BoardContext, ConfigError, QuickFilterFieldConfig, SortFieldConfig, SortDirection } from "./context/board-context";
 import { ColumnItem, ViewItem, ViewEntity } from "./interfaces";
 import Loading from "./components/container/loading";
 import { Toaster } from "react-hot-toast";
 import { useDataverse } from "./hooks/useDataverse";
 import { useNavigation } from "./hooks/useNavigation";
-import { getColumnValue } from "./lib/utils";
+import { getColumnValue, getFieldNameSuffixForMatch } from "./lib/utils";
 import { unlocatedColumn } from "./lib/constants";
 import { Spinner, SpinnerSize } from "@fluentui/react";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -16,6 +16,41 @@ import { CardInfo } from "./interfaces";
 
 const QUICK_FILTER_ALL_KEY = "__all__";
 const QUICK_FILTER_EMPTY_KEY = "__empty__";
+const QUICK_FILTERS_STORAGE_PREFIX = "pcf-kanban-quickfilters";
+
+interface StoredQuickFilters {
+  quickFilterValues: Record<string, string | null>;
+  searchKeyword: string;
+  sortByField: string | null;
+  sortDirection: SortDirection;
+}
+
+function loadStoredQuickFilters(storageKey: string): StoredQuickFilters | null {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, unknown> | null;
+    if (!parsed || typeof parsed !== "object") return null;
+    const qfv = parsed.quickFilterValues;
+    return {
+      quickFilterValues:
+        qfv && typeof qfv === "object" && qfv !== null && !Array.isArray(qfv)
+          ? (qfv as Record<string, string | null>)
+          : {},
+      searchKeyword: typeof parsed.searchKeyword === "string" ? parsed.searchKeyword : "",
+      sortByField:
+        parsed.sortByField !== undefined && parsed.sortByField !== null
+          ? String(parsed.sortByField)
+          : null,
+      sortDirection:
+        parsed.sortDirection === "asc" || parsed.sortDirection === "desc"
+          ? (parsed.sortDirection as SortDirection)
+          : "asc",
+    };
+  } catch {
+    return null;
+  }
+}
 
 function getQuickFilterComparableValue(fieldValue: unknown): string {
   if (fieldValue == null || fieldValue === "") return "";
@@ -60,6 +95,11 @@ interface IProps {
 }
 
 const App = ({ context, notificationPosition }: IProps) => {
+  // View-ID für Local-Storage-Scope: Schnellfilter pro View getrennt speichern
+  const viewId = (context.parameters?.dataset as { getViewId?: () => string })?.getViewId?.() ?? "";
+  const quickFiltersStorageKey =
+    viewId ? `${QUICK_FILTERS_STORAGE_PREFIX}-${viewId}` : null;
+
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<ViewItem | undefined>();
   const [columns, setColumns] = useState<ColumnItem[]>([]);
@@ -68,10 +108,30 @@ const App = ({ context, notificationPosition }: IProps) => {
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
   const [isOpeningEntity, setIsOpeningEntity] = useState(false);
   const [configErrors, setConfigErrors] = useState<ConfigError[]>([]);
-  const [quickFilterValues, setQuickFilterValuesState] = useState<Record<string, string | null>>({});
+  const [quickFilterValues, setQuickFilterValuesState] = useState<Record<string, string | null>>(
+    () =>
+      quickFiltersStorageKey
+        ? (loadStoredQuickFilters(quickFiltersStorageKey)?.quickFilterValues ?? {})
+        : {}
+  );
   const [quickFilterOptions, setQuickFilterOptions] = useState<Record<string, IDropdownOption[]>>({});
-  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState(() =>
+    quickFiltersStorageKey
+      ? (loadStoredQuickFilters(quickFiltersStorageKey)?.searchKeyword ?? "")
+      : ""
+  );
+  const [sortByField, setSortByField] = useState<string | null>(() =>
+    quickFiltersStorageKey
+      ? (loadStoredQuickFilters(quickFiltersStorageKey)?.sortByField ?? null)
+      : null
+  );
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() =>
+    quickFiltersStorageKey
+      ? (loadStoredQuickFilters(quickFiltersStorageKey)?.sortDirection ?? "asc")
+      : "asc"
+  );
   const reportedConfigErrorsRef = useRef<Set<string>>(new Set());
+  const prevViewIdRef = useRef<string | null>(null);
   const draggingRef = useRef(false);
   const openingRef = useRef(false);
 
@@ -86,21 +146,79 @@ const App = ({ context, notificationPosition }: IProps) => {
   const { openForm } = useNavigation(context);
   const { dataset } = context.parameters;
 
+  // Schlüssel für Refresh: Bei jedem Render aus aktuellen Records ableiten, damit
+  // nach dataset.refresh() die Anzeige aktualisiert wird (auch wenn PCF dieselbe Referenz liefert).
+  const datasetRecordsKey =
+    `${Object.keys(dataset.records).length}-${Object.keys(dataset.records).sort().slice(0, 100).join(",")}`;
+
   const quickFilterFieldsParam = (context.parameters as { quickFilterFields?: { raw?: string } }).quickFilterFields?.raw;
   const quickFilterFieldsParsed = useMemo(
     () => parseQuickFilterFieldsRaw(quickFilterFieldsParam, reportConfigError),
     [quickFilterFieldsParam, reportConfigError]
   );
 
+  const sortFieldsParam = (context.parameters as { sortFields?: { raw?: string } }).sortFields?.raw;
+  const sortFieldsParsed = useMemo(
+    () => parseQuickFilterFieldsRaw(sortFieldsParam, reportConfigError),
+    [sortFieldsParam, reportConfigError]
+  );
+
+  const fieldDisplayNamesOnCardMap = useMemo((): Map<string, string> => {
+    const raw = (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw?.trim();
+    if (!raw) return new Map();
+    try {
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Map();
+      const map = new Map<string, string>();
+      for (const e of arr) {
+        if (e && typeof e === "object" && "logicalName" in e && "displayName" in e) {
+          const name = String(e.logicalName).trim();
+          const displayName = String(e.displayName).trim();
+          if (name) map.set(name, displayName);
+        }
+      }
+      return map;
+    } catch (e) {
+      reportConfigError("fieldDisplayNamesOnCard", e instanceof Error ? e.message : String(e));
+      return new Map();
+    }
+  }, [(context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw, reportConfigError]);
+
   const quickFilterFieldsConfig = useMemo((): QuickFilterFieldConfig[] => {
     if (!dataset?.columns) return [];
     return quickFilterFieldsParsed
       .map((name) => {
-        const col = dataset.columns.find((c) => c.name === name);
-        return col ? { key: col.name, text: col.displayName ?? col.name } : null;
+        const col = dataset.columns.find(
+          (c) => c.name === name || getFieldNameSuffixForMatch(c.name) === name
+        );
+        if (!col) return null;
+        const displayName =
+          fieldDisplayNamesOnCardMap.get(col.name) ??
+          fieldDisplayNamesOnCardMap.get(getFieldNameSuffixForMatch(col.name)) ??
+          col.displayName ??
+          col.name;
+        return { key: col.name, text: displayName };
       })
       .filter((c): c is QuickFilterFieldConfig => c !== null);
-  }, [dataset?.columns, quickFilterFieldsParsed]);
+  }, [dataset?.columns, quickFilterFieldsParsed, fieldDisplayNamesOnCardMap]);
+
+  const sortFieldsConfig = useMemo((): SortFieldConfig[] => {
+    if (!dataset?.columns) return [];
+    return sortFieldsParsed
+      .map((name) => {
+        const col = dataset.columns.find(
+          (c) => c.name === name || getFieldNameSuffixForMatch(c.name) === name
+        );
+        if (!col) return null;
+        const displayName =
+          fieldDisplayNamesOnCardMap.get(col.name) ??
+          fieldDisplayNamesOnCardMap.get(getFieldNameSuffixForMatch(col.name)) ??
+          col.displayName ??
+          col.name;
+        return { key: col.name, text: displayName };
+      })
+      .filter((c): c is SortFieldConfig => c !== null);
+  }, [dataset?.columns, sortFieldsParsed, fieldDisplayNamesOnCardMap]);
 
   const setQuickFilterValue = useCallback((field: string, value: string | null) => {
     setQuickFilterValuesState((prev) => ({ ...prev, [field]: value === QUICK_FILTER_ALL_KEY ? null : value }));
@@ -118,8 +236,44 @@ const App = ({ context, notificationPosition }: IProps) => {
     (context.parameters as { fieldWidthsOnCard?: { raw?: string } }).fieldWidthsOnCard?.raw,
     (context.parameters as { emailFieldsOnCard?: { raw?: string } }).emailFieldsOnCard?.raw,
     (context.parameters as { phoneFieldsOnCard?: { raw?: string } }).phoneFieldsOnCard?.raw,
+    (context.parameters as { ellipsisFieldsOnCard?: { raw?: string } }).ellipsisFieldsOnCard?.raw,
+    (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw,
     (context.parameters as { quickFilterFields?: { raw?: string } }).quickFilterFields?.raw,
+    (context.parameters as { sortFields?: { raw?: string } }).sortFields?.raw,
   ]);
+
+  // Bei View-Wechsel (andere Dataverse-View): gespeicherte Schnellfilter für diesen View laden
+  useEffect(() => {
+    if (!quickFiltersStorageKey) return;
+    if (prevViewIdRef.current !== null && prevViewIdRef.current !== viewId) {
+      const stored = loadStoredQuickFilters(quickFiltersStorageKey);
+      if (stored) {
+        setQuickFilterValuesState(stored.quickFilterValues);
+        setSearchKeyword(stored.searchKeyword);
+        setSortByField(stored.sortByField);
+        setSortDirection(stored.sortDirection);
+      }
+    }
+    prevViewIdRef.current = viewId;
+  }, [viewId, quickFiltersStorageKey]);
+
+  // Schnellfilter bei Änderung in Local Storage speichern (nur für aktuellen View)
+  useEffect(() => {
+    if (!quickFiltersStorageKey) return;
+    try {
+      localStorage.setItem(
+        quickFiltersStorageKey,
+        JSON.stringify({
+          quickFilterValues,
+          searchKeyword,
+          sortByField,
+          sortDirection,
+        })
+      );
+    } catch {
+      // Local Storage voll oder nicht verfügbar
+    }
+  }, [quickFiltersStorageKey, quickFilterValues, searchKeyword, sortByField, sortDirection]);
 
   const openFormWithLoading = useCallback(async (entityName: string, id?: string) => {
     if (openingRef.current) return;
@@ -194,12 +348,49 @@ const App = ({ context, notificationPosition }: IProps) => {
       activeColumns = [unlocatedColumn, ...activeColumns];
     }
 
-    const columns = activeColumns.map((col) => {
+    let columns = activeColumns.map((col) => {
       return {
         ...col,
         cards: filteredCards.filter((card: any) => card?.column == col.id),
       };
     });
+
+    if (sortByField) {
+      const useEstimatedValueRaw = sortByField === "estimatedvalue";
+      columns = columns.map((col) => {
+        const sortedCards = [...(col.cards ?? [])].sort((a: any, b: any) => {
+          let cmp: number;
+          if (useEstimatedValueRaw) {
+            const aNum =
+              typeof a.estimatedvalueRaw === "number" && !Number.isNaN(a.estimatedvalueRaw)
+                ? a.estimatedvalueRaw
+                : null;
+            const bNum =
+              typeof b.estimatedvalueRaw === "number" && !Number.isNaN(b.estimatedvalueRaw)
+                ? b.estimatedvalueRaw
+                : null;
+            if (aNum !== null && bNum !== null) {
+              cmp = aNum - bNum;
+            } else if (aNum !== null) {
+              cmp = -1;
+            } else if (bNum !== null) {
+              cmp = 1;
+            } else {
+              const va = getQuickFilterComparableValue(a[sortByField]);
+              const vb = getQuickFilterComparableValue(b[sortByField]);
+              cmp = va.localeCompare(vb, undefined, { numeric: true });
+            }
+          } else {
+            const va = getQuickFilterComparableValue(a[sortByField]);
+            const vb = getQuickFilterComparableValue(b[sortByField]);
+            cmp = va.localeCompare(vb, undefined, { numeric: true });
+          }
+          return sortDirection === "asc" ? cmp : -cmp;
+        });
+        return { ...col, cards: sortedCards };
+      });
+    }
+
     setColumns(columns);
   }, [
     activeView,
@@ -207,7 +398,11 @@ const App = ({ context, notificationPosition }: IProps) => {
     quickFilterFieldsConfig,
     quickFilterValues,
     searchKeyword,
+    sortByField,
+    sortDirection,
     dataset.records,
+    datasetRecordsKey,
+    context,
   ]);
 
   useEffect(() => {
@@ -261,7 +456,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     setIsLoading(false);
   };
 
-  useMemo(() => {
+  useEffect(() => {
     setSelectedEntity(dataset.getTargetEntityType());
     handleColumnsChange();
   }, [context.parameters.dataset.columns]);
@@ -308,10 +503,11 @@ const App = ({ context, notificationPosition }: IProps) => {
 
         const cardData = { id, ...columnValues } as Record<string, unknown>;
         for (const fieldName of quickFilterFieldsList) {
-          if (fieldName in cardData) continue;
-          const col = dataset.columns.find((c) => c.name === fieldName);
-          if (col) {
-            cardData[fieldName] = getColumnValue(record, col);
+          const col = dataset.columns.find(
+            (c) => c.name === fieldName || getFieldNameSuffixForMatch(c.name) === fieldName
+          );
+          if (col && !(col.name in cardData)) {
+            cardData[col.name] = getColumnValue(record, col);
           }
         }
         return cardData;
@@ -347,6 +543,11 @@ const App = ({ context, notificationPosition }: IProps) => {
         quickFilterOptions,
         searchKeyword,
         setSearchKeyword,
+        sortFieldsConfig,
+        sortByField,
+        setSortByField,
+        sortDirection,
+        setSortDirection,
       }}
     >
       <div className="app-content-wrapper">

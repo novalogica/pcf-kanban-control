@@ -14,6 +14,8 @@ interface ICardInfoProps {
   id: UniqueIdentifier,
   fieldName?: string,
   info: CardInfo,
+  /** Custom display name for the field label on the card (overrides info.label). */
+  displayLabelOverride?: string,
   /** When true, the field value is rendered as HTML (not escaped). */
   renderAsHtml?: boolean,
   /** When true, the field label is hidden. */
@@ -22,10 +24,14 @@ interface ICardInfoProps {
   widthPercent?: number,
   /** When true and value is a lookup, render as Persona (image/initials); otherwise as simple link. */
   lookupAsPersona?: boolean,
+  /** When true and lookupAsPersona is true, show only the Persona icon/initials (no text). */
+  lookupPersonaIconOnly?: boolean,
   /** When true, render value as clickable mailto link (e.g. for related contact email with SingleLine.Text). */
   asEmailLink?: boolean,
   /** When true, render value as clickable tel link (e.g. for related contact phone with SingleLine.Text). */
   asPhoneLink?: boolean,
+  /** When true, the field value uses text-overflow: ellipsis (single line); otherwise multi-line clamp. */
+  textEllipsis?: boolean,
 }
 
 const CARD_INFO_GAP_PX = 16;
@@ -40,7 +46,7 @@ function getColumnDataType(dataset: { columns?: { name: string; dataType?: strin
   return col?.dataType;
 }
 
-const CardDetails = ({ id, fieldName, info, renderAsHtml = false, hideLabel = false, widthPercent, lookupAsPersona = false, asEmailLink = false, asPhoneLink = false }: ICardInfoProps) => {
+const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml = false, hideLabel = false, widthPercent, lookupAsPersona = false, lookupPersonaIconOnly = false, asEmailLink = false, asPhoneLink = false, textEllipsis = false }: ICardInfoProps) => {
   const { context, openFormWithLoading } = useContext(BoardContext);
   const htmlHostRef = useRef<HTMLDivElement>(null);
   const columnDataType = getColumnDataType(context.parameters?.dataset as { columns?: { name: string; dataType?: string }[] }, fieldName);
@@ -61,7 +67,8 @@ const CardDetails = ({ id, fieldName, info, renderAsHtml = false, hideLabel = fa
   }
 
   const isEmpty = isNullOrEmpty(info.value) || info.value === "Unallocated";
-  const hasLabel = info.label != null && String(info.label).trim() !== "";
+  const label = displayLabelOverride != null && displayLabelOverride !== "" ? displayLabelOverride : info.label;
+  const hasLabel = label != null && String(label).trim() !== "";
   const htmlContent = isEmpty ? "" : String(info.value ?? "");
   const displayText = isEntityReference(info.value) ? "" : (renderAsHtml ? "" : String(handleInfoValue(info.value)));
   const rawValue = typeof info.value === "string" ? info.value.trim() : String(info.value ?? "").trim();
@@ -98,33 +105,50 @@ const CardDetails = ({ id, fieldName, info, renderAsHtml = false, hideLabel = fa
       : { flex: `0 0 calc(${widthPercent}% - ${CARD_INFO_GAP_PX * (1 - widthPercent / 100)}px)`, minWidth: 0 }
     : undefined;
 
+  const cardInfoClassName = "card-info" + (textEllipsis ? " card-info--ellipsis" : "");
+
   return ( 
-    <div className="card-info" style={flexStyle} data-field-logical-name={fieldName ?? undefined}>
+    <div className={cardInfoClassName} style={flexStyle} data-field-logical-name={fieldName ?? undefined}>
       {!hideLabel && (
-        <Text className="card-info-label" variant="small">{info.label}</Text>
+        <Text className="card-info-label" variant="small">{label}</Text>
       )}
       {
-        isEntityReference(info.value) ? <Lookup info={info} onOpenLookup={onLookupClicked} displayAsPersona={lookupAsPersona} />
+        isEntityReference(info.value) ? <Lookup info={info} onOpenLookup={onLookupClicked} displayAsPersona={lookupAsPersona} personaIconOnly={lookupPersonaIconOnly} />
           : renderAsHtml
             ? (
                 <div
                   ref={htmlHostRef}
                   className="card-text card-info-value card-info-value--html"
-                  aria-label={info.label}
+                  aria-label={label}
                 />
               )
             : linkHref
-              ? (
-                  <a
-                    className="card-text card-info-value card-info-value--link"
-                    href={linkHref}
-                    onClick={onLinkClick}
-                    rel="noopener noreferrer"
-                    aria-label={info.label ? (isEmailField ? `E-Mail: ${displayText}` : `Anrufen: ${displayText}`) : undefined}
-                  >
-                    {displayText}
-                  </a>
-                )
+              ? textEllipsis
+                ? (
+                    <div className="card-info-value-ellipsis-wrap" style={{ minWidth: 0, overflow: "hidden" }}>
+                      <a
+                        className="card-text card-info-value card-info-value--link"
+                        href={linkHref}
+                        onClick={onLinkClick}
+                        rel="noopener noreferrer"
+                        aria-label={label ? (isEmailField ? `E-Mail: ${displayText}` : `Anrufen: ${displayText}`) : undefined}
+                        style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        {displayText}
+                      </a>
+                    </div>
+                  )
+                : (
+                    <a
+                      className="card-text card-info-value card-info-value--link"
+                      href={linkHref}
+                      onClick={onLinkClick}
+                      rel="noopener noreferrer"
+                      aria-label={label ? (isEmailField ? `E-Mail: ${displayText}` : `Anrufen: ${displayText}`) : undefined}
+                    >
+                      {displayText}
+                    </a>
+                  )
               : (
                   <Text className="card-text card-info-value" variant="medium">
                     {handleInfoValue(info.value)}

@@ -99,6 +99,15 @@
     />
 
     <property 
+      name="fieldDisplayNamesOnCard" 
+      display-name-key="Field display names on card" 
+      description-key="Assign custom display names to fields by logical name. JSON array (e.g. [{&quot;logicalName&quot;:&quot;estimatedvalue&quot;,&quot;displayName&quot;:&quot;Wert&quot;}]). The display name is shown as the field label on the card."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="booleanFieldHighlights" 
       display-name-key="Field highlights" 
       description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;,&quot;type&quot;:&quot;left&quot;}]. Any field type (boolean, text, lookup, etc.). Empty = no highlight, filled = highlight. Optional type: left (default), right, cornerTopRight, cornerBottomRight. left/right = colored border; corner = diagonal corner mark. First match per type wins."
@@ -126,6 +135,15 @@
     />
 
     <property 
+      name="lookupFieldsPersonaIconOnlyOnCard" 
+      display-name-key="Lookup Persona icon only on card" 
+      description-key="Field logical names for which Persona is shown with icon/initials only (no text). Only applies to fields also listed in Lookup fields as Persona on card. JSON array (e.g. [&quot;ownerid&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="emailFieldsOnCard" 
       display-name-key="E-Mail fields on card (as link)" 
       description-key="Field logical names that are shown as clickable mailto links (e.g. from related contact). Use for fields that display e-mail but have type SingleLine.Text. JSON array (e.g. [&quot;parentcontactid_emailaddress1&quot;]) or comma-separated list."
@@ -144,9 +162,27 @@
     />
 
     <property 
+      name="ellipsisFieldsOnCard" 
+      display-name-key="Ellipsis fields on card" 
+      description-key="Field logical names for which the value is shown with text-overflow: ellipsis (single line, overflow hidden with ...). Other fields use multi-line clamp. JSON array (e.g. [&quot;description&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="quickFilterFields" 
       display-name-key="Quick filter fields" 
       description-key="Field logical names to show as quick filter dropdowns. Supports OptionSet, Lookup, and text fields (text fields with fixed values are shown as dropdowns with occurring values). JSON array (e.g. [&quot;statuscode&quot;,&quot;my_text_field&quot;]) or comma-separated list. Only fields present in the dataset can be used."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="sortFields" 
+      display-name-key="Sort fields" 
+      description-key="Field logical names available for custom sorting (dropdown next to search). JSON array (e.g. [&quot;createdon&quot;,&quot;estimatedvalue&quot;]) or comma-separated list. Only fields present in the dataset can be used. Ascending/descending is selectable in the UI."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
@@ -157,6 +193,15 @@
       display-name-key="Expand board to full width" 
       description-key="When enabled, the board uses the full view width and columns scale proportionally."
       of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="minColumnWidth" 
+      display-name-key="Minimum column width" 
+      description-key="Minimum width of each column in pixels. Also applies when &quot;Expand board to full width&quot; is enabled; horizontal scrolling is used if needed. Leave empty for default (400)."
+      of-type="SingleLine.Text" 
       usage="input" 
       required="false"
     />

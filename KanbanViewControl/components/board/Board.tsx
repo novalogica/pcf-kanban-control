@@ -65,6 +65,14 @@ const Board = () => {
     return (context.parameters as { expandBoardToFullWidth?: { raw?: boolean } }).expandBoardToFullWidth?.raw === true;
   }, [context.parameters]);
 
+  const minColumnWidthPx = useMemo(() => {
+    const raw = (context.parameters as { minColumnWidth?: { raw?: string } }).minColumnWidth?.raw;
+    if (raw == null || String(raw).trim() === "") return undefined;
+    const n = parseInt(String(raw).trim(), 10);
+    if (Number.isNaN(n) || n < 200 || n > 1200) return undefined;
+    return n;
+  }, [context.parameters]);
+
   const visibleColumns = useMemo(() => {
     if (!columns) return [];
     if (!hideEmptyColumns) return columns;
@@ -80,7 +88,10 @@ const Board = () => {
       <QuickFilters />
       {!hideViews && <CommandBar />}
       <div className="kanban-container">
-        <div className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}`}>
+        <div
+          className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}`}
+          style={minColumnWidthPx != null ? ({ "--min-column-width": `${minColumnWidthPx}px` } as React.CSSProperties) : undefined}
+        >
           {allowCardMove ? (
             <DragDropContext onDragStart={handleDragStart} onDragEnd={handleCardDrag}>
               {columnsContent}

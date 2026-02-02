@@ -3,9 +3,16 @@ import { useContext, useState, useEffect } from "react";
 import { BoardContext } from "../../context/board-context";
 import KanbanDropdown from "../dropdown/Dropdown";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
+import type { SortDirection } from "../../context/board-context";
 
 const QUICK_FILTER_ALL_KEY = "__all__";
+const SORT_NONE_KEY = "__sort_none__";
+const SORT_KEY_SEP = ":";
 const SEARCH_DEBOUNCE_MS = 250;
+
+function sortOptionKey(fieldKey: string, direction: SortDirection): string {
+  return `${fieldKey}${SORT_KEY_SEP}${direction}`;
+}
 
 const QuickFilters = () => {
   const {
@@ -15,6 +22,11 @@ const QuickFilters = () => {
     quickFilterOptions,
     searchKeyword,
     setSearchKeyword,
+    sortFieldsConfig,
+    sortByField,
+    setSortByField,
+    sortDirection,
+    setSortDirection,
   } = useContext(BoardContext);
 
   const [inputValue, setInputValue] = useState(searchKeyword);
@@ -58,15 +70,55 @@ const QuickFilters = () => {
           />
         );
       })}
-      <div className="kanban-quick-filters-search">
-        <input
-          type="search"
-          className="kanban-quick-filters-search-input"
-          placeholder="In allen Feldern suchen…"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          aria-label="Suche in allen Kartenfeldern"
-        />
+      <div className="kanban-quick-filters-right">
+        {sortFieldsConfig.length > 0 && (
+          <div className="kanban-quick-filters-sort">
+            <KanbanDropdown
+              label="Sortieren nach"
+              placeholder="(Keine)"
+              options={[
+                { key: SORT_NONE_KEY, text: "(Keine)" },
+                ...sortFieldsConfig.flatMap((c) => [
+                  { key: sortOptionKey(c.key, "asc"), text: `${c.text} (Aufsteigend)` },
+                  { key: sortOptionKey(c.key, "desc"), text: `${c.text} (Absteigend)` },
+                ]),
+              ]}
+              selectedOption={
+                sortByField && sortDirection
+                  ? {
+                      key: sortOptionKey(sortByField, sortDirection),
+                      text: `${sortFieldsConfig.find((c) => c.key === sortByField)?.text ?? sortByField} (${sortDirection === "asc" ? "Aufsteigend" : "Absteigend"})`,
+                    }
+                  : { key: SORT_NONE_KEY, text: "(Keine)" }
+              }
+              onOptionSelected={(option) => {
+                const key = String(option.key);
+                if (key === SORT_NONE_KEY) {
+                  setSortByField(null);
+                  setSortDirection("asc");
+                  return;
+                }
+                const idx = key.indexOf(SORT_KEY_SEP);
+                if (idx >= 0) {
+                  const field = key.slice(0, idx);
+                  const dir = key.slice(idx + 1) as SortDirection;
+                  setSortByField(field);
+                  setSortDirection(dir === "asc" || dir === "desc" ? dir : "asc");
+                }
+              }}
+            />
+          </div>
+        )}
+        <div className="kanban-quick-filters-search">
+          <input
+            type="search"
+            className="kanban-quick-filters-search-input"
+            placeholder="In allen Feldern suchen…"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            aria-label="Suche in allen Kartenfeldern"
+          />
+        </div>
       </div>
     </div>
   );

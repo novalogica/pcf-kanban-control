@@ -8,6 +8,12 @@ export const isNullOrEmpty = (value: unknown) => {
     return false;
 }
 
+/** For related fields (e.g. a_xxx.telephone1) returns the part after the last dot; otherwise the full name. Used to match config by short name (e.g. telephone1). */
+export function getFieldNameSuffixForMatch(fieldName: string): string {
+    const lastDot = fieldName.lastIndexOf(".");
+    return lastDot >= 0 ? fieldName.slice(lastDot + 1) : fieldName;
+}
+
 export const getColumnValue = (
     record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
     column: ComponentFramework.PropertyHelper.DataSetApi.Column

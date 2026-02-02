@@ -13,6 +13,13 @@ export interface QuickFilterFieldConfig {
   text: string;
 }
 
+export interface SortFieldConfig {
+  key: string;
+  text: string;
+}
+
+export type SortDirection = "asc" | "desc";
+
 interface IBoardContext {
   context: ComponentFramework.Context<IInputs>,
   activeView: ViewItem | undefined,
@@ -45,6 +52,16 @@ interface IBoardContext {
   searchKeyword: string,
   /** Suchbegriff setzen; leeres string = keine Suche */
   setSearchKeyword: (value: string) => void,
+  /** Sortierung: konfigurierte Felder zur Auswahl */
+  sortFieldsConfig: SortFieldConfig[],
+  /** aktuell gewähltes Sortierfeld (logicalName) oder null = keine Sortierung */
+  sortByField: string | null,
+  /** Sortierfeld setzen */
+  setSortByField: (field: string | null) => void,
+  /** Sortierrichtung: aufsteigend / absteigend */
+  sortDirection: SortDirection,
+  /** Sortierrichtung setzen */
+  setSortDirection: (dir: SortDirection) => void,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

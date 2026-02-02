@@ -7,6 +7,7 @@ import { CardDetails, CardDetailsList } from "./CardDetails";
 import { useMemo, useCallback } from "react";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
+import { getFieldNameSuffixForMatch } from "../../lib/utils";
 
 export type HighlightType = "left" | "right" | "cornerTopRight" | "cornerBottomRight";
 
@@ -42,10 +43,14 @@ function looksLikeBoolean(value: unknown): boolean {
   return false;
 }
 
-/** For related fields (e.g. a_xxx.telephone1) returns the part after the last dot; otherwise the full name. Used to match config by short name (e.g. telephone1). */
-function getFieldNameSuffixForMatch(fieldName: string): string {
-  const lastDot = fieldName.lastIndexOf(".");
-  return lastDot >= 0 ? fieldName.slice(lastDot + 1) : fieldName;
+/** True if the config set contains the field (by full name or by suffix after the last dot). Use for all field-based config sets. */
+function setMatchesField(set: Set<string>, fieldName: string): boolean {
+  return set.has(fieldName) || set.has(getFieldNameSuffixForMatch(fieldName));
+}
+
+/** Returns the value for the field from the map (by full name or by suffix). Use for all field-based config maps. */
+function mapGetByField<K>(map: Map<string, K>, fieldName: string): K | undefined {
+  return map.get(fieldName) ?? map.get(getFieldNameSuffixForMatch(fieldName));
 }
 
 /** True if the value is non-empty (for non-boolean fields: "has a value" = highlight). */
@@ -196,6 +201,24 @@ const Card = ({ item, draggable = true }: IProps) => {
     }
   }, [context.parameters, reportConfigError]);
 
+  const lookupFieldsPersonaIconOnlyOnCardSet = useMemo(() => {
+    const raw = (context.parameters as { lookupFieldsPersonaIconOnlyOnCard?: { raw?: string } }).lookupFieldsPersonaIconOnlyOnCard?.raw?.trim();
+    if (!raw) return new Set<string>();
+    try {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[")) {
+        const arr = JSON.parse(trimmed) as string[];
+        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("lookupFieldsPersonaIconOnlyOnCard", e instanceof Error ? e.message : String(e));
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+  }, [context.parameters, reportConfigError]);
+
   const emailFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { emailFieldsOnCard?: { raw?: string } }).emailFieldsOnCard?.raw?.trim();
     if (!raw) return new Set<string>();
@@ -232,12 +255,54 @@ const Card = ({ item, draggable = true }: IProps) => {
     }
   }, [context.parameters, reportConfigError]);
 
+  const ellipsisFieldsOnCardSet = useMemo(() => {
+    const raw = (context.parameters as { ellipsisFieldsOnCard?: { raw?: string } }).ellipsisFieldsOnCard?.raw?.trim();
+    if (!raw) return new Set<string>();
+    try {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith("[")) {
+        const arr = JSON.parse(trimmed) as string[];
+        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    } catch (e) {
+      if (raw.trim().startsWith("[")) {
+        reportConfigError?.("ellipsisFieldsOnCard", e instanceof Error ? e.message : String(e));
+      }
+      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+  }, [context.parameters, reportConfigError]);
+
+  const fieldDisplayNamesOnCardMap = useMemo((): Map<string, string> => {
+    const raw = (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw?.trim();
+    if (!raw) return new Map();
+    try {
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Map();
+      const map = new Map<string, string>();
+      for (const e of arr) {
+        if (e && typeof e === "object" && "logicalName" in e && "displayName" in e) {
+          const name = String(e.logicalName).trim();
+          const displayName = String(e.displayName).trim();
+          if (name) map.set(name, displayName);
+        }
+      }
+      return map;
+    } catch (e) {
+      reportConfigError?.("fieldDisplayNamesOnCard", e instanceof Error ? e.message : String(e));
+      return new Map();
+    }
+  }, [context.parameters, reportConfigError]);
+
   const highlights = useMemo(() => {
     const result: { left?: string; right?: string; cornerTopRight?: string; cornerBottomRight?: string } = {};
     const done = { left: false, right: false, cornerTopRight: false, cornerBottomRight: false };
+    const itemKeys = Object.keys(item);
     for (const { logicalName, color, type = "left" } of booleanFieldHighlights) {
       if (done[type]) continue;
-      const field = item[logicalName];
+      const itemKey = itemKeys.find((k) => k === logicalName || getFieldNameSuffixForMatch(k) === logicalName);
+      if (itemKey == null) continue;
+      const field = item[itemKey];
       if (field == null) continue;
       const value = field && typeof field === "object" && "value" in field ? (field as CardInfo).value : field;
       const matches = looksLikeBoolean(value) ? isBooleanTruthy(value) : hasValue(value);
@@ -254,7 +319,7 @@ const Card = ({ item, draggable = true }: IProps) => {
     return Object.entries(item)?.filter((i) => {
       if (i[0] === "title" || i[0] === "tag" || i[0] === "id" || i[0] === "column") return false;
       if (hideColumnFieldOnCard && columnFieldKey && i[0] === columnFieldKey) return false;
-      if (hiddenFieldsOnCardSet.has(i[0])) return false;
+      if (setMatchesField(hiddenFieldsOnCardSet, i[0])) return false;
       return true;
     });
   }, [item, hideColumnFieldOnCard, columnFieldKey, hiddenFieldsOnCardSet]);
@@ -300,19 +365,21 @@ const Card = ({ item, draggable = true }: IProps) => {
         <CardDetailsList>
           {cardDetails?.map((info) => {
             const fieldKey = info[0] as string;
-            const fieldSuffix = getFieldNameSuffixForMatch(fieldKey);
             return (
               <CardDetails
                 key={`${fieldKey}-${item.id}`}
                 id={item.id}
                 fieldName={fieldKey}
                 info={info[1] as CardInfo}
-                renderAsHtml={htmlFieldsOnCardSet.has(fieldKey)}
-                hideLabel={hideLabelForFieldsOnCardSet.has(fieldKey)}
-                widthPercent={fieldWidthsOnCardMap.get(fieldKey)}
-                lookupAsPersona={lookupFieldsAsPersonaOnCardSet.has(fieldKey)}
-                asEmailLink={emailFieldsOnCardSet.has(fieldKey) || emailFieldsOnCardSet.has(fieldSuffix)}
-                asPhoneLink={phoneFieldsOnCardSet.has(fieldKey) || phoneFieldsOnCardSet.has(fieldSuffix)}
+                displayLabelOverride={mapGetByField(fieldDisplayNamesOnCardMap, fieldKey)}
+                renderAsHtml={setMatchesField(htmlFieldsOnCardSet, fieldKey)}
+                hideLabel={setMatchesField(hideLabelForFieldsOnCardSet, fieldKey)}
+                widthPercent={mapGetByField(fieldWidthsOnCardMap, fieldKey)}
+                lookupAsPersona={setMatchesField(lookupFieldsAsPersonaOnCardSet, fieldKey)}
+                lookupPersonaIconOnly={setMatchesField(lookupFieldsPersonaIconOnlyOnCardSet, fieldKey)}
+                asEmailLink={setMatchesField(emailFieldsOnCardSet, fieldKey)}
+                asPhoneLink={setMatchesField(phoneFieldsOnCardSet, fieldKey)}
+                textEllipsis={setMatchesField(ellipsisFieldsOnCardSet, fieldKey)}
               />
             );
           })}

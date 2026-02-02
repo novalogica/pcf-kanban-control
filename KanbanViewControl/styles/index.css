@@ -16,7 +16,8 @@
 }
 
 .columns-wrapper {
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   display: flex;
   flex-direction: row;
   gap: 32px;
@@ -25,12 +26,13 @@
 }
 
 .columns-wrapper--full-width {
-  overflow-x: hidden;
+  width: 100%;
+  overflow-x: auto;
 }
 
 .columns-wrapper--full-width .column-container {
   flex: 1;
-  min-width: 0;
+  min-width: var(--min-column-width, 400px);
 }
 
 .columns-wrapper--full-width .cards-wrapper {
@@ -48,7 +50,7 @@
 .column-container {
   min-height: 200px;
   max-height: 100vh;
-  min-width: 400px;
+  min-width: var(--min-column-width, 400px);
   display: flex;
   flex-direction: column;
   justify-content: start;
@@ -262,6 +264,52 @@
   -webkit-box-orient: vertical;
 }
 
+/* Per-field ellipsis: single line with text-overflow ellipsis (configured via ellipsisFieldsOnCard).
+   Flex-Item darf nicht mit Inhalt mitwachsen – max-width begrenzt, min-width: 0 erlaubt Schrumpfen. */
+.card-info--ellipsis {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.card-info--ellipsis .card-text,
+.card-info--ellipsis .card-info-value--link {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  min-width: 0;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  -webkit-box-orient: unset;
+}
+.card-info--ellipsis .card-info-value--link {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+/* Wrapper für E-Mail/Telefon-Links: begrenzt Breite zuverlässig, damit Ellipsis greift */
+.card-info--ellipsis .card-info-value-ellipsis-wrap {
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+.card-info--ellipsis .card-info-value-ellipsis-wrap .card-info-value--link {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-info--ellipsis .card-info-value--html {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* Lookup als einfacher Link – gleiche Höhe wie andere card-info-value */
 .card-info-value--link {
   all: unset;
@@ -292,6 +340,9 @@
   height: 22px !important;
   min-width: 22px !important;
 }
+.personaContainer--iconOnly .ms-Persona-details {
+  display: none;
+}
 .user-badge {
   color: #115ea3;
 }
@@ -316,20 +367,58 @@
 }
 
 .kanban-quick-filters .kanban-dropdown {
-  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 200px;
+  gap: 4px;
 }
 
 .kanban-quick-filters .kanban-dropdown .ms-Dropdown-title {
-  min-width: 220px;
+  min-width: 0;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
 }
 
-.kanban-quick-filters-search {
+.kanban-quick-filters-right {
   margin-left: auto;
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: flex-end;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.kanban-quick-filters-sort {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.kanban-quick-filters-sort .kanban-dropdown {
+  min-width: 160px;
+}
+
+.kanban-quick-filters-sort-direction {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.kanban-quick-filters-sort-direction button {
+  flex-shrink: 0;
+}
+
+.kanban-quick-filters-search {
+  display: flex;
+  align-items: flex-end;
+  flex-shrink: 0;
 }
 
 .kanban-quick-filters-search-input {
