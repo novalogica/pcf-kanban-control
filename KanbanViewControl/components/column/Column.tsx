@@ -9,10 +9,11 @@ import NoResults from "../container/no-results";
 import { getItemStyle, getListStyle } from "../../lib/card-drag";
 import { BoardContext } from "../../context/board-context";
 
-const Column = ({ column }: { column: ColumnItem }) => {
+const Column = ({ column, widthPx }: { column: ColumnItem; widthPx?: number }) => {
   const { context, draggingRef, openFormWithLoading } = useContext(BoardContext);
   const allowCardMove = ((context.parameters as unknown) as { allowCardMove?: { raw?: boolean } }).allowCardMove?.raw !== false;
   const hasCards = !isNullOrEmpty(column.cards) && column.cards!.length > 0;
+  const columnStyle = widthPx != null ? { width: widthPx, minWidth: widthPx, maxWidth: widthPx } : undefined;
 
   const handleCardWrapperClick = useCallback(
     (itemId: string | number) => () => {
@@ -25,7 +26,7 @@ const Column = ({ column }: { column: ColumnItem }) => {
 
   if (!allowCardMove) {
     return (
-      <div className="column-container">
+      <div className="column-container" style={columnStyle}>
         <ColumnHeader column={column} />
         <div className="cards-wrapper">
           {hasCards && column.cards?.map((item) => (
@@ -40,7 +41,7 @@ const Column = ({ column }: { column: ColumnItem }) => {
   }
 
   return (
-    <div className="column-container">
+    <div className="column-container" style={columnStyle}>
       <ColumnHeader column={column} />
       <Droppable key={column.id.toString()} droppableId={column.id.toString()}>
         {(provided, snapshot) => (

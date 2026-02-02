@@ -11,6 +11,8 @@ interface IPropsSingle {
   multiSelect?: false;
   selectedKeys?: never;
   onSelectionChange?: never;
+  /** Fixed width in px for the dropdown (e.g. in popup); passed to Fluent UI Dropdown */
+  dropdownWidth?: number | "auto";
 }
 
 interface IPropsMulti {
@@ -22,12 +24,22 @@ interface IPropsMulti {
   onSelectionChange: (selectedKeys: string[]) => void;
   selectedOption?: never;
   onOptionSelected?: never;
+  /** Fixed width in px for the dropdown (e.g. in popup); passed to Fluent UI Dropdown */
+  dropdownWidth?: number | "auto";
 }
 
 type IProps = IPropsSingle | IPropsMulti;
 
 const KanbanDropdown = (props: IProps) => {
-  const { label, placeholder, options, multiSelect } = props;
+  const { label, placeholder, options, multiSelect, dropdownWidth } = props;
+  const styles =
+    typeof dropdownWidth === "number"
+      ? {
+          ...dropdownStyles,
+          dropdown: { width: dropdownWidth, minWidth: dropdownWidth },
+          title: { width: dropdownWidth, minWidth: dropdownWidth, boxSizing: "border-box" as const },
+        }
+      : dropdownStyles;
   const [selectedItem, setSelectedItem] = React.useState<IDropdownOption | undefined>(
     !multiSelect ? props.selectedOption : undefined
   );
@@ -57,13 +69,14 @@ const KanbanDropdown = (props: IProps) => {
     return (
       <Dropdown
         className="kanban-dropdown"
-        styles={dropdownStyles}
+        styles={styles}
         placeholder={placeholder ?? "Select options"}
         label={label}
         options={options}
         multiSelect
         selectedKeys={props.selectedKeys}
         onChange={onChange}
+        dropdownWidth={dropdownWidth}
       />
     );
   }
@@ -71,12 +84,13 @@ const KanbanDropdown = (props: IProps) => {
   return (
     <Dropdown
       className="kanban-dropdown"
-      styles={dropdownStyles}
+      styles={styles}
       placeholder={placeholder ?? "Select an option"}
       selectedKey={selectedItem ? selectedItem.key : undefined}
       label={label}
       options={options}
       onChange={onChange}
+      dropdownWidth={dropdownWidth}
     />
   );
 };

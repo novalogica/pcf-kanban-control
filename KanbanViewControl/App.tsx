@@ -241,6 +241,17 @@ const App = ({ context, notificationPosition }: IProps) => {
     [quickFilterFieldsParam, reportConfigError, clearConfigError]
   );
 
+  const quickFilterFieldsInPopupParam = (context.parameters as { quickFilterFieldsInPopup?: { raw?: string } }).quickFilterFieldsInPopup?.raw;
+  const quickFilterFieldsInPopupSet = useMemo((): Set<string> => {
+    const list = parseQuickFilterFieldsRaw(
+      quickFilterFieldsInPopupParam,
+      reportConfigError,
+      clearConfigError,
+      "quickFilterFieldsInPopup"
+    );
+    return new Set(list);
+  }, [quickFilterFieldsInPopupParam, reportConfigError, clearConfigError]);
+
   const sortFieldsParam = (context.parameters as { sortFields?: { raw?: string } }).sortFields?.raw;
   const sortFieldsParsed = useMemo(
     () => parseQuickFilterFieldsRaw(sortFieldsParam, reportConfigError, clearConfigError, "sortFields"),
@@ -319,16 +330,22 @@ const App = ({ context, notificationPosition }: IProps) => {
     if (!dataset?.columns) return [];
     const colWithType = dataset.columns as { name: string; displayName?: string; dataType?: string }[];
     return quickFilterFieldsParsed
-      .map((name) => {
+      .map((name): QuickFilterFieldConfig | null => {
         const col = colWithType.find((c) => c.name === name);
         if (!col) return null;
         const displayName =
           fieldDisplayNamesOnCardMap.get(col.name) ?? col.displayName ?? col.name;
         const isMultiselect = !isBooleanColumnDataType(col.dataType);
-        return { key: col.name, text: displayName, isMultiselect };
+        const inPopup = quickFilterFieldsInPopupSet.has(col.name);
+        return {
+          key: col.name,
+          text: displayName,
+          isMultiselect,
+          ...(inPopup ? { inPopup: true as const } : {}),
+        };
       })
       .filter((c): c is QuickFilterFieldConfig => c !== null);
-  }, [dataset?.columns, quickFilterFieldsParsed, fieldDisplayNamesOnCardMap]);
+  }, [dataset?.columns, quickFilterFieldsParsed, fieldDisplayNamesOnCardMap, quickFilterFieldsInPopupSet]);
 
   const sortFieldsConfig = useMemo((): SortFieldConfig[] => {
     if (!dataset?.columns) return [];

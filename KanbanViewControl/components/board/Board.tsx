@@ -81,6 +81,25 @@ const Board = () => {
     return n;
   }, [context.parameters]);
 
+  const columnWidthsMap = useMemo(() => {
+    const raw = (context.parameters as { columnWidths?: { raw?: string } }).columnWidths?.raw;
+    if (raw == null || String(raw).trim() === "") return new Map<string, number>();
+    try {
+      const arr = JSON.parse(raw) as { id?: string; width?: number }[];
+      if (!Array.isArray(arr)) return new Map<string, number>();
+      const map = new Map<string, number>();
+      for (const item of arr) {
+        if (item?.id != null && typeof item.width === "number") {
+          const w = Math.min(1200, Math.max(200, item.width));
+          map.set(String(item.id), w);
+        }
+      }
+      return map;
+    } catch {
+      return new Map<string, number>();
+    }
+  }, [context.parameters]);
+
   const visibleColumns = useMemo(() => {
     if (!columns) return [];
     if (!hideEmptyColumns) return columns;
@@ -88,7 +107,11 @@ const Board = () => {
   }, [columns, hideEmptyColumns]);
 
   const columnsContent = visibleColumns.map((column) => (
-    <Column key={column.id} column={column} />
+    <Column
+      key={column.id}
+      column={column}
+      widthPx={columnWidthsMap.get(column.id.toString())}
+    />
   ));
 
   return (

@@ -13,6 +13,8 @@ export interface QuickFilterFieldConfig {
   text: string;
   /** true = multiselect filter (all except Boolean); false = single select (Boolean) */
   isMultiselect: boolean;
+  /** true = filter is shown in a popup (e.g. "Weitere Filter") to save space; false = inline */
+  inPopup?: boolean;
 }
 
 export interface SortFieldConfig {
