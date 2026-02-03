@@ -15,6 +15,7 @@
   "dependencies": {
     "@fluentui/react": "8.29.0",
     "@hello-pangea/dnd": "^16.6.0",
+    "dompurify": "^3.3.1",
     "react": "16.8.6",
     "react-dom": "16.8.6",
     "react-hot-toast": "^2.4.1"

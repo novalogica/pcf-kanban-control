@@ -420,6 +420,8 @@ const App = ({ context, notificationPosition }: IProps) => {
     context.parameters.businessProcessFlowStepOrder?.raw,
     (context.parameters as { hiddenFieldsOnCard?: { raw?: string } }).hiddenFieldsOnCard?.raw,
     (context.parameters as { htmlFieldsOnCard?: { raw?: string } }).htmlFieldsOnCard?.raw,
+    (context.parameters as { allowedHtmlTagsOnCard?: { raw?: string } }).allowedHtmlTagsOnCard?.raw,
+    (context.parameters as { allowedHtmlAttributesOnCard?: { raw?: string } }).allowedHtmlAttributesOnCard?.raw,
     (context.parameters as { booleanFieldHighlights?: { raw?: string } }).booleanFieldHighlights?.raw,
     (context.parameters as { fieldWidthsOnCard?: { raw?: string } }).fieldWidthsOnCard?.raw,
     (context.parameters as { emailFieldsOnCard?: { raw?: string } }).emailFieldsOnCard?.raw,

@@ -83,8 +83,26 @@
     <property 
       name="htmlFieldsOnCard" 
       display-name-key="HTML fields on card" 
-      description-key="Field logical names whose content is rendered as HTML (not escaped). JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;])."
+      description-key="Field logical names whose content is rendered as HTML (sanitized). JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;])."
       of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowedHtmlTagsOnCard" 
+      display-name-key="Allowed HTML tags on card" 
+      description-key="Comma-separated list of allowed HTML tags for HTML fields on card. Default: p,br,b,i,u,strong,em,a,ul,ol,li,table,thead,tbody,tr,th,td. Empty = no tags (all HTML stripped). Add style only if needed and accept security risk (see Security in README)."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowedHtmlAttributesOnCard" 
+      display-name-key="Allowed HTML attributes on card" 
+      description-key="Comma-separated list of allowed attributes for HTML fields on card (e.g. href for links). Default: href. Empty = no attributes."
+      of-type="SingleLine.Text" 
       usage="input" 
       required="false"
     />

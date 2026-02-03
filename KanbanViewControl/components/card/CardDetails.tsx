@@ -3,10 +3,16 @@ import { useRef, useEffect } from "react";
 import { CardInfo, UniqueIdentifier } from "../../interfaces";
 import { Text } from "@fluentui/react/lib/Text";
 import { isEntityReference, isNullOrEmpty } from "../../lib/utils";
+import { sanitizeHtml } from "../../lib/sanitize-html";
 import { Lookup } from "../lookup/Lookup";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
 import { MultiType } from "../../interfaces/card.type";
+
+interface HtmlSanitizeParams {
+  allowedHtmlTagsOnCard?: { raw?: string };
+  allowedHtmlAttributesOnCard?: { raw?: string };
+}
 
 const SHADOW_HTML_SLOT_CLASS = "card-info-value--html-slot";
 
@@ -77,6 +83,13 @@ const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml =
     : undefined;
   const onLinkClick = (e: React.MouseEvent) => e.stopPropagation();
 
+  const htmlSanitizeParams = context.parameters as HtmlSanitizeParams;
+  const allowedTagsRaw = htmlSanitizeParams.allowedHtmlTagsOnCard?.raw;
+  const allowedAttrsRaw = htmlSanitizeParams.allowedHtmlAttributesOnCard?.raw;
+  const sanitizedHtml = renderAsHtml && htmlContent
+    ? sanitizeHtml(htmlContent, allowedTagsRaw, allowedAttrsRaw)
+    : "";
+
   useEffect(() => {
     if (!renderAsHtml || !htmlHostRef.current) return;
     const host = htmlHostRef.current;
@@ -91,9 +104,9 @@ const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml =
     }
     const slot = shadow.firstChild as HTMLDivElement;
     if (slot) {
-      slot.innerHTML = htmlContent;
+      slot.innerHTML = sanitizedHtml;
     }
-  }, [renderAsHtml, htmlContent]);
+  }, [renderAsHtml, sanitizedHtml]);
 
   if (isEmpty && !hasLabel) {
     return null;

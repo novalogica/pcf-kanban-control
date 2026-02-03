@@ -50,7 +50,9 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 |----------|------|-------------|
 | **Hide column field on card** | Yes/No | When **Yes**, the field that is used for the current "View By" grouping (e.g. priority, status) is **not** shown on the card, to avoid redundancy. Other fields are unchanged. Default: **No**. |
 | **Hidden fields on card** | Text | Field **logical names** that are loaded with the dataset but **not shown** on cards. Use to fetch data (e.g. for lookups) without displaying it. **JSON array** (e.g. `["field1","field2"]`) or **comma-separated** list. Invalid JSON falls back to comma parsing. |
-| **HTML fields on card** | Text | Field **logical names** whose value is rendered as **HTML** (not escaped). Use for rich text or formatted content. **JSON array** or comma-separated list. Only use with trusted data to avoid XSS. Invalid JSON falls back to comma parsing. |
+| **HTML fields on card** | Text | Field **logical names** whose value is rendered as **HTML** (sanitized with DOMPurify and a configurable whitelist). Use for rich text or formatted content. **JSON array** or comma-separated list. Invalid JSON falls back to comma parsing. See **Security** for whitelist options. |
+| **Allowed HTML tags on card** | Text | Comma-separated list of **allowed HTML tags** for HTML fields on card. Default: `p,br,b,i,u,strong,em,a,ul,ol,li,table,thead,tbody,tr,th,td`. Empty = no tags (all HTML stripped). Add `style` only if needed and accept the security risk (see Security). |
+| **Allowed HTML attributes on card** | Text | Comma-separated list of **allowed attributes** for HTML fields on card (e.g. `href` for links). Default: `href`. Empty = no attributes. |
 | **Hide label for fields on card** | Text | Field **logical names** for which the **label** is hidden on the card; only the value is shown. **JSON array** or comma-separated list. Useful for compact layouts. Invalid JSON falls back to comma parsing. |
 | **Field display names on card** | Text | **JSON array** of `{"logicalName":"fieldname","displayName":"Label"}`. Assigns custom display names (labels) to fields on the card. Fields not listed keep their dataset display name. Invalid JSON is reported. Example: `[{"logicalName":"estimatedvalue","displayName":"Wert"}]`. |
 | **Field highlights** | Text | **JSON array** of `{"logicalName":"fieldname","color":"#hex","type":"left"}`. For any field type: **empty**/falsy = no highlight, **filled**/truthy = highlight. **First match per type** wins. Optional **type**: `left` (default) = colored left border, `right` = colored right border, `cornerTopRight` / `cornerBottomRight` = diagonal corner mark. Fields must be in the dataset columns. Invalid JSON is reported. Example: `[{"logicalName":"ispriority","color":"#e81123","type":"left"},{"logicalName":"isurgent","color":"#ff0","type":"cornerTopRight"}]`. |
@@ -60,6 +62,25 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 | **E-Mail fields on card (as link)** | Text | Field **logical names** that are shown as **clickable mailto links** (e.g. E-Mail of related contact). Use when the field displays an e-mail but has type SingleLine.Text in the dataset. **JSON array** (e.g. `["parentcontactid_emailaddress1"]`) or comma-separated list. |
 | **Phone fields on card (as link)** | Text | Field **logical names** that are shown as **clickable tel links** (e.g. phone of related contact). Use when the field displays a phone number but has type SingleLine.Text in the dataset. **JSON array** (e.g. `["parentcontactid_telephone1"]`) or comma-separated list. |
 | **Ellipsis fields on card** | Text | Field **logical names** for which the value is shown with **text-overflow: ellipsis** (single line, overflow hidden with …). Other fields use multi-line clamp. **JSON array** or comma-separated list. |
+
+### Security (HTML fields on card)
+
+HTML content from **HTML fields on card** is sanitized with [DOMPurify](https://github.com/cure53/DOMPurify) before rendering. Only tags and attributes listed in **Allowed HTML tags on card** and **Allowed HTML attributes on card** are kept; scripts, event handlers (e.g. `onerror`, `onclick`), and unsafe markup are removed. This reduces Stored XSS risk even if the bound field is editable by users, imports, or integrations.
+
+- **Configurable whitelist** – Restrict allowed tags and attributes in the component settings to the minimum your use case needs. Fewer tags = smaller attack surface.
+- **Shadow DOM** – HTML is rendered inside a Shadow Root for encapsulation.
+- **Bound field** – The field is bound to Dataverse data. Sanitization happens inside the control; you can still limit who can write to the bound field via security roles to reduce risk further.
+
+**Whitelist configuration (important)**
+
+- **Only trusted configuration** – Allowed tags and attributes are set when the form is configured (app maker/admin). Do not allow end users or untrusted systems to change these settings.
+- **Do not allow event handlers or inline style** – Do not add event attributes (e.g. `onclick`, `onerror`, `onload`) or the `style` attribute to **Allowed HTML attributes on card** (that would allow `style="..."` on elements and can reintroduce XSS). Use the default `href` only, or add attributes like `target` if you need them (see below).
+- **`style` tag is a significant security risk** – Allowing the `style` tag in **Allowed HTML tags on card** enables embedded CSS (`<style>...</style>`). CSS can be abused for XSS, data exfiltration, or UI manipulation (e.g. `expression()` in older browsers, `-moz-binding`, `behavior`, `@import` to external resources, or `url()` to leak data). Only add `style` to the whitelist if the HTML field content is fully trusted (e.g. authored only by admins, not by end users or imports).
+- **Links with `target="_blank"`** – If you add `target` to **Allowed HTML attributes on card** so that links open in a new tab, be aware of [tab-nabbing](https://owasp.org/www-community/attacks/Reverse_Tabnabbing). Prefer links that use `rel="noopener"` (and optionally `rel="noreferrer"`) in the stored HTML where possible; DOMPurify does not add these automatically.
+
+**Dependency updates**
+
+- Keep DOMPurify updated to the latest patch version (e.g. `npm update dompurify`) and run `npm audit` regularly so security fixes are applied in time.
 
 ### Filters & sorting
 
@@ -146,10 +167,11 @@ If a JSON property contains invalid JSON, the control shows a **Configuration er
    ```
    Or comma-separated: `estimatedvalue, createdon, ownerid`
 
-**HTML fields on card** (render content as HTML; use only with trusted data)
+**HTML fields on card** (render content as HTML; content is sanitized with DOMPurify and the configured tag/attribute whitelist)
    ```json
    ["description","customhtmlfield"]
    ```
+   Use **Allowed HTML tags on card** and **Allowed HTML attributes on card** to restrict allowed markup (see Security).
 
 **Hide label for fields on card** (show value only, no label)
    ```json
