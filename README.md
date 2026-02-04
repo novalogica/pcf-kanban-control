@@ -37,6 +37,7 @@ All configurable properties from the Control Manifest. Invalid JSON in text prop
 | Property | Type | Description |
 |----------|------|-------------|
 | **Allow moving cards** | Yes/No | When **No**, drag-and-drop is disabled; cards cannot be moved between columns. Clicking a card still opens the record. Useful for read-only or approval boards. Default: **Yes**. |
+| **Show open in new tab button on card** | Yes/No | When **Yes**, each card shows a button (top right) that opens the record in a new browser tab (_blank). Uses the Fluent UI icon OpenRegular. Default: **No**. |
 | **Hide empty columns** | Yes/No | When **Yes**, columns that currently have no cards are hidden. The board only shows columns that contain at least one record. Default: **No**. |
 | **Expand board to full width** | Yes/No | When **Yes**, the board uses the full available width and columns scale proportionally. When **No**, the board keeps a fixed layout. Default: **No**. |
 | **Minimum column width** | Text | Minimum width of each column in **pixels** (number as text, e.g. `300` or `400`). Also applies when "Expand board to full width" is enabled; horizontal scrolling is used if needed. Leave empty for default (400). |

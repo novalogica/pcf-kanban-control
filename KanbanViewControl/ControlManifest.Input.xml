@@ -54,6 +54,15 @@
     />
 
     <property 
+      name="showOpenInNewTabButton" 
+      display-name-key="Show open in new tab button on card" 
+      description-key="When enabled, each card shows a button (top right) that opens the record in a new browser tab."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="hideEmptyColumns" 
       display-name-key="Hide empty columns" 
       description-key="When enabled, columns that contain no cards are not shown."

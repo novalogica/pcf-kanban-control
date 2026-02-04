@@ -47,6 +47,10 @@ interface IBoardContext {
   isOpeningEntity: boolean,
   /** Opens entity form with loading state; prevents multiple opens */
   openFormWithLoading: (entityName: string, id?: string) => Promise<void>,
+  /** Opens entity record in a new browser tab (_blank). Only used when showOpenInNewTabButton is true. */
+  openEntityInNewTab: (entityName: string, id: string) => void,
+  /** When true, show the "open in new tab" button on each card (top right). */
+  showOpenInNewTabButton: boolean,
   /** Reported JSON/configuration validation errors (property name + message) */
   configErrors: ConfigError[],
   /** Reports a configuration error (e.g. invalid JSON); stored only once per property/message */

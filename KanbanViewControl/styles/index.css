@@ -220,6 +220,38 @@
   -webkit-line-clamp: 2;
   line-clamp: 2; 
   -webkit-box-orient: vertical;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.card-open-new-tab-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgb(102, 102, 102);
+  cursor: pointer;
+}
+
+.card-open-new-tab-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgb(33, 78, 128);
+}
+
+.card-open-new-tab-btn:focus {
+  outline: 1px solid rgb(33, 78, 128);
+  outline-offset: 1px;
+}
+
+.card-open-new-tab-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .card-body {

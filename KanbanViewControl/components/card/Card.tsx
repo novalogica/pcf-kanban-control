@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Text } from "@fluentui/react/lib/Text";
+import { OpenRegular } from "@fluentui/react-icons";
 import CardHeader from "./CardHeader";
 import CardBody from "./CardBody";
 import { CardInfo, CardItem } from "../../interfaces";
@@ -65,7 +66,7 @@ function hasValue(value: unknown): boolean {
 const CLICK_MOVE_THRESHOLD_PX = 5;
 
 const Card = ({ item, draggable = true }: IProps) => {
-  const { context, activeView, openFormWithLoading, reportConfigError, clearConfigError } = useContext(BoardContext);
+  const { context, activeView, openFormWithLoading, openEntityInNewTab, showOpenInNewTabButton, reportConfigError, clearConfigError } = useContext(BoardContext);
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const onCardClick = useCallback(() => {
@@ -397,6 +398,21 @@ const Card = ({ item, draggable = true }: IProps) => {
         <Text className="card-title" nowrap>
           {item?.title?.value}
         </Text>
+        {showOpenInNewTabButton && (
+          <button
+            type="button"
+            className="card-open-new-tab-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              openEntityInNewTab(context.parameters.dataset.getTargetEntityType(), item.id.toString());
+            }}
+            aria-label="In neuem Tab öffnen"
+            title="In neuem Tab öffnen"
+          >
+            <OpenRegular />
+          </button>
+        )}
       </CardHeader>
       <CardBody>
         <CardDetailsList>

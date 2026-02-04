@@ -227,8 +227,9 @@ const App = ({ context, notificationPosition }: IProps) => {
   }, []);
 
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context, reportConfigError, clearConfigError);
-  const { openForm } = useNavigation(context);
+  const { openForm, openEntityInNewTab } = useNavigation(context);
   const { dataset } = context.parameters;
+  const showOpenInNewTabButton = (context.parameters as { showOpenInNewTabButton?: { raw?: boolean } }).showOpenInNewTabButton?.raw === true;
 
   // Key for refresh: derived from current records on each render so that
   // after dataset.refresh() the display updates (even when PCF returns the same reference).
@@ -785,6 +786,8 @@ const App = ({ context, notificationPosition }: IProps) => {
         draggingRef,
         isOpeningEntity,
         openFormWithLoading,
+        openEntityInNewTab,
+        showOpenInNewTabButton,
         configErrors,
         reportConfigError,
         clearConfigError,
