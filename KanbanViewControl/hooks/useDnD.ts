@@ -1,15 +1,17 @@
 import { CardInfo, ColumnItem } from "../interfaces";
-import {useDataverse} from "./useDataverse";
+import { useDataverse } from "./useDataverse";
 import { DropResult } from "@hello-pangea/dnd";
-import { BoardContext } from '../context/board-context';
-import { useContext } from 'react';
+import { BoardContext } from "../context/board-context";
+import { useContext } from "react";
 import toast from "react-hot-toast";
 import { moveCard } from "../lib/card-drag";
+import { getStrings } from "../lib/strings";
 
 export type ColumnId = ColumnItem[][number]["id"];
 
 export const useDnD = (columns: ColumnItem[]) => {
-  const { context, activeView, setColumns, openFormWithLoading } = useContext(BoardContext);
+  const { context, locale, activeView, setColumns, openFormWithLoading } = useContext(BoardContext);
+  const strings = getStrings(locale);
   const { updateRecord } = useDataverse(context);
   
   const onDragEnd = async (result: DropResult, record: any) => {
@@ -45,14 +47,15 @@ export const useDnD = (columns: ColumnItem[]) => {
     movedCards = await moveCard(columns, sourceCard, result);
     setColumns(movedCards ?? [])
 
+    const columnName = record.columnName ?? strings.toastUnallocated;
     const response = await toast.promise(
       updateRecord(record),
       {
-        loading: 'Saving...',
-        success: `Successfully moved to ${record.columnName ?? "Unallocated"} 🎉`,
+        loading: strings.toastSaving,
+        success: strings.toastSuccessMoved(columnName),
         error: (e) => e.message,
       }
-    )
+    );
     
     if(!response) {
       const oldValue = sourceColumn?.title;

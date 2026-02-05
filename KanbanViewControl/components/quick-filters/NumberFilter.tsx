@@ -1,11 +1,12 @@
 import * as React from "react";
+import { useContext } from "react";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { Callout } from "@fluentui/react/lib/Callout";
-import {
-  parseNumberFilterValue,
-} from "../../lib/utils";
+import { parseNumberFilterValue } from "../../lib/utils";
 import { dropdownStyles } from "../dropdown/styles";
+import { BoardContext } from "../../context/board-context";
+import { getStrings } from "../../lib/strings";
 
 const NUM_FILTER_ALL_KEY = "__all__";
 const NUM_FILTER_GT = "gt";
@@ -39,19 +40,22 @@ function parseValueForInput(value: string | null): { single: string; min: string
   return { single: String(parsed.num), min: "", max: "" };
 }
 
-/** Format number for display in dropdown title (locale-aware, e.g. 10.000 or 1.234,56). */
-function formatNumForDisplay(n: number): string {
-  return n.toLocaleString("de-DE", { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+/** Format number for display in dropdown title (locale-aware). */
+function formatNumForDisplay(n: number, locale: string): string {
+  const localeTag = locale === "de" ? "de-DE" : locale === "en" ? "en-US" : locale;
+  return n.toLocaleString(localeTag, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
 }
 
-const numberFilterOptionsBase: IDropdownOption[] = [
-  { key: NUM_FILTER_ALL_KEY, text: "(Alle)" },
-  { key: NUM_FILTER_GT, text: "Größer als" },
-  { key: NUM_FILTER_LT, text: "Kleiner als" },
-  { key: NUM_FILTER_GTE, text: "Größer oder gleich" },
-  { key: NUM_FILTER_LTE, text: "Kleiner oder gleich" },
-  { key: NUM_FILTER_BETWEEN, text: "Zwischen" },
-];
+function getNumberFilterOptionsBase(strings: ReturnType<typeof getStrings>): IDropdownOption[] {
+  return [
+    { key: NUM_FILTER_ALL_KEY, text: strings.numberFilterAll },
+    { key: NUM_FILTER_GT, text: strings.numberFilterGreaterThan },
+    { key: NUM_FILTER_LT, text: strings.numberFilterLessThan },
+    { key: NUM_FILTER_GTE, text: strings.numberFilterGreaterOrEqual },
+    { key: NUM_FILTER_LTE, text: strings.numberFilterLessOrEqual },
+    { key: NUM_FILTER_BETWEEN, text: strings.numberFilterBetween },
+  ];
+}
 
 export interface NumberFilterProps {
   fieldKey: string;
@@ -73,6 +77,9 @@ const NumberFilter: React.FC<NumberFilterProps> = ({
   labelOverride,
   step = 1,
 }) => {
+  const { locale } = useContext(BoardContext);
+  const strings = getStrings(locale);
+  const numberFilterOptionsBase = React.useMemo(() => getNumberFilterOptionsBase(strings), [strings]);
   const displayLabel = labelOverride !== undefined ? labelOverride : label;
   const mode = getMode(value);
   const parsed = parseValueForInput(value);
@@ -91,14 +98,14 @@ const NumberFilter: React.FC<NumberFilterProps> = ({
     const p = parseNumberFilterValue(value);
     return numberFilterOptionsBase.map((opt) => {
       if (!p) return opt;
-      if (opt.key === NUM_FILTER_GT && p.op === "gt") return { ...opt, text: `Größer als ${formatNumForDisplay(p.num)}` };
-      if (opt.key === NUM_FILTER_LT && p.op === "lt") return { ...opt, text: `Kleiner als ${formatNumForDisplay(p.num)}` };
-      if (opt.key === NUM_FILTER_GTE && p.op === "gte") return { ...opt, text: `≥ ${formatNumForDisplay(p.num)}` };
-      if (opt.key === NUM_FILTER_LTE && p.op === "lte") return { ...opt, text: `≤ ${formatNumForDisplay(p.num)}` };
-      if (opt.key === NUM_FILTER_BETWEEN && p.op === "between") return { ...opt, text: `${formatNumForDisplay(p.min)} – ${formatNumForDisplay(p.max)}` };
+      if (opt.key === NUM_FILTER_GT && p.op === "gt") return { ...opt, text: `${strings.numberFilterGreaterThan} ${formatNumForDisplay(p.num, locale)}` };
+      if (opt.key === NUM_FILTER_LT && p.op === "lt") return { ...opt, text: `${strings.numberFilterLessThan} ${formatNumForDisplay(p.num, locale)}` };
+      if (opt.key === NUM_FILTER_GTE && p.op === "gte") return { ...opt, text: `≥ ${formatNumForDisplay(p.num, locale)}` };
+      if (opt.key === NUM_FILTER_LTE && p.op === "lte") return { ...opt, text: `≤ ${formatNumForDisplay(p.num, locale)}` };
+      if (opt.key === NUM_FILTER_BETWEEN && p.op === "between") return { ...opt, text: `${formatNumForDisplay(p.min, locale)} – ${formatNumForDisplay(p.max, locale)}` };
       return opt;
     });
-  }, [value]);
+  }, [value, numberFilterOptionsBase, strings, locale]);
 
   const selectedOption = numberFilterOptions.find((o) => o.key === mode) ?? numberFilterOptions[0];
 
@@ -178,7 +185,7 @@ const NumberFilter: React.FC<NumberFilterProps> = ({
           className="kanban-dropdown"
           styles={styles}
           label={displayLabel}
-          placeholder="(Alle)"
+          placeholder={strings.numberFilterAll}
           options={numberFilterOptions}
           selectedKey={selectedOption.key}
           onChange={handleDropdownChange}
@@ -221,8 +228,8 @@ const NumberFilter: React.FC<NumberFilterProps> = ({
                       onChange(null);
                     }
                   }}
-                  placeholder="Wert"
-                  ariaLabel="Zahlenwert"
+                  placeholder={strings.numberFilterValuePlaceholder}
+                  ariaLabel={strings.numberFilterValueAriaLabel}
                   step={step}
                 />
               </div>
@@ -236,8 +243,8 @@ const NumberFilter: React.FC<NumberFilterProps> = ({
                     setMinVal(newValue ?? "");
                     applyBetween(newValue ?? "", maxVal);
                   }}
-                  placeholder="Min"
-                  ariaLabel="Mindestwert"
+                  placeholder={strings.numberFilterMinPlaceholder}
+                  ariaLabel={strings.numberFilterMinAriaLabel}
                   step={step}
                 />
                 <TextField
@@ -247,8 +254,8 @@ const NumberFilter: React.FC<NumberFilterProps> = ({
                     setMaxVal(newValue ?? "");
                     applyBetween(minVal, newValue ?? "");
                   }}
-                  placeholder="Max"
-                  ariaLabel="Höchstwert"
+                  placeholder={strings.numberFilterMaxPlaceholder}
+                  ariaLabel={strings.numberFilterMaxAriaLabel}
                   step={step}
                 />
               </div>

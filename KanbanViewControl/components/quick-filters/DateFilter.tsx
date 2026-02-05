@@ -1,8 +1,11 @@
 import * as React from "react";
+import { useContext } from "react";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { DatePicker } from "@fluentui/react/lib/DatePicker";
 import { Callout } from "@fluentui/react/lib/Callout";
 import { dropdownStyles } from "../dropdown/styles";
+import { BoardContext } from "../../context/board-context";
+import { getStrings } from "../../lib/strings";
 
 const DATE_FILTER_ALL_KEY = "__all__";
 const DATE_FILTER_TODAY = "today";
@@ -37,13 +40,15 @@ function formatDateForDisplay(d: Date): string {
   return `${day}.${month}.${year}`;
 }
 
-const dateFilterOptionsBase: IDropdownOption[] = [
-  { key: DATE_FILTER_ALL_KEY, text: "(Alle)" },
-  { key: DATE_FILTER_TODAY, text: "Heute" },
-  { key: DATE_FILTER_LAST_7, text: "Letzte 7 Tage" },
-  { key: DATE_FILTER_LAST_30, text: "Letzte 30 Tage" },
-  { key: DATE_FILTER_CUSTOM, text: "Benutzerdefinierter Bereich" },
-];
+function getDateFilterOptionsBase(strings: ReturnType<typeof getStrings>): IDropdownOption[] {
+  return [
+    { key: DATE_FILTER_ALL_KEY, text: strings.dateFilterAll },
+    { key: DATE_FILTER_TODAY, text: strings.dateFilterToday },
+    { key: DATE_FILTER_LAST_7, text: strings.dateFilterLast7 },
+    { key: DATE_FILTER_LAST_30, text: strings.dateFilterLast30 },
+    { key: DATE_FILTER_CUSTOM, text: strings.dateFilterCustomRange },
+  ];
+}
 
 export interface DateFilterProps {
   fieldKey: string;
@@ -62,7 +67,10 @@ const DateFilter: React.FC<DateFilterProps> = ({
   dropdownWidth,
   labelOverride,
 }) => {
+  const { locale } = useContext(BoardContext);
+  const strings = getStrings(locale);
   const displayLabel = labelOverride !== undefined ? labelOverride : label;
+  const dateFilterOptionsBase = React.useMemo(() => getDateFilterOptionsBase(strings), [strings]);
   const mode =
     !value || value === ""
       ? DATE_FILTER_ALL_KEY
@@ -94,12 +102,12 @@ const DateFilter: React.FC<DateFilterProps> = ({
 
   const dateFilterOptions = React.useMemo((): IDropdownOption[] => {
     const customRangeParsed = parseCustomRange(value);
-    return dateFilterOptionsBase.map((opt) =>
+    return dateFilterOptionsBase.map((opt: IDropdownOption) =>
       opt.key === DATE_FILTER_CUSTOM && customRangeParsed
         ? { ...opt, text: `${formatDateForDisplay(customRangeParsed.start)} – ${formatDateForDisplay(customRangeParsed.end)}` }
         : opt
     );
-  }, [value]);
+  }, [value, dateFilterOptionsBase]);
 
   const selectedOption = dateFilterOptions.find((o) => o.key === mode) ?? dateFilterOptions[0];
 
@@ -181,7 +189,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
           className="kanban-dropdown"
           styles={styles}
           label={displayLabel}
-          placeholder="(Alle)"
+          placeholder={strings.dateFilterAll}
           options={dateFilterOptions}
           selectedKey={selectedOption.key}
           onChange={handleDropdownChange}
@@ -198,7 +206,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
         >
           <div className="kanban-date-filter-range kanban-date-filter-callout-content">
             <DatePicker
-              label="Von"
+              label={strings.dateFilterFrom}
               value={customStart}
               onSelectDate={handleCustomStartChange}
               formatDate={(d) => (d ? formatDateForValue(d) : "")}
@@ -207,10 +215,10 @@ const DateFilter: React.FC<DateFilterProps> = ({
                 return isNaN(d.getTime()) ? null : d;
               }}
               allowTextInput
-              ariaLabel="Startdatum auswählen"
+              ariaLabel={strings.dateFilterStartAria}
             />
             <DatePicker
-              label="Bis"
+              label={strings.dateFilterTo}
               value={customEnd}
               onSelectDate={handleCustomEndChange}
               formatDate={(d) => (d ? formatDateForValue(d) : "")}
@@ -219,7 +227,7 @@ const DateFilter: React.FC<DateFilterProps> = ({
                 return isNaN(d.getTime()) ? null : d;
               }}
               allowTextInput
-              ariaLabel="Enddatum auswählen"
+              ariaLabel={strings.dateFilterEndAria}
             />
           </div>
         </Callout>

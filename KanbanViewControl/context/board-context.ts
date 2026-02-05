@@ -13,7 +13,7 @@ export interface QuickFilterFieldConfig {
   text: string;
   /** true = multiselect filter (all except Boolean); false = single select (Boolean) */
   isMultiselect: boolean;
-  /** true = filter is shown in a popup (e.g. "Weitere Filter") to save space; false = inline */
+  /** true = filter is shown in a popup (e.g. "More filters") to save space; false = inline */
   inPopup?: boolean;
   /** true = DateTime/DateOnly field: use date filter UI (today, last 7/30 days, custom range) */
   isDateField?: boolean;
@@ -35,7 +35,12 @@ export interface FilterPresetConfig {
 
 export type SortDirection = "asc" | "desc";
 
+/** Locale string (e.g. "en", "de") derived from context.userSettings.languageId (LCID). Used for UI strings. */
+export type Locale = string;
+
 interface IBoardContext {
+  /** App language locale (e.g. "en", "de") so the control can show localized strings. */
+  locale: Locale,
   context: ComponentFramework.Context<IInputs>,
   activeView: ViewItem | undefined,
   setActiveView: React.Dispatch<React.SetStateAction<ViewItem | undefined>>,

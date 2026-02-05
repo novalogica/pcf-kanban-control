@@ -10,6 +10,7 @@ import { useDataverse } from "./hooks/useDataverse";
 import { useNavigation } from "./hooks/useNavigation";
 import { getColumnValue, isBooleanColumnDataType, isDateColumnDataType, isNumberColumnDataType, toComparableDate, toComparableNumber, isDateInFilterRange, isNumberInFilterRange } from "./lib/utils";
 import { unlocatedColumn } from "./lib/constants";
+import { getLocaleFromLanguageId, getStrings } from "./lib/strings";
 import { Spinner, SpinnerSize } from "@fluentui/react";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { CardInfo } from "./interfaces";
@@ -226,6 +227,9 @@ const App = ({ context, notificationPosition }: IProps) => {
     }
   }, []);
 
+  const locale = getLocaleFromLanguageId(
+    (context as { userSettings?: { languageId?: number } }).userSettings?.languageId
+  );
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context, reportConfigError, clearConfigError);
   const { openForm, openEntityInNewTab } = useNavigation(context);
   const { dataset } = context.parameters;
@@ -406,7 +410,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     (presetId: string | null) => {
       setSelectedFilterPresetId(presetId);
       if (!presetId) {
-        // "(Kein Preset)": alle Quick-Filter leeren
+        // When no preset: clear all quick filters
         setQuickFilterValuesState(() => {
           const next: Record<string, string | string[] | null> = {};
           for (const cfg of quickFilterFieldsConfig) {
@@ -841,12 +845,13 @@ const App = ({ context, notificationPosition }: IProps) => {
   );
 
   if (isLoading) {
-    return <Loading />;
+    return <Loading label={getStrings(locale).loadingLabel} />;
   }
 
   return (
     <BoardContext.Provider
       value={{
+        locale,
         context,
         views,
         activeView,
@@ -896,7 +901,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         <Board />
         {isOpeningEntity && (
           <div className="opening-entity-overlay" aria-busy="true" aria-live="polite">
-            <Spinner label="Opening record..." size={SpinnerSize.large} />
+            <Spinner label={getStrings(locale).openingRecordLabel} size={SpinnerSize.large} />
           </div>
         )}
       </div>

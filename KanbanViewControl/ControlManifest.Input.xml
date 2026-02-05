@@ -128,7 +128,7 @@
     <property 
       name="fieldDisplayNamesOnCard" 
       display-name-key="Field display names on card" 
-      description-key="Assign custom display names to fields by logical name. JSON array (e.g. [{&quot;logicalName&quot;:&quot;estimatedvalue&quot;,&quot;displayName&quot;:&quot;Wert&quot;}]). The display name is shown as the field label on the card."
+      description-key="Assign custom display names to fields by logical name. JSON array (e.g. [{&quot;logicalName&quot;:&quot;estimatedvalue&quot;,&quot;displayName&quot;:&quot;Value&quot;}]). The display name is shown as the field label on the card."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
@@ -209,7 +209,7 @@
     <property 
       name="quickFilterFieldsInPopup" 
       display-name-key="Quick filter fields in popup" 
-      description-key="Field logical names that are shown in a popup (e.g. &quot;Weitere Filter&quot;) instead of inline, to save space and avoid wrapping. Must be a subset of Quick filter fields. JSON array (e.g. [&quot;ownerid&quot;,&quot;statuscode&quot;]) or comma-separated list."
+      description-key="Field logical names that are shown in a popup (e.g. &quot;More filters&quot;) instead of inline, to save space and avoid wrapping. Must be a subset of Quick filter fields. JSON array (e.g. [&quot;ownerid&quot;,&quot;statuscode&quot;]) or comma-separated list."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
@@ -227,7 +227,7 @@
     <property 
       name="defaultSort" 
       display-name-key="Default sort" 
-      description-key="Default sort when no user preference is saved. JSON object: { &quot;field&quot;: &quot;logicalName&quot; (e.g. estimatedvalue for revenue/Umsatz), &quot;direction&quot;: &quot;asc&quot; | &quot;desc&quot; }. Only applies if the field is also listed in Sort fields. Example: { &quot;field&quot;: &quot;estimatedvalue&quot;, &quot;direction&quot;: &quot;desc&quot; } for revenue descending."
+      description-key="Default sort when no user preference is saved. JSON object: { &quot;field&quot;: &quot;logicalName&quot; (e.g. estimatedvalue for revenue), &quot;direction&quot;: &quot;asc&quot; | &quot;desc&quot; }. Only applies if the field is also listed in Sort fields. Example: { &quot;field&quot;: &quot;estimatedvalue&quot;, &quot;direction&quot;: &quot;desc&quot; } for revenue descending."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"

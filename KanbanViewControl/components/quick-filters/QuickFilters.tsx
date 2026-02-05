@@ -9,6 +9,8 @@ import { Callout } from "@fluentui/react/lib/Callout";
 import { IconButton } from "@fluentui/react/lib/Button";
 import type { SortDirection } from "../../context/board-context";
 import type { QuickFilterFieldConfig } from "../../context/board-context";
+import { getStrings } from "../../lib/strings";
+import type { Strings } from "../../lib/strings";
 
 const QUICK_FILTER_ALL_KEY = "__all__";
 const SORT_NONE_KEY = "__sort_none__";
@@ -25,6 +27,7 @@ function renderFilterControl(
   quickFilterOptions: Record<string, IDropdownOption[]>,
   quickFilterValues: Record<string, string | string[] | null>,
   setQuickFilterValue: (field: string, value: string | string[] | null) => void,
+  strings: Strings,
   options?: { labelOverride?: string; dropdownWidth?: number }
 ) {
   const label = options?.labelOverride !== undefined ? options.labelOverride : cfg.text;
@@ -61,7 +64,7 @@ function renderFilterControl(
   }
 
   const rawOptions = quickFilterOptions[cfg.key] ?? [
-    { key: QUICK_FILTER_ALL_KEY, text: "(Alle)" },
+    { key: QUICK_FILTER_ALL_KEY, text: strings.quickFilterAll },
   ];
 
   if (cfg.isMultiselect) {
@@ -75,7 +78,7 @@ function renderFilterControl(
       <KanbanDropdown
         key={cfg.key}
         label={label}
-        placeholder="(Alle)"
+        placeholder={strings.quickFilterAll}
         options={opts}
         multiSelect
         selectedKeys={selectedKeys}
@@ -94,7 +97,7 @@ function renderFilterControl(
     <KanbanDropdown
       key={cfg.key}
       label={label}
-      placeholder="(Alle)"
+      placeholder={strings.quickFilterAll}
       options={rawOptions}
       selectedOption={selectedOption as IDropdownOption}
       onOptionSelected={(option) => {
@@ -111,6 +114,7 @@ function renderFilterControl(
 
 const QuickFilters = () => {
   const {
+    locale,
     quickFilterFieldsConfig,
     quickFilterValues,
     setQuickFilterValue,
@@ -126,6 +130,7 @@ const QuickFilters = () => {
     selectedFilterPresetId,
     applyFilterPreset,
   } = useContext(BoardContext);
+  const strings = getStrings(locale);
 
   const [inputValue, setInputValue] = useState(searchKeyword);
   const [popupFilterOpen, setPopupFilterOpen] = useState(false);
@@ -152,17 +157,17 @@ const QuickFilters = () => {
   }, [inputValue, setSearchKeyword]);
 
   return (
-    <div className="kanban-quick-filters" role="group" aria-label="Schnellfilter und Suche">
+    <div className="kanban-quick-filters" role="group" aria-label={strings.quickFiltersAriaLabel}>
       <div className="kanban-quick-filters-inline">
         {inlineFilters.map((cfg) =>
-          renderFilterControl(cfg, quickFilterOptions, quickFilterValues, setQuickFilterValue)
+          renderFilterControl(cfg, quickFilterOptions, quickFilterValues, setQuickFilterValue, strings)
         )}
         {popupFilters.length > 0 && (
           <div className="kanban-quick-filters-popup-trigger" ref={popupFilterButtonRef}>
             <IconButton
               iconProps={{ iconName: "Filter" }}
-              title="Weitere Filter"
-              ariaLabel="Weitere Filter öffnen"
+              title={strings.quickFiltersMoreFilters}
+              ariaLabel={strings.quickFiltersMoreFiltersOpen}
               onClick={() => setPopupFilterOpen((v) => !v)}
               className="kanban-quick-filters-more-btn"
             />
@@ -176,7 +181,7 @@ const QuickFilters = () => {
                 setInitialFocus
               >
                 <div className="kanban-quick-filters-popup-content">
-                  <div className="kanban-quick-filters-popup-title">Weitere Filter</div>
+                  <div className="kanban-quick-filters-popup-title">{strings.quickFiltersMoreFilters}</div>
                   {popupFilters.map((cfg) => (
                     <div key={cfg.key} className="kanban-quick-filters-popup-row">
                       <span className="kanban-quick-filters-popup-label">{cfg.text}</span>
@@ -186,6 +191,7 @@ const QuickFilters = () => {
                           quickFilterOptions,
                           quickFilterValues,
                           setQuickFilterValue,
+                          strings,
                           { labelOverride: "" }
                         )}
                       </div>
@@ -201,22 +207,22 @@ const QuickFilters = () => {
         {sortFieldsConfig.length > 0 && (
           <div className="kanban-quick-filters-sort">
             <KanbanDropdown
-              label="Sortieren nach"
-              placeholder="(Keine)"
+              label={strings.sortByLabel}
+              placeholder={strings.sortNone}
               options={[
-                { key: SORT_NONE_KEY, text: "(Keine)" },
+                { key: SORT_NONE_KEY, text: strings.sortNone },
                 ...sortFieldsConfig.flatMap((c) => [
-                  { key: sortOptionKey(c.key, "asc"), text: `${c.text} (Aufsteigend)` },
-                  { key: sortOptionKey(c.key, "desc"), text: `${c.text} (Absteigend)` },
+                  { key: sortOptionKey(c.key, "asc"), text: `${c.text} (${strings.sortAscending})` },
+                  { key: sortOptionKey(c.key, "desc"), text: `${c.text} (${strings.sortDescending})` },
                 ]),
               ]}
               selectedOption={
                 sortByField && sortDirection
                   ? {
                       key: sortOptionKey(sortByField, sortDirection),
-                      text: `${sortFieldsConfig.find((c) => c.key === sortByField)?.text ?? sortByField} (${sortDirection === "asc" ? "Aufsteigend" : "Absteigend"})`,
+                      text: `${sortFieldsConfig.find((c) => c.key === sortByField)?.text ?? sortByField} (${sortDirection === "asc" ? strings.sortAscending : strings.sortDescending})`,
                     }
-                  : { key: SORT_NONE_KEY, text: "(Keine)" }
+                  : { key: SORT_NONE_KEY, text: strings.sortNone }
               }
               onOptionSelected={(option) => {
                 const key = String(option.key);
@@ -239,18 +245,18 @@ const QuickFilters = () => {
         {filterPresetsConfig.length > 0 && (
           <div className="kanban-quick-filters-preset">
             <KanbanDropdown
-              label="Filter-Preset"
-              placeholder="(Kein Preset)"
+              label={strings.filterPresetLabel}
+              placeholder={strings.filterPresetNone}
               options={[
-                { key: FILTER_PRESET_NONE_KEY, text: "(Kein Preset)" },
+                { key: FILTER_PRESET_NONE_KEY, text: strings.filterPresetNone },
                 ...filterPresetsConfig.map((p) => ({ key: p.id, text: p.label })),
               ]}
               selectedOption={
                 selectedFilterPresetId
                   ? filterPresetsConfig.find((p) => p.id === selectedFilterPresetId)
                     ? { key: selectedFilterPresetId, text: filterPresetsConfig.find((p) => p.id === selectedFilterPresetId)!.label }
-                    : { key: FILTER_PRESET_NONE_KEY, text: "(Kein Preset)" }
-                  : { key: FILTER_PRESET_NONE_KEY, text: "(Kein Preset)" }
+                    : { key: FILTER_PRESET_NONE_KEY, text: strings.filterPresetNone }
+                  : { key: FILTER_PRESET_NONE_KEY, text: strings.filterPresetNone }
               }
               onOptionSelected={(option) => {
                 const key = String(option.key);
@@ -263,10 +269,10 @@ const QuickFilters = () => {
           <input
             type="search"
             className="kanban-quick-filters-search-input"
-            placeholder="In allen Feldern suchen…"
+            placeholder={strings.quickFiltersSearchPlaceholder}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            aria-label="Suche in allen Kartenfeldern"
+            aria-label={strings.quickFiltersSearchAriaLabel}
           />
         </div>
       </div>
