@@ -9,12 +9,12 @@ import { useMemo, useCallback, useRef } from "react";
 import { BoardContext } from "../../context/board-context";
 import { useContext } from "react";
 
-export type HighlightType = "left" | "right" | "cornerTopRight" | "cornerBottomRight";
+export type HighlightType = "left" | "right" | "cornerTopRight" | "cornerBottomRight" | "cornerTopLeft" | "cornerBottomLeft";
 
 export interface BooleanFieldHighlightConfig {
   logicalName: string;
   color: string;
-  /** Highlight type: left border, right border, or diagonal corner (top-right / bottom-right). Default "left". First match per type wins. */
+  /** Highlight type: left/right border or diagonal corner (top-left, top-right, bottom-left, bottom-right). Default "left". First match per type wins. */
   type?: HighlightType;
 }
 
@@ -173,7 +173,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       const arr = JSON.parse(raw);
       if (!Array.isArray(arr)) return [];
       clearConfigError?.("booleanFieldHighlights");
-      const validTypes: HighlightType[] = ["left", "right", "cornerTopRight", "cornerBottomRight"];
+      const validTypes: HighlightType[] = ["left", "right", "cornerTopRight", "cornerBottomRight", "cornerTopLeft", "cornerBottomLeft"];
       return arr
         .filter((e: unknown) => e && typeof e === "object" && "logicalName" in e && "color" in e)
         .map((e: { logicalName: string; color: string; type?: string }) => {
@@ -332,8 +332,8 @@ const Card = ({ item, draggable = true }: IProps) => {
   }, [context.parameters, reportConfigError, clearConfigError]);
 
   const highlights = useMemo(() => {
-    const result: { left?: string; right?: string; cornerTopRight?: string; cornerBottomRight?: string } = {};
-    const done = { left: false, right: false, cornerTopRight: false, cornerBottomRight: false };
+    const result: { left?: string; right?: string; cornerTopRight?: string; cornerBottomRight?: string; cornerTopLeft?: string; cornerBottomLeft?: string } = {};
+    const done = { left: false, right: false, cornerTopRight: false, cornerBottomRight: false, cornerTopLeft: false, cornerBottomLeft: false };
     const itemKeys = Object.keys(item);
     for (const { logicalName, color, type = "left" } of booleanFieldHighlights) {
       if (done[type]) continue;
@@ -363,18 +363,22 @@ const Card = ({ item, draggable = true }: IProps) => {
 
   const isClickable = !draggable;
 
-  const hasAnyHighlight = highlights.left ?? highlights.right ?? highlights.cornerTopRight ?? highlights.cornerBottomRight;
+  const hasAnyHighlight = highlights.left ?? highlights.right ?? highlights.cornerTopRight ?? highlights.cornerBottomRight ?? highlights.cornerTopLeft ?? highlights.cornerBottomLeft;
   const highlightClass =
     (highlights.left ? " card-container--highlight-left" : "") +
     (highlights.right ? " card-container--highlight-right" : "") +
     (highlights.cornerTopRight ? " card-container--highlight-corner-top-right" : "") +
-    (highlights.cornerBottomRight ? " card-container--highlight-corner-bottom-right" : "");
+    (highlights.cornerBottomRight ? " card-container--highlight-corner-bottom-right" : "") +
+    (highlights.cornerTopLeft ? " card-container--highlight-corner-top-left" : "") +
+    (highlights.cornerBottomLeft ? " card-container--highlight-corner-bottom-left" : "");
   const highlightStyle = hasAnyHighlight
     ? {
         ...(highlights.left && { ["--card-highlight-left" as string]: highlights.left }),
         ...(highlights.right && { ["--card-highlight-right" as string]: highlights.right }),
         ...(highlights.cornerTopRight && { ["--card-highlight-corner-top-right" as string]: highlights.cornerTopRight }),
         ...(highlights.cornerBottomRight && { ["--card-highlight-corner-bottom-right" as string]: highlights.cornerBottomRight }),
+        ...(highlights.cornerTopLeft && { ["--card-highlight-corner-top-left" as string]: highlights.cornerTopLeft }),
+        ...(highlights.cornerBottomLeft && { ["--card-highlight-corner-bottom-left" as string]: highlights.cornerBottomLeft }),
       }
     : undefined;
 
@@ -388,10 +392,12 @@ const Card = ({ item, draggable = true }: IProps) => {
       onKeyDown={isClickable ? onKeyDown : undefined}
       style={highlightStyle}
     >
-      {(highlights.cornerTopRight ?? highlights.cornerBottomRight) && (
+      {(highlights.cornerTopRight ?? highlights.cornerBottomRight ?? highlights.cornerTopLeft ?? highlights.cornerBottomLeft) && (
         <>
           {highlights.cornerTopRight && <span className="card-corner-highlight card-corner-highlight--top-right" aria-hidden />}
           {highlights.cornerBottomRight && <span className="card-corner-highlight card-corner-highlight--bottom-right" aria-hidden />}
+          {highlights.cornerTopLeft && <span className="card-corner-highlight card-corner-highlight--top-left" aria-hidden />}
+          {highlights.cornerBottomLeft && <span className="card-corner-highlight card-corner-highlight--bottom-left" aria-hidden />}
         </>
       )}
       <CardHeader>

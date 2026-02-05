@@ -137,7 +137,7 @@
     <property 
       name="booleanFieldHighlights" 
       display-name-key="Field highlights" 
-      description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;,&quot;type&quot;:&quot;left&quot;}]. Any field type (boolean, text, lookup, etc.). Empty = no highlight, filled = highlight. Optional type: left (default), right, cornerTopRight, cornerBottomRight. left/right = colored border; corner = diagonal corner mark. First match per type wins."
+      description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;,&quot;type&quot;:&quot;left&quot;}]. Any field type (boolean, text, lookup, etc.). Empty = no highlight, filled = highlight. Optional type: left (default), right, cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight. left/right = colored border; corner = diagonal corner mark. First match per type wins."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
