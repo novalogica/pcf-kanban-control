@@ -428,7 +428,9 @@
   overflow: hidden;
 }
 
-.kanban-quick-filters-inline .kanban-dropdown {
+.kanban-quick-filters-inline .kanban-dropdown,
+.kanban-quick-filters-inline .kanban-date-filter,
+.kanban-quick-filters-inline .kanban-number-filter {
   flex-shrink: 0;
 }
 
@@ -508,6 +510,87 @@
 /* Hide dropdown label in popup (we use row label instead) */
 .kanban-quick-filters-popup-dropdown .kanban-dropdown > .ms-Label {
   display: none;
+}
+
+.kanban-quick-filters-popup-trigger {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Date filter: only dropdown inline; Von/Bis in callout when "Benutzerdefinierter Bereich" selected */
+.kanban-date-filter {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.kanban-date-filter-dropdown-wrap {
+  display: inline-block;
+}
+
+.kanban-date-filter .ms-Dropdown {
+  width: auto !important;
+}
+
+.kanban-date-filter-callout.kanban-date-filter-callout {
+  padding: 12px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.kanban-date-filter-callout-content {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.kanban-date-filter-callout-content .ms-DatePicker {
+  min-width: 140px;
+}
+
+/* Number filter: only dropdown inline; Wert/Min/Max in callout when operator selected */
+.kanban-number-filter {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.kanban-number-filter-dropdown-wrap {
+  display: inline-block;
+}
+
+.kanban-number-filter .ms-Dropdown {
+  width: auto !important;
+}
+
+.kanban-number-filter-callout.kanban-number-filter-callout {
+  padding: 12px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.kanban-number-filter-callout-content {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.kanban-number-filter-callout-content .kanban-number-filter-input,
+.kanban-number-filter-callout-content .kanban-number-filter-range {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kanban-number-filter-callout-content .ms-TextField {
+  min-width: 100px;
+  max-width: 140px;
 }
 
 .kanban-quick-filters-popup-content .kanban-dropdown .ms-Dropdown-title:hover {

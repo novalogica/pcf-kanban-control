@@ -13,6 +13,8 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 - Drag-and-drop functionality.
 - Lookup column support (including Persona-style display).
 - **Quick filter** dropdowns and **custom sort** fields (configurable).
+- **Date/time quick filters**: For DateTime and DateOnly fields, special filter options (Heute, Letzte 7 Tage, Letzte 30 Tage, Benutzerdefinierter Bereich) with Fluent UI DatePicker.
+- **Number/currency quick filters**: For numeric and currency fields, filter by Größer als, Kleiner als, Größer/Kleiner oder gleich, Zwischen (min/max) with Fluent UI.
 - Toast notifications for value updates.
 
 ## 🚀 Usage
@@ -87,9 +89,9 @@ HTML content from **HTML fields on card** is sanitized with [DOMPurify](https://
 
 | Property | Type | Description |
 |----------|------|-------------|
-| **Quick filter fields** | Text | Field **logical names** to show as **quick filter dropdowns** above the board. All fields except **Boolean** are **multiselect** filters; Boolean fields remain single-select. Use the **exact column name** from the dataset (e.g. `ownerid` for the entity, or `a_xxx.ownerid` for linked-entity columns). **JSON array** (e.g. `["statuscode","ownerid","a_c66099806c8349a18e63498da795a1a6.ownerid"]`) or comma-separated list. Only fields present in the dataset can be used. Invalid JSON falls back to comma parsing. |
-| **Quick filter fields in popup** | Text | Field **logical names** that are shown in a **popup** („Weitere Filter“) instead of inline, to save space and avoid wrapping. Must be a **subset** of **Quick filter fields**. **JSON array** (e.g. `["ownerid","statuscode"]`) or comma-separated list. Only fields listed in Quick filter fields can be used. |
-| **Filter presets** | Text | **JSON array** of filter presets shown in a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. For **multiselect** quick filter fields use an array: `"fieldLogicalName": ["value1","value2"]`; for Boolean use a single value. Filter values must match the values shown in the quick filter dropdowns. Use placeholder **`{{currentUser}}`** for the current user (e.g. `ownerid: "{{currentUser}}"` for "Meine Opportunities"); replaced at runtime by the user's display name (Dataverse systemuser.fullname). Invalid JSON is reported. **The Filter-Preset dropdown is only shown if this property is set** in the view/form control configuration. |
+| **Quick filter fields** | Text | Field **logical names** to show as **quick filter dropdowns** above the board. All fields except **Boolean** are **multiselect** filters; Boolean fields remain single-select. **DateTime/DateOnly** get a **date filter** UI: *(Alle)*, *Heute*, *Letzte 7 Tage*, *Letzte 30 Tage*, *Benutzerdefinierter Bereich*. **Number/Currency** get a **number filter** UI: *(Alle)*, *Größer als*, *Kleiner als*, *Größer/Kleiner oder gleich*, *Zwischen* (min/max). Use the **exact column name** from the dataset (e.g. `ownerid`, `scheduledstart`, `estimatedvalue`). **JSON array** (e.g. `["statuscode","ownerid","scheduledstart","estimatedvalue"]`) or comma-separated list. Only fields present in the dataset can be used. Invalid JSON falls back to comma parsing. |
+| **Quick filter fields in popup** | Text | Field **logical names** that are shown in a **popup** („Weitere Filter“) instead of inline, to save space and avoid wrapping. Must be a **subset** of **Quick filter fields**. **JSON array** (e.g. `["ownerid","statuscode","scheduledstart"]`) or comma-separated list. Only fields listed in Quick filter fields can be used. |
+| **Filter presets** | Text | **JSON array** of filter presets shown in a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. For **multiselect** use array; for Boolean single value. **Date fields:** `"today"`, `"last7"`, `"last30"`, `"YYYY-MM-DD|YYYY-MM-DD"`, or `{"start":"YYYY-MM-DD","end":"YYYY-MM-DD"}`. **Number/currency fields:** `"gt:123"`, `"lt:456"`, `"gte:0"`, `"lte:10000"`, `"between:100|5000"`. Use **`{{currentUser}}`** for current user (e.g. `ownerid`). Invalid JSON is reported. **The Filter-Preset dropdown is only shown if this property is set** in the view/form control configuration. |
 | **Sort fields** | Text | Field **logical names** available for **custom sorting** (dropdown next to search). **JSON array** (e.g. `["createdon","estimatedvalue"]`) or comma-separated list. Only fields present in the dataset can be used. Ascending/descending is selectable in the UI. Invalid JSON falls back to comma parsing. |
 
 ### Notifications
@@ -156,11 +158,15 @@ If a JSON property contains invalid JSON, the control shows a **Configuration er
    [
      {"id":"open","label":"Offen","filters":{"statuscode":"1"}},
      {"id":"my-opportunities","label":"Meine Opportunities","filters":{"ownerid":"{{currentUser}}"}},
-     {"id":"multi-status","label":"Mehrere Status","filters":{"statuscode":["1","2","3"]}}
+     {"id":"multi-status","label":"Mehrere Status","filters":{"statuscode":["1","2","3"]}},
+     {"id":"this-week","label":"Diese Woche","filters":{"scheduledstart":"last7"}},
+     {"id":"jan-2025","label":"Januar 2025","filters":{"createdon":{"start":"2025-01-01","end":"2025-01-31"}}}
    ]
    ```
    - `filters`: field logical name → single value (Boolean/single-select) or **array of values** (multiselect quick filter fields). Values must match the quick filter dropdown labels.
    - **Placeholder `{{currentUser}}`**: use for the current user (e.g. `ownerid`). Replaced at runtime by the logged-in user's display name (Dataverse systemuser.fullname). Ideal for presets like "Meine Opportunities" or "Meine Fälle".
+   - **Date/time fields**: use `"today"`, `"last7"`, `"last30"`, or a range: `"YYYY-MM-DD|YYYY-MM-DD"` or `{"start":"YYYY-MM-DD","end":"YYYY-MM-DD"}`. Example: `"scheduledstart": "last7"` for "Letzte 7 Tage", or `"createdon": {"start":"2025-01-01","end":"2025-01-31"}` for January 2025.
+   - **Number/currency fields**: use `"gt:123"` (greater than), `"lt:456"` (less than), `"gte:0"` (greater or equal), `"lte:10000"` (less or equal), `"between:100|5000"` (inclusive range). Example: `"estimatedvalue": "gt:10000"` for Umsatz > 10000.
 
 **Hidden fields on card** (loaded but not displayed)
    ```json
@@ -225,11 +231,11 @@ If a JSON property contains invalid JSON, the control shows a **Configuration er
 **Maximum column width** (number as text)
    Set e.g. `500` or `800`. Valid range 200–2000. Leave empty for no limit.
 
-**Quick filter fields** (dropdown filters above the board; multiselect except for Boolean fields)
+**Quick filter fields** (dropdown filters above the board; multiselect except for Boolean; DateTime/DateOnly get date filter; Number/Currency get number filter)
    ```json
-   ["statuscode","prioritycode","ownerid"]
+   ["statuscode","prioritycode","ownerid","scheduledstart","createdon","estimatedvalue"]
    ```
-   Or comma-separated. Only fields in the dataset can be used.
+   Or comma-separated. Only fields in the dataset can be used. **DateTime/DateOnly** fields show the date filter (Heute, Letzte 7/30 Tage, Benutzerdefinierter Bereich). **Number/Currency** fields show the number filter: Größer als, Kleiner als, Größer/Kleiner oder gleich, Zwischen (min/max).
 
 **Sort fields** (custom sort dropdown next to search)
    ```json

@@ -2,6 +2,8 @@ import * as React from "react";
 import { useContext, useState, useEffect, useRef, useMemo } from "react";
 import { BoardContext } from "../../context/board-context";
 import KanbanDropdown from "../dropdown/Dropdown";
+import DateFilter from "./DateFilter";
+import NumberFilter from "./NumberFilter";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { Callout } from "@fluentui/react/lib/Callout";
 import { IconButton } from "@fluentui/react/lib/Button";
@@ -18,7 +20,7 @@ function sortOptionKey(fieldKey: string, direction: SortDirection): string {
   return `${fieldKey}${SORT_KEY_SEP}${direction}`;
 }
 
-function renderFilterDropdown(
+function renderFilterControl(
   cfg: QuickFilterFieldConfig,
   quickFilterOptions: Record<string, IDropdownOption[]>,
   quickFilterValues: Record<string, string | string[] | null>,
@@ -27,10 +29,40 @@ function renderFilterDropdown(
 ) {
   const label = options?.labelOverride !== undefined ? options.labelOverride : cfg.text;
   const dropdownWidth = options?.dropdownWidth;
+  const selectedValue = quickFilterValues[cfg.key] ?? null;
+
+  if (cfg.isDateField) {
+    return (
+      <DateFilter
+        key={cfg.key}
+        fieldKey={cfg.key}
+        label={label}
+        value={selectedValue && typeof selectedValue === "string" ? selectedValue : null}
+        onChange={(value) => setQuickFilterValue(cfg.key, value)}
+        dropdownWidth={dropdownWidth}
+        labelOverride={options?.labelOverride}
+      />
+    );
+  }
+
+  if (cfg.isNumberField) {
+    return (
+      <NumberFilter
+        key={cfg.key}
+        fieldKey={cfg.key}
+        label={label}
+        value={selectedValue && typeof selectedValue === "string" ? selectedValue : null}
+        onChange={(value) => setQuickFilterValue(cfg.key, value)}
+        dropdownWidth={dropdownWidth}
+        labelOverride={options?.labelOverride}
+        step={cfg.key.toLowerCase().includes("currency") || cfg.key.toLowerCase().includes("value") ? 0.01 : 1}
+      />
+    );
+  }
+
   const rawOptions = quickFilterOptions[cfg.key] ?? [
     { key: QUICK_FILTER_ALL_KEY, text: "(Alle)" },
   ];
-  const selectedValue = quickFilterValues[cfg.key] ?? null;
 
   if (cfg.isMultiselect) {
     const opts = rawOptions.filter((o) => o.key !== QUICK_FILTER_ALL_KEY);
@@ -123,7 +155,7 @@ const QuickFilters = () => {
     <div className="kanban-quick-filters" role="group" aria-label="Schnellfilter und Suche">
       <div className="kanban-quick-filters-inline">
         {inlineFilters.map((cfg) =>
-          renderFilterDropdown(cfg, quickFilterOptions, quickFilterValues, setQuickFilterValue)
+          renderFilterControl(cfg, quickFilterOptions, quickFilterValues, setQuickFilterValue)
         )}
         {popupFilters.length > 0 && (
           <div className="kanban-quick-filters-popup-trigger" ref={popupFilterButtonRef}>
@@ -149,7 +181,7 @@ const QuickFilters = () => {
                     <div key={cfg.key} className="kanban-quick-filters-popup-row">
                       <span className="kanban-quick-filters-popup-label">{cfg.text}</span>
                       <div className="kanban-quick-filters-popup-dropdown">
-                        {renderFilterDropdown(
+                        {renderFilterControl(
                           cfg,
                           quickFilterOptions,
                           quickFilterValues,

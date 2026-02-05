@@ -8,7 +8,7 @@ import Loading from "./components/container/loading";
 import { Toaster } from "react-hot-toast";
 import { useDataverse } from "./hooks/useDataverse";
 import { useNavigation } from "./hooks/useNavigation";
-import { getColumnValue, isBooleanColumnDataType } from "./lib/utils";
+import { getColumnValue, isBooleanColumnDataType, isDateColumnDataType, isNumberColumnDataType, toComparableDate, toComparableNumber, isDateInFilterRange, isNumberInFilterRange } from "./lib/utils";
 import { unlocatedColumn } from "./lib/constants";
 import { Spinner, SpinnerSize } from "@fluentui/react";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -288,14 +288,18 @@ const App = ({ context, notificationPosition }: IProps) => {
           label: String(e.label),
           filters: typeof e.filters === "object" && e.filters !== null && !Array.isArray(e.filters)
             ? Object.fromEntries(
-                Object.entries(e.filters).map(([k, v]) => [
-                  k,
-                  Array.isArray(v)
-                    ? (v as unknown[]).map((x) => (x != null ? String(x) : ""))
-                    : v != null
-                      ? String(v)
-                      : "",
-                ])
+                Object.entries(e.filters).map(([k, v]) => {
+                  if (Array.isArray(v)) {
+                    return [k, (v as unknown[]).map((x) => (x != null ? String(x) : ""))];
+                  }
+                  if (v != null && typeof v === "object" && "start" in v && "end" in v) {
+                    const start = String((v as { start: unknown }).start).trim();
+                    const end = String((v as { end: unknown }).end).trim();
+                    return [k, start && end ? `custom:${start}|${end}` : ""];
+                  }
+                  if (v != null) return [k, String(v)];
+                  return [k, ""];
+                })
               )
             : {},
         }));
@@ -329,24 +333,50 @@ const App = ({ context, notificationPosition }: IProps) => {
 
   const quickFilterFieldsConfig = useMemo((): QuickFilterFieldConfig[] => {
     if (!dataset?.columns) return [];
-    const colWithType = dataset.columns as { name: string; displayName?: string; dataType?: string }[];
-    return quickFilterFieldsParsed
+    const colWithType = dataset.columns as { name: string; displayName?: string; dataType?: string | number }[];
+    const records = dataset.records;
+    const firstRecord = records && Object.keys(records).length > 0
+      ? records[Object.keys(records)[0]]
+      : undefined;
+    const result = quickFilterFieldsParsed
       .map((name): QuickFilterFieldConfig | null => {
         const col = colWithType.find((c) => c.name === name);
         if (!col) return null;
         const displayName =
           fieldDisplayNamesOnCardMap.get(col.name) ?? col.displayName ?? col.name;
-        const isMultiselect = !isBooleanColumnDataType(col.dataType);
+        let isDateField = isDateColumnDataType(col.dataType);
+        if (!isDateField && firstRecord) {
+          try {
+            const raw = firstRecord.getValue(col.name);
+            isDateField = raw instanceof Date || (typeof raw === "number" && raw > 1000000000000);
+          } catch {
+            // ignore
+          }
+        }
+        let isNumberField = isNumberColumnDataType(col.dataType);
+        if (!isNumberField && firstRecord) {
+          try {
+            const raw = firstRecord.getValue(col.name);
+            isNumberField = typeof raw === "number" && !Number.isNaN(raw) && raw < 1000000000000;
+          } catch {
+            // ignore
+          }
+        }
+        const dataTypeStr = typeof col.dataType === "string" ? col.dataType : undefined;
+        const isMultiselect = !isBooleanColumnDataType(dataTypeStr);
         const inPopup = quickFilterFieldsInPopupSet.has(col.name);
         return {
           key: col.name,
           text: displayName,
           isMultiselect,
           ...(inPopup ? { inPopup: true as const } : {}),
+          ...(isDateField ? { isDateField: true as const } : {}),
+          ...(isNumberField ? { isNumberField: true as const } : {}),
         };
       })
       .filter((c): c is QuickFilterFieldConfig => c !== null);
-  }, [dataset?.columns, quickFilterFieldsParsed, fieldDisplayNamesOnCardMap, quickFilterFieldsInPopupSet]);
+    return result;
+  }, [dataset?.columns, dataset?.records, quickFilterFieldsParsed, fieldDisplayNamesOnCardMap, quickFilterFieldsInPopupSet]);
 
   const sortFieldsConfig = useMemo((): SortFieldConfig[] => {
     if (!dataset?.columns) return [];
@@ -395,6 +425,12 @@ const App = ({ context, notificationPosition }: IProps) => {
             const raw = preset.filters[cfg.key] ?? preset.filters[logicalName];
             if (raw === undefined) {
               next[cfg.key] = null;
+            } else if (cfg.isDateField) {
+              const val = Array.isArray(raw) ? raw[0] : raw;
+              next[cfg.key] = val != null && String(val).trim() !== "" ? String(val).trim() : null;
+            } else if (cfg.isNumberField) {
+              const val = Array.isArray(raw) ? raw[0] : raw;
+              next[cfg.key] = val != null && String(val).trim() !== "" ? String(val).trim() : null;
             } else {
               const arr = Array.isArray(raw) ? raw : [raw];
               const withPlaceholder = arr.map((v) =>
@@ -529,6 +565,7 @@ const App = ({ context, notificationPosition }: IProps) => {
 
     const optionsByField: Record<string, IDropdownOption[]> = {};
     for (const cfg of quickFilterFieldsConfig) {
+      if (cfg.isDateField || cfg.isNumberField) continue;
       const values = new Set<string>();
       let hasEmpty = false;
       for (const card of allCards) {
@@ -550,6 +587,20 @@ const App = ({ context, notificationPosition }: IProps) => {
     let filteredCards = allCards.filter((card: any) => {
       for (const cfg of quickFilterFieldsConfig) {
         const selected = quickFilterValues[cfg.key];
+        if (cfg.isDateField) {
+          const dateFilterVal = selected == null || Array.isArray(selected) ? null : selected;
+          if (dateFilterVal === null || dateFilterVal === "") continue;
+          const recordDate = toComparableDate(card[`${cfg.key}Raw`] ?? card[cfg.key]);
+          if (!isDateInFilterRange(recordDate, dateFilterVal)) return false;
+          continue;
+        }
+        if (cfg.isNumberField) {
+          const numFilterVal = selected == null || Array.isArray(selected) ? null : selected;
+          if (numFilterVal === null || numFilterVal === "") continue;
+          const recordNum = toComparableNumber(card[`${cfg.key}Raw`] ?? card[cfg.key]);
+          if (!isNumberInFilterRange(recordNum, numFilterVal)) return false;
+          continue;
+        }
         const cardVal = getQuickFilterComparableValue(card[cfg.key]);
         if (cfg.isMultiselect) {
           const arr = Array.isArray(selected) ? selected : null;
@@ -749,6 +800,28 @@ const App = ({ context, notificationPosition }: IProps) => {
             const rawValue = record.getValue(col.name);
             if (rawValue !== null && rawValue !== undefined) {
               result = { ...result, estimatedvalueRaw: rawValue };
+            }
+          }
+          const rawColVal = record.getValue(col.name);
+          const isDateValue =
+            rawColVal instanceof Date ||
+            (typeof rawColVal === "number" && rawColVal > 1000000000000);
+          const isNumericValue =
+            typeof rawColVal === "number" && !Number.isNaN(rawColVal) && rawColVal < 1000000000000;
+          if (
+            isDateValue ||
+            isDateColumnDataType((col as { dataType?: string | number }).dataType)
+          ) {
+            if (rawColVal !== null && rawColVal !== undefined) {
+              result = { ...result, [`${col.name}Raw`]: rawColVal };
+            }
+          }
+          if (
+            isNumericValue ||
+            isNumberColumnDataType((col as { dataType?: string | number }).dataType)
+          ) {
+            if (rawColVal !== null && rawColVal !== undefined) {
+              result = { ...result, [`${col.name}Raw`]: rawColVal };
             }
           }
           return result;

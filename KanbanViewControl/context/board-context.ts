@@ -15,6 +15,10 @@ export interface QuickFilterFieldConfig {
   isMultiselect: boolean;
   /** true = filter is shown in a popup (e.g. "Weitere Filter") to save space; false = inline */
   inPopup?: boolean;
+  /** true = DateTime/DateOnly field: use date filter UI (today, last 7/30 days, custom range) */
+  isDateField?: boolean;
+  /** true = numeric/currency field: use number filter UI (gt, lt, between) */
+  isNumberField?: boolean;
 }
 
 export interface SortFieldConfig {
