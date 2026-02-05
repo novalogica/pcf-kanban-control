@@ -9,6 +9,8 @@ export interface Strings {
   dateFilterToday: string;
   dateFilterLast7: string;
   dateFilterLast30: string;
+  dateFilterCurrentMonth: string;
+  dateFilterCurrentYear: string;
   dateFilterCustomRange: string;
   dateFilterFrom: string;
   dateFilterTo: string;
@@ -58,6 +60,8 @@ const en: Strings = {
   dateFilterToday: "Today",
   dateFilterLast7: "Last 7 days",
   dateFilterLast30: "Last 30 days",
+  dateFilterCurrentMonth: "Current month",
+  dateFilterCurrentYear: "Current year",
   dateFilterCustomRange: "Custom range",
   dateFilterFrom: "From",
   dateFilterTo: "To",
@@ -103,6 +107,8 @@ const de: Strings = {
   dateFilterToday: "Heute",
   dateFilterLast7: "Letzte 7 Tage",
   dateFilterLast30: "Letzte 30 Tage",
+  dateFilterCurrentMonth: "Aktueller Monat",
+  dateFilterCurrentYear: "Aktuelles Jahr",
   dateFilterCustomRange: "Benutzerdefinierter Bereich",
   dateFilterFrom: "Von",
   dateFilterTo: "Bis",

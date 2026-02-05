@@ -11,6 +11,8 @@ const DATE_FILTER_ALL_KEY = "__all__";
 const DATE_FILTER_TODAY = "today";
 const DATE_FILTER_LAST_7 = "last7";
 const DATE_FILTER_LAST_30 = "last30";
+const DATE_FILTER_CURRENT_MONTH = "currentMonth";
+const DATE_FILTER_CURRENT_YEAR = "currentYear";
 const DATE_FILTER_CUSTOM = "custom";
 const DATE_FILTER_PREFIX_CUSTOM = "custom:";
 
@@ -46,6 +48,8 @@ function getDateFilterOptionsBase(strings: ReturnType<typeof getStrings>): IDrop
     { key: DATE_FILTER_TODAY, text: strings.dateFilterToday },
     { key: DATE_FILTER_LAST_7, text: strings.dateFilterLast7 },
     { key: DATE_FILTER_LAST_30, text: strings.dateFilterLast30 },
+    { key: DATE_FILTER_CURRENT_MONTH, text: strings.dateFilterCurrentMonth },
+    { key: DATE_FILTER_CURRENT_YEAR, text: strings.dateFilterCurrentYear },
     { key: DATE_FILTER_CUSTOM, text: strings.dateFilterCustomRange },
   ];
 }
@@ -80,9 +84,13 @@ const DateFilter: React.FC<DateFilterProps> = ({
           ? DATE_FILTER_LAST_7
           : value === DATE_FILTER_LAST_30
             ? DATE_FILTER_LAST_30
-            : value.startsWith(DATE_FILTER_PREFIX_CUSTOM)
-              ? DATE_FILTER_CUSTOM
-              : DATE_FILTER_ALL_KEY;
+            : value === DATE_FILTER_CURRENT_MONTH
+              ? DATE_FILTER_CURRENT_MONTH
+              : value === DATE_FILTER_CURRENT_YEAR
+                ? DATE_FILTER_CURRENT_YEAR
+                : value.startsWith(DATE_FILTER_PREFIX_CUSTOM)
+                  ? DATE_FILTER_CUSTOM
+                  : DATE_FILTER_ALL_KEY;
 
   const customRange = parseCustomRange(value);
   const [customStart, setCustomStart] = React.useState<Date | undefined>(
@@ -102,12 +110,20 @@ const DateFilter: React.FC<DateFilterProps> = ({
 
   const dateFilterOptions = React.useMemo((): IDropdownOption[] => {
     const customRangeParsed = parseCustomRange(value);
-    return dateFilterOptionsBase.map((opt: IDropdownOption) =>
-      opt.key === DATE_FILTER_CUSTOM && customRangeParsed
-        ? { ...opt, text: `${formatDateForDisplay(customRangeParsed.start)} – ${formatDateForDisplay(customRangeParsed.end)}` }
-        : opt
-    );
-  }, [value, dateFilterOptionsBase]);
+    const now = new Date();
+    return dateFilterOptionsBase.map((opt: IDropdownOption) => {
+      if (opt.key === DATE_FILTER_CUSTOM && customRangeParsed) {
+        return { ...opt, text: `${formatDateForDisplay(customRangeParsed.start)} – ${formatDateForDisplay(customRangeParsed.end)}` };
+      }
+      if (opt.key === DATE_FILTER_CURRENT_MONTH && value === DATE_FILTER_CURRENT_MONTH) {
+        return { ...opt, text: now.toLocaleDateString(locale, { month: "long", year: "numeric" }) };
+      }
+      if (opt.key === DATE_FILTER_CURRENT_YEAR && value === DATE_FILTER_CURRENT_YEAR) {
+        return { ...opt, text: String(now.getFullYear()) };
+      }
+      return opt;
+    });
+  }, [value, dateFilterOptionsBase, locale]);
 
   const selectedOption = dateFilterOptions.find((o) => o.key === mode) ?? dateFilterOptions[0];
 
@@ -131,7 +147,13 @@ const DateFilter: React.FC<DateFilterProps> = ({
       onChange(null);
       return;
     }
-    if (key === DATE_FILTER_TODAY || key === DATE_FILTER_LAST_7 || key === DATE_FILTER_LAST_30) {
+    if (
+      key === DATE_FILTER_TODAY ||
+      key === DATE_FILTER_LAST_7 ||
+      key === DATE_FILTER_LAST_30 ||
+      key === DATE_FILTER_CURRENT_MONTH ||
+      key === DATE_FILTER_CURRENT_YEAR
+    ) {
       onChange(key);
       return;
     }

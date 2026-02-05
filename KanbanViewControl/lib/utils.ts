@@ -95,7 +95,7 @@ export type DateFilterValue = string | null;
 
 const DATE_FILTER_PREFIX_CUSTOM = "custom:";
 
-/** Returns [startDate, endDate] for "today" | "last7" | "last30" | "custom:start|end". Uses local calendar day; endDate is inclusive (end of day). */
+/** Returns [startDate, endDate] for "today" | "last7" | "last30" | "currentMonth" | "currentYear" | "custom:start|end". Uses local calendar; endDate is inclusive (end of day). */
 export function getDateFilterRange(value: DateFilterValue): { start: Date; end: Date } | null {
   if (!value || value === "") return null;
   const today = new Date();
@@ -114,6 +114,16 @@ export function getDateFilterRange(value: DateFilterValue): { start: Date; end: 
     const start = new Date(startOfToday);
     start.setDate(start.getDate() - 29);
     return { start, end: endOfToday };
+  }
+  if (value === "currentMonth") {
+    const start = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { start, end };
+  }
+  if (value === "currentYear") {
+    const start = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const end = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { start, end };
   }
   if (value.startsWith(DATE_FILTER_PREFIX_CUSTOM)) {
     const part = value.slice(DATE_FILTER_PREFIX_CUSTOM.length);
