@@ -6,6 +6,7 @@ import { Callout } from "@fluentui/react/lib/Callout";
 import { dropdownStyles } from "../dropdown/styles";
 import { BoardContext } from "../../context/board-context";
 import { getStrings } from "../../lib/strings";
+import { getDateFilterRange } from "../../lib/utils";
 
 const DATE_FILTER_ALL_KEY = "__all__";
 const DATE_FILTER_TODAY = "today";
@@ -13,6 +14,9 @@ const DATE_FILTER_LAST_7 = "last7";
 const DATE_FILTER_LAST_30 = "last30";
 const DATE_FILTER_CURRENT_MONTH = "currentMonth";
 const DATE_FILTER_CURRENT_YEAR = "currentYear";
+const DATE_FILTER_CURRENT_WEEK = "currentWeek";
+const DATE_FILTER_NEXT_WEEK = "nextWeek";
+const DATE_FILTER_NEXT_MONTH = "nextMonth";
 const DATE_FILTER_CUSTOM = "custom";
 const DATE_FILTER_PREFIX_CUSTOM = "custom:";
 
@@ -48,8 +52,11 @@ function getDateFilterOptionsBase(strings: ReturnType<typeof getStrings>): IDrop
     { key: DATE_FILTER_TODAY, text: strings.dateFilterToday },
     { key: DATE_FILTER_LAST_7, text: strings.dateFilterLast7 },
     { key: DATE_FILTER_LAST_30, text: strings.dateFilterLast30 },
+    { key: DATE_FILTER_CURRENT_WEEK, text: strings.dateFilterCurrentWeek },
     { key: DATE_FILTER_CURRENT_MONTH, text: strings.dateFilterCurrentMonth },
     { key: DATE_FILTER_CURRENT_YEAR, text: strings.dateFilterCurrentYear },
+    { key: DATE_FILTER_NEXT_WEEK, text: strings.dateFilterNextWeek },
+    { key: DATE_FILTER_NEXT_MONTH, text: strings.dateFilterNextMonth },
     { key: DATE_FILTER_CUSTOM, text: strings.dateFilterCustomRange },
   ];
 }
@@ -84,13 +91,19 @@ const DateFilter: React.FC<DateFilterProps> = ({
           ? DATE_FILTER_LAST_7
           : value === DATE_FILTER_LAST_30
             ? DATE_FILTER_LAST_30
-            : value === DATE_FILTER_CURRENT_MONTH
-              ? DATE_FILTER_CURRENT_MONTH
-              : value === DATE_FILTER_CURRENT_YEAR
-                ? DATE_FILTER_CURRENT_YEAR
-                : value.startsWith(DATE_FILTER_PREFIX_CUSTOM)
-                  ? DATE_FILTER_CUSTOM
-                  : DATE_FILTER_ALL_KEY;
+            : value === DATE_FILTER_CURRENT_WEEK
+              ? DATE_FILTER_CURRENT_WEEK
+              : value === DATE_FILTER_CURRENT_MONTH
+                ? DATE_FILTER_CURRENT_MONTH
+                : value === DATE_FILTER_CURRENT_YEAR
+                  ? DATE_FILTER_CURRENT_YEAR
+                  : value === DATE_FILTER_NEXT_WEEK
+                    ? DATE_FILTER_NEXT_WEEK
+                    : value === DATE_FILTER_NEXT_MONTH
+                      ? DATE_FILTER_NEXT_MONTH
+                      : value.startsWith(DATE_FILTER_PREFIX_CUSTOM)
+                        ? DATE_FILTER_CUSTOM
+                        : DATE_FILTER_ALL_KEY;
 
   const customRange = parseCustomRange(value);
   const [customStart, setCustomStart] = React.useState<Date | undefined>(
@@ -120,6 +133,19 @@ const DateFilter: React.FC<DateFilterProps> = ({
       }
       if (opt.key === DATE_FILTER_CURRENT_YEAR && value === DATE_FILTER_CURRENT_YEAR) {
         return { ...opt, text: String(now.getFullYear()) };
+      }
+      if ((opt.key === DATE_FILTER_CURRENT_WEEK || opt.key === DATE_FILTER_NEXT_WEEK) && (value === DATE_FILTER_CURRENT_WEEK || value === DATE_FILTER_NEXT_WEEK)) {
+        const range = getDateFilterRange(value === DATE_FILTER_CURRENT_WEEK ? "currentWeek" : "nextWeek");
+        if (range) {
+          const rangeText = `${formatDateForDisplay(range.start)} – ${formatDateForDisplay(range.end)}`;
+          return { ...opt, text: rangeText };
+        }
+      }
+      if (opt.key === DATE_FILTER_NEXT_MONTH && value === DATE_FILTER_NEXT_MONTH) {
+        const range = getDateFilterRange("nextMonth");
+        if (range) {
+          return { ...opt, text: range.start.toLocaleDateString(locale, { month: "long", year: "numeric" }) };
+        }
       }
       return opt;
     });
@@ -151,8 +177,11 @@ const DateFilter: React.FC<DateFilterProps> = ({
       key === DATE_FILTER_TODAY ||
       key === DATE_FILTER_LAST_7 ||
       key === DATE_FILTER_LAST_30 ||
+      key === DATE_FILTER_CURRENT_WEEK ||
       key === DATE_FILTER_CURRENT_MONTH ||
-      key === DATE_FILTER_CURRENT_YEAR
+      key === DATE_FILTER_CURRENT_YEAR ||
+      key === DATE_FILTER_NEXT_WEEK ||
+      key === DATE_FILTER_NEXT_MONTH
     ) {
       onChange(key);
       return;

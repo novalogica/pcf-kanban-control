@@ -11,6 +11,9 @@ export interface Strings {
   dateFilterLast30: string;
   dateFilterCurrentMonth: string;
   dateFilterCurrentYear: string;
+  dateFilterCurrentWeek: string;
+  dateFilterNextWeek: string;
+  dateFilterNextMonth: string;
   dateFilterCustomRange: string;
   dateFilterFrom: string;
   dateFilterTo: string;
@@ -62,6 +65,9 @@ const en: Strings = {
   dateFilterLast30: "Last 30 days",
   dateFilterCurrentMonth: "Current month",
   dateFilterCurrentYear: "Current year",
+  dateFilterCurrentWeek: "Current calendar week",
+  dateFilterNextWeek: "Next calendar week",
+  dateFilterNextMonth: "Next month",
   dateFilterCustomRange: "Custom range",
   dateFilterFrom: "From",
   dateFilterTo: "To",
@@ -109,6 +115,9 @@ const de: Strings = {
   dateFilterLast30: "Letzte 30 Tage",
   dateFilterCurrentMonth: "Aktueller Monat",
   dateFilterCurrentYear: "Aktuelles Jahr",
+  dateFilterCurrentWeek: "Aktuelle Kalenderwoche",
+  dateFilterNextWeek: "Nächste Kalenderwoche",
+  dateFilterNextMonth: "Nächster Monat",
   dateFilterCustomRange: "Benutzerdefinierter Bereich",
   dateFilterFrom: "Von",
   dateFilterTo: "Bis",

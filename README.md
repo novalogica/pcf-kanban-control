@@ -407,7 +407,7 @@ Content from **HTML fields on card** is sanitized with [DOMPurify](https://githu
 
 **Type:** Text (JSON array or comma-separated)
 
-**Logical field names** to show as **quick filter dropdowns** above the board. All fields except Boolean are **multiselect**; Boolean remains single-select. **DateTime/DateOnly** get a **date filter UI**: (All), Today, Last 7 days, Last 30 days, Custom range. **Number/Currency** get a **number filter UI**: (All), Greater than, Less than, Greater/Less or equal, Between (min/max). Use the **exact column name** from the dataset. Only fields present in the dataset can be used. Invalid JSON is interpreted as comma-separated.
+**Logical field names** to show as **quick filter dropdowns** above the board. All fields except Boolean are **multiselect**; Boolean remains single-select. **DateTime/DateOnly** get a **date filter UI**: (All), Today, Last 7 days, Last 30 days, Current calendar week, Current month, Current year, Next calendar week, Next month, Custom range. **Number/Currency** get a **number filter UI**: (All), Greater than, Less than, Greater/Less or equal, Between (min/max). Use the **exact column name** from the dataset. Only fields present in the dataset can be used. Invalid JSON is interpreted as comma-separated.
 
 **Example:**
 
@@ -435,7 +435,7 @@ Or comma-separated.
 
 Predefined filters shown as a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. For **multiselect** use an array as value; for Boolean use a single value. **The filter preset dropdown is only shown when this property is set.**
 
-**Date fields:** `"today"`, `"last7"`, `"last30"`, `"YYYY-MM-DD|YYYY-MM-DD"` or `{"start":"YYYY-MM-DD","end":"YYYY-MM-DD"}`.  
+**Date fields:** `"today"`, `"last7"`, `"last30"`, `"currentMonth"`, `"currentYear"`, `"currentWeek"`, `"nextWeek"`, `"nextMonth"`, `"YYYY-MM-DD|YYYY-MM-DD"` or `{"start":"YYYY-MM-DD","end":"YYYY-MM-DD"}`.  
 **Number/currency fields:** `"gt:123"`, `"lt:456"`, `"gte:0"`, `"lte:10000"`, `"between:100|5000"`.  
 **Current user:** `{{currentUser}}` e.g. for `ownerid` (replaced at runtime by the signed-in user's display name).
 
@@ -446,14 +446,14 @@ Predefined filters shown as a dropdown next to sorting. Each preset: `{"id":"uni
   {"id":"open","label":"Open","filters":{"statuscode":"1"}},
   {"id":"my-opportunities","label":"My Opportunities","filters":{"ownerid":"{{currentUser}}"}},
   {"id":"multi-status","label":"Multiple statuses","filters":{"statuscode":["1","2","3"]}},
-  {"id":"this-week","label":"This week","filters":{"scheduledstart":"last7"}},
+  {"id":"this-week","label":"This week","filters":{"scheduledstart":"currentWeek"}},
   {"id":"jan-2025","label":"January 2025","filters":{"createdon":{"start":"2025-01-01","end":"2025-01-31"}}}
 ]
 ```
 
 - `filters`: logical field name → single value (Boolean/single-select) or **array of values** (multiselect).
 - **`{{currentUser}}`**: replaced by the signed-in user's display name (Dataverse systemuser.fullname), ideal for "My Opportunities" or "My cases".
-- Date fields: `"today"`, `"last7"`, `"last30"` or range as above.
+- Date fields: `"today"`, `"last7"`, `"last30"`, `"currentWeek"`, `"currentMonth"`, `"currentYear"`, `"nextWeek"`, `"nextMonth"` or range as above.
 - Number/currency: `"gt:123"`, `"lt:456"`, `"gte:0"`, `"lte:10000"`, `"between:100|5000"`.
 
 ---

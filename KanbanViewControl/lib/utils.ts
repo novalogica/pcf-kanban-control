@@ -95,7 +95,16 @@ export type DateFilterValue = string | null;
 
 const DATE_FILTER_PREFIX_CUSTOM = "custom:";
 
-/** Returns [startDate, endDate] for "today" | "last7" | "last30" | "currentMonth" | "currentYear" | "custom:start|end". Uses local calendar; endDate is inclusive (end of day). */
+/** ISO week: Monday 00:00:00 of the week containing d. */
+function getMondayOfWeek(d: Date): Date {
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const day = d.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const daysToMonday = (day - 1 + 7) % 7;
+  monday.setDate(monday.getDate() - daysToMonday);
+  return monday;
+}
+
+/** Returns [startDate, endDate] for "today" | "last7" | "last30" | "currentMonth" | "currentYear" | "currentWeek" | "nextWeek" | "nextMonth" | "custom:start|end". Uses local calendar; endDate is inclusive (end of day). */
 export function getDateFilterRange(value: DateFilterValue): { start: Date; end: Date } | null {
   if (!value || value === "") return null;
   const today = new Date();
@@ -123,6 +132,30 @@ export function getDateFilterRange(value: DateFilterValue): { start: Date; end: 
   if (value === "currentYear") {
     const start = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
     const end = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { start, end };
+  }
+  // ISO week: Monday = start, Sunday = end
+  if (value === "currentWeek") {
+    const monday = getMondayOfWeek(today);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    return { start: monday, end: sunday };
+  }
+  if (value === "nextWeek") {
+    const mondayThis = getMondayOfWeek(today);
+    const mondayNext = new Date(mondayThis);
+    mondayNext.setDate(mondayNext.getDate() + 7);
+    const sundayNext = new Date(mondayNext);
+    sundayNext.setDate(sundayNext.getDate() + 6);
+    sundayNext.setHours(23, 59, 59, 999);
+    return { start: mondayNext, end: sundayNext };
+  }
+  if (value === "nextMonth") {
+    const y = today.getFullYear();
+    const m = today.getMonth() + 1;
+    const start = new Date(y, m, 1, 0, 0, 0, 0);
+    const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
     return { start, end };
   }
   if (value.startsWith(DATE_FILTER_PREFIX_CUSTOM)) {
