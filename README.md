@@ -56,8 +56,7 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Field widths on card](#field-widths-on-card)
   - [Lookup fields as Persona on card](#lookup-fields-as-persona-on-card)
   - [Lookup Persona icon only on card](#lookup-persona-icon-only-on-card)
-  - [E-Mail fields on card (as link)](#e-mail-fields-on-card-as-link)
-  - [Phone fields on card (as link)](#phone-fields-on-card-as-link)
+  - [Show E-Mail and Phone as links on card](#show-e-mail-and-phone-as-links-on-card)
   - [Ellipsis fields on card](#ellipsis-fields-on-card)
 - [Security (HTML on cards)](#security-html-on-cards)
 - [Filters & sorting](#filters--sorting)
@@ -346,35 +345,11 @@ Or comma-separated. For icon/initials only without text see **Lookup Persona ico
 
 ---
 
-### E-Mail fields on card (as link)
+### Show E-Mail and Phone as links on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** TwoOptions (Yes/No)
 
-**Logical field names** that are shown as **clickable mailto links** (e.g. email of related contact). Use when the field displays an email but has type SingleLine.Text in the dataset.
-
-**Example:**
-
-```json
-["parentcontactid_emailaddress1"]
-```
-
-Or comma-separated.
-
----
-
-### Phone fields on card (as link)
-
-**Type:** Text (JSON array or comma-separated)
-
-**Logical field names** that are shown as **clickable tel links** (e.g. phone of related contact). Use when the field displays a phone number but has type SingleLine.Text in the dataset.
-
-**Example:**
-
-```json
-["parentcontactid_telephone1"]
-```
-
-Or comma-separated.
+When **enabled**, fields whose column type is **SingleLine.Email** or **SingleLine.Phone** (from `dataset.columns`) are shown as **clickable mailto/tel links** on the card. The data type is read from the dataset; no per-field list is needed.
 
 ---
 

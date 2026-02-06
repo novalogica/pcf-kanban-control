@@ -2,7 +2,7 @@ import * as React from "react";
 import { useRef, useEffect } from "react";
 import { CardInfo, UniqueIdentifier } from "../../interfaces";
 import { Text } from "@fluentui/react/lib/Text";
-import { isEntityReference, isNullOrEmpty } from "../../lib/utils";
+import { isEntityReference, isNullOrEmpty, isEmailColumnDataType, isPhoneColumnDataType } from "../../lib/utils";
 import { sanitizeHtml } from "../../lib/sanitize-html";
 import { Lookup } from "../lookup/Lookup";
 import { BoardContext } from "../../context/board-context";
@@ -32,19 +32,13 @@ interface ICardInfoProps {
   lookupAsPersona?: boolean,
   /** When true and lookupAsPersona is true, show only the Persona icon/initials (no text). */
   lookupPersonaIconOnly?: boolean,
-  /** When true, render value as clickable mailto link (e.g. for related contact email with SingleLine.Text). */
-  asEmailLink?: boolean,
-  /** When true, render value as clickable tel link (e.g. for related contact phone with SingleLine.Text). */
-  asPhoneLink?: boolean,
+  /** When true, E-Mail and Phone fields (SingleLine.Email, SingleLine.Phone) are shown as mailto/tel links; derived from dataset column dataType. */
+  showEmailAndPhoneAsLinks?: boolean,
   /** When true, the field value uses text-overflow: ellipsis (single line); otherwise multi-line clamp. */
   textEllipsis?: boolean,
 }
 
 const CARD_INFO_GAP_PX = 16;
-
-/** PCF/Dataverse column data types that should be rendered as clickable mailto/tel links. */
-const EMAIL_DATA_TYPES = ["Email", "email"];
-const PHONE_DATA_TYPES = ["Phone", "phone"];
 
 function getColumnDataType(dataset: { columns?: { name: string; dataType?: string }[] } | undefined, fieldName: string | undefined): string | undefined {
   if (!fieldName || !dataset?.columns) return undefined;
@@ -52,12 +46,12 @@ function getColumnDataType(dataset: { columns?: { name: string; dataType?: strin
   return col?.dataType;
 }
 
-const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml = false, hideLabel = false, widthPercent, lookupAsPersona = false, lookupPersonaIconOnly = false, asEmailLink = false, asPhoneLink = false, textEllipsis = false }: ICardInfoProps) => {
+const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml = false, hideLabel = false, widthPercent, lookupAsPersona = false, lookupPersonaIconOnly = false, showEmailAndPhoneAsLinks = false, textEllipsis = false }: ICardInfoProps) => {
   const { context, openFormWithLoading } = useContext(BoardContext);
   const htmlHostRef = useRef<HTMLDivElement>(null);
   const columnDataType = getColumnDataType(context.parameters?.dataset as { columns?: { name: string; dataType?: string }[] }, fieldName);
-  const isEmailField = asEmailLink || (columnDataType != null && EMAIL_DATA_TYPES.includes(columnDataType));
-  const isPhoneField = asPhoneLink || (columnDataType != null && PHONE_DATA_TYPES.includes(columnDataType));
+  const isEmailField = showEmailAndPhoneAsLinks && isEmailColumnDataType(columnDataType);
+  const isPhoneField = showEmailAndPhoneAsLinks && isPhoneColumnDataType(columnDataType);
 
   const onLookupClicked = (entityName: string, id: string) => {
     openFormWithLoading(entityName, id);

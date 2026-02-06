@@ -171,19 +171,10 @@
     />
 
     <property 
-      name="emailFieldsOnCard" 
-      display-name-key="E-Mail fields on card (as link)" 
-      description-key="Field logical names that are shown as clickable mailto links (e.g. from related contact). Use for fields that display e-mail but have type SingleLine.Text. JSON array (e.g. [&quot;parentcontactid_emailaddress1&quot;]) or comma-separated list."
-      of-type="SingleLine.TextArea" 
-      usage="input" 
-      required="false"
-    />
-
-    <property 
-      name="phoneFieldsOnCard" 
-      display-name-key="Phone fields on card (as link)" 
-      description-key="Field logical names that are shown as clickable tel links (e.g. from related contact). Use for fields that display phone numbers but have type SingleLine.Text. JSON array (e.g. [&quot;parentcontactid_telephone1&quot;]) or comma-separated list."
-      of-type="SingleLine.TextArea" 
+      name="showEmailAndPhoneAsLinks" 
+      display-name-key="Show E-Mail and Phone as links on card" 
+      description-key="When enabled, fields with type SingleLine.Email or SingleLine.Phone are shown as clickable mailto/tel links. The data type is read from the dataset; no per-field list needed."
+      of-type="TwoOptions" 
       usage="input" 
       required="false"
     />

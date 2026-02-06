@@ -90,6 +90,34 @@ export function isDateColumnDataType(dataType: string | number | undefined): boo
   );
 }
 
+/** PCF/Dataverse column data types for E-Mail fields (SingleLine.Email). Used to render mailto links when showEmailAndPhoneAsLinks is enabled. */
+const EMAIL_COLUMN_DATA_TYPES = ["Email", "email", "SingleLine.Email", "singleline.email"];
+
+/** PCF/Dataverse column data types for Phone fields (SingleLine.Phone). Used to render tel links when showEmailAndPhoneAsLinks is enabled. */
+const PHONE_COLUMN_DATA_TYPES = ["Phone", "phone", "SingleLine.Phone", "singleline.phone"];
+
+/** True if the column dataType is E-Mail (SingleLine.Email); use for mailto link on card when showEmailAndPhoneAsLinks is on. */
+export function isEmailColumnDataType(dataType: string | undefined): boolean {
+  if (dataType == null) return false;
+  const normalized = String(dataType).trim().toLowerCase();
+  return (
+    EMAIL_COLUMN_DATA_TYPES.some((t) => t.toLowerCase() === normalized) ||
+    normalized.endsWith(".email") ||
+    normalized === "email"
+  );
+}
+
+/** True if the column dataType is Phone (SingleLine.Phone); use for tel link on card when showEmailAndPhoneAsLinks is on. */
+export function isPhoneColumnDataType(dataType: string | undefined): boolean {
+  if (dataType == null) return false;
+  const normalized = String(dataType).trim().toLowerCase();
+  return (
+    PHONE_COLUMN_DATA_TYPES.some((t) => t.toLowerCase() === normalized) ||
+    normalized.endsWith(".phone") ||
+    normalized === "phone"
+  );
+}
+
 /** Date filter value stored in quick filter: null | "today" | "last7" | "last30" | "custom:YYYY-MM-DD|YYYY-MM-DD" */
 export type DateFilterValue = string | null;
 

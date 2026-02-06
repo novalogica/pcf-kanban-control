@@ -252,43 +252,9 @@ const Card = ({ item, draggable = true }: IProps) => {
     }
   }, [context.parameters, reportConfigError, clearConfigError]);
 
-  const emailFieldsOnCardSet = useMemo(() => {
-    const raw = (context.parameters as { emailFieldsOnCard?: { raw?: string } }).emailFieldsOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("emailFieldsOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("emailFieldsOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const phoneFieldsOnCardSet = useMemo(() => {
-    const raw = (context.parameters as { phoneFieldsOnCard?: { raw?: string } }).phoneFieldsOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("phoneFieldsOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("phoneFieldsOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
+  const showEmailAndPhoneAsLinks = useMemo(() => {
+    return (context.parameters as { showEmailAndPhoneAsLinks?: { raw?: boolean } }).showEmailAndPhoneAsLinks?.raw === true;
+  }, [context.parameters]);
 
   const ellipsisFieldsOnCardSet = useMemo(() => {
     const raw = (context.parameters as { ellipsisFieldsOnCard?: { raw?: string } }).ellipsisFieldsOnCard?.raw?.trim();
@@ -436,8 +402,7 @@ const Card = ({ item, draggable = true }: IProps) => {
                 widthPercent={mapGetByField(fieldWidthsOnCardMap, fieldKey)}
                 lookupAsPersona={setMatchesField(lookupFieldsAsPersonaOnCardSet, fieldKey)}
                 lookupPersonaIconOnly={setMatchesField(lookupFieldsPersonaIconOnlyOnCardSet, fieldKey)}
-                asEmailLink={setMatchesField(emailFieldsOnCardSet, fieldKey)}
-                asPhoneLink={setMatchesField(phoneFieldsOnCardSet, fieldKey)}
+                showEmailAndPhoneAsLinks={showEmailAndPhoneAsLinks}
                 textEllipsis={setMatchesField(ellipsisFieldsOnCardSet, fieldKey)}
               />
             );
