@@ -94,6 +94,8 @@ interface IBoardContext {
   selectedFilterPresetId: string | null,
   /** Select preset and apply filters; null = deselect preset (filters remain unchanged) */
   applyFilterPreset: (presetId: string | null) => void,
+  /** Optional name of a global JavaScript function that is called before a card is moved between columns. */
+  cardMoveValidationFunctionName?: string,
 }
 
 export const BoardContext = createContext<IBoardContext>(undefined!);

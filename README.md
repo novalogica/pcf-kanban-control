@@ -36,6 +36,8 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Hide View By if default View By set?](#hide-view-by-if-default-view-by-set)
 - [Board layout & behaviour](#board-layout--behaviour)
   - [Allow moving cards](#allow-moving-cards)
+  - [Card move validation function](#card-move-validation-function)
+  - [Card move validation script (web resource)](#card-move-validation-script-web-resource)
   - [Show open in new tab button on card](#show-open-in-new-tab-button-on-card)
   - [Hide empty columns](#hide-empty-columns)
   - [Expand board to full width](#expand-board-to-full-width)
@@ -126,6 +128,175 @@ When **Yes**, the "View type" dropdown is hidden **only if** a default view (Def
 **Type:** Yes/No
 
 When **No**, drag-and-drop is disabled; cards cannot be moved between columns. Clicking a card still opens the record. Useful for read-only or approval boards. Default: **Yes**.
+
+---
+
+### Card move validation function
+
+**Type:** Text  
+
+Optional name of a **global JavaScript function** (from a model-driven app web resource) that is called **before a card is moved to another column**.  
+The function can be **synchronous or asynchronous** and can **allow or cancel** the move and optionally provide an error message that is shown as a **toast notification**.
+
+> The function is only called for **column changes** (moving a card to a different column). Pure reordering inside the same column is not validated.
+
+#### Function location
+
+The function must be available on the **global `window` object** when the Kanban control runs.  
+Common patterns:
+
+- `MyNamespace.Kanban.onBeforeMove`
+- `Xrm.Page.MyHandlers.validateKanbanMove`
+
+Set the property **Card move validation function** to the full path, e.g.:
+
+```text
+MyNamespace.Kanban.onBeforeMove
+```
+
+#### Loading the web resource
+
+This control is used in **Views** (table/list overviews), not on entity forms. So that the validation script is available when the view opens, the control loads it itself from the **Card move validation script (web resource)** property.
+
+**Steps:**  
+1. Create a **web resource** of type **Script (JScript)** in your solution. Upload your .js file. Set the **Name** to a unique value that includes your publisher prefix and path, e.g. `publisherprefix_/scripts/kanban_validate.js` (replace `publisherprefix_` with your solution publisher prefix). Publish.  
+2. In the view configuration, set the Kanban control property **Card move validation script (web resource)** to that exact web resource name (e.g. `publisherprefix_/scripts/kanban_validate.js`).  
+3. Set **Card move validation function** to the function path (e.g. `MyNamespace.Kanban.onBeforeMove`).  
+4. When the view opens, the control loads the script from Dataverse; the validation function is then available for card moves.
+
+#### Card move validation script (web resource)
+
+**Type:** Text  
+
+Optional **web resource name** (e.g. `publisherprefix_/scripts/kanban_validate.js` or `publisherprefix_scriptname.js`) that the control loads when the view opens. The name must match the web resource name in your solution (including publisher prefix and path). When set, the control builds the URL and loads the script from Dataverse; after it loads, the **Card move validation function** is available for move validation.
+
+**What to enter:** Use only the **name** of the web resource (the part after `/webresources/` in the full URL). Do **not** include the path segment that looks like `%7b000000192684110%7d` (or `{…}` in the address bar). That is a Dataverse version token; it changes on every publish and is not part of the resource name. Example: if the full URL is `https://yourorg.crm4.dynamics.com/%7b000000192684110%7d/webresources/your_script.js`, enter **`your_script.js`**.
+
+#### Function signature
+
+The control calls the function with a single argument:
+
+```ts
+function onBeforeMove(args) { /* ... */ }
+```
+
+`args` has the following shape:
+
+```ts
+{
+  recordId: string;              // Dataverse record ID
+  entityName: string;            // Logical entity name (e.g. "opportunity")
+  logicalName: string;           // Plural logical name used for update
+  fieldName: string;             // Column field logical name used for the phase/status
+  newValue: any;                 // New raw value for the column field (option value or null)
+  sourceColumnId: string | null; // Internal column id of the source column
+  sourceColumnTitle: string|null;// Display name of the source column
+  destinationColumnId: string|null;   // Internal column id of the target column
+  destinationColumnTitle: string|null;// Display name of the target column
+  card: {                        // Card data as used on the board (may be useful for additional checks)
+    id: string;
+    column: string;
+    title: { label: string; value: any };
+    // other fields loaded from the dataset...
+  } | undefined;
+}
+```
+
+#### Return values
+
+The function may return one of the following (or a `Promise` that resolves to one of them):
+
+- `true` – allow the move.
+- `false` – cancel the move (no toast unless you throw/return a message object).
+- `{ allow: boolean; message?: string }` – allow/cancel the move and optionally show `message` as an error toast when `allow === false`.
+
+If the function **throws an error** or the returned promise is **rejected**, the move is **cancelled** and the error message is shown as a toast (if available).
+
+#### Examples
+
+**1. Simple synchronous check**
+
+```js
+var MyNamespace = MyNamespace || {};
+
+MyNamespace.Kanban = {
+  onBeforeMove: function (args) {
+    // Block moving from "Open" to "Closed"
+    if (args.sourceColumnTitle === "Open" && args.destinationColumnTitle === "Closed") {
+      return {
+        allow: false,
+        message: "You cannot move directly from Open to Closed."
+      };
+    }
+
+    return true;
+  }
+};
+```
+
+**2. Asynchronous validation (e.g. Web API call)**
+
+```js
+var MyNamespace = MyNamespace || {};
+
+MyNamespace.Kanban = {
+  onBeforeMove: async function (args) {
+    // Example: call a custom API that returns { allow: boolean, message?: string }
+    var result = await MyNamespace.Api.validatePhaseChange(args.recordId, args.destinationColumnId);
+    if (!result.allow) {
+      return {
+        allow: false,
+        message: result.message || "Move not allowed by server validation."
+      };
+    }
+
+    return true;
+  }
+};
+```
+
+If the validation cancels the move (`allow: false` or `false`), the card **snaps back** to its original column and no Dataverse update is executed.
+
+**3. Required field when moving between phases (e.g. Phase 2 → Phase 3: estimatedvalue must be set)**
+
+When moving from a specific phase to the next, a field (e.g. revenue) must be filled:
+
+```js
+var MyNamespace = MyNamespace || {};
+
+MyNamespace.Kanban = (function () {
+  var SOURCE_PHASE_TITLE = "Phase 2";   // Adjust: display name of your source phase
+  var TARGET_PHASE_TITLE = "Phase 3";   // Adjust: display name of target phase
+  var REQUIRED_FIELD_RAW = "estimatedvalueRaw";
+
+  function isEmpty(value) {
+    if (value === null || value === undefined) return true;
+    if (typeof value === "number") return Number.isNaN(value);
+    if (typeof value === "string") return value.trim() === "";
+    return false;
+  }
+
+  function onBeforeMove(args) {
+    if (args.sourceColumnTitle !== SOURCE_PHASE_TITLE || args.destinationColumnTitle !== TARGET_PHASE_TITLE) {
+      return true;
+    }
+    var card = args.card;
+    var raw = card && card[REQUIRED_FIELD_RAW];
+    if (isEmpty(raw)) {
+      return {
+        allow: false,
+        message: "Please enter the estimated value before moving to Phase 3."
+      };
+    }
+    return true;
+  }
+
+  return { onBeforeMove: onBeforeMove };
+})();
+```
+
+Configuration: **Card move validation function** = `MyNamespace.Kanban.onBeforeMove`.  
+Full example: [`examples/kanban-validate-phase-required-field.js`](examples/kanban-validate-phase-required-field.js) (uses generic `MyNamespace.Kanban`).
 
 ---
 

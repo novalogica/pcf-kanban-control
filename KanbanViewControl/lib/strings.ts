@@ -52,6 +52,7 @@ export interface Strings {
   toastSaving: string;
   toastSuccessMoved: (columnName: string) => string;
   toastUnallocated: string;
+  toastValidationFunctionNotFound: string;
 
   // Loading
   loadingLabel: string;
@@ -103,6 +104,7 @@ const en: Strings = {
   toastSaving: "Saving...",
   toastSuccessMoved: (columnName) => `Successfully moved to ${columnName} 🎉`,
   toastUnallocated: "Unallocated",
+  toastValidationFunctionNotFound: "Card move validation function is not available. Check that the web resource is loaded and the function path is correct.",
 
   loadingLabel: "Loading...",
   openingRecordLabel: "Opening record...",
@@ -153,6 +155,7 @@ const de: Strings = {
   toastSaving: "Speichern...",
   toastSuccessMoved: (columnName) => `Erfolgreich verschoben nach ${columnName} 🎉`,
   toastUnallocated: "Nicht zugeordnet",
+  toastValidationFunctionNotFound: "Die Validierungsfunktion für Kartenverschiebungen ist nicht verfügbar. Prüfen Sie, ob die Webressource geladen ist und der Funktionspfad stimmt.",
 
   loadingLabel: "Laden...",
   openingRecordLabel: "Datensatz wird geöffnet...",

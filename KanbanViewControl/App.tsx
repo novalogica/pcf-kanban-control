@@ -11,6 +11,7 @@ import { useNavigation } from "./hooks/useNavigation";
 import { getColumnValue, isBooleanColumnDataType, isDateColumnDataType, isNumberColumnDataType, toComparableDate, toComparableNumber, isDateInFilterRange, isNumberInFilterRange } from "./lib/utils";
 import { unlocatedColumn } from "./lib/constants";
 import { getLocaleFromLanguageId, getStrings } from "./lib/strings";
+import { getClientUrl, loadWebResourceScript } from "./lib/load-validation-script";
 import { Spinner, SpinnerSize } from "@fluentui/react";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { CardInfo } from "./interfaces";
@@ -212,6 +213,29 @@ const App = ({ context, notificationPosition }: IProps) => {
   const prevViewIdRef = useRef<string | null>(null);
   const draggingRef = useRef(false);
   const openingRef = useRef(false);
+
+  const cardMoveValidationFunctionName = useMemo(() => {
+    const raw = (context.parameters as { cardMoveValidationFunction?: { raw?: string } }).cardMoveValidationFunction?.raw;
+    if (typeof raw !== "string") return undefined;
+    const trimmed = raw.trim();
+    return trimmed || undefined;
+  }, [(context.parameters as { cardMoveValidationFunction?: { raw?: string } }).cardMoveValidationFunction?.raw]);
+
+  const cardMoveValidationScriptName = useMemo(() => {
+    const raw = (context.parameters as { cardMoveValidationScript?: { raw?: string } }).cardMoveValidationScript?.raw;
+    if (typeof raw !== "string") return undefined;
+    const trimmed = raw.trim();
+    return trimmed || undefined;
+  }, [(context.parameters as { cardMoveValidationScript?: { raw?: string } }).cardMoveValidationScript?.raw]);
+
+  useEffect(() => {
+    if (!cardMoveValidationScriptName) return;
+    const clientUrl = getClientUrl(context);
+    if (!clientUrl) return;
+    loadWebResourceScript(clientUrl, cardMoveValidationScriptName).catch(() => {
+      // Script load failure: validation will show "function not available" when user tries to move
+    });
+  }, [context, cardMoveValidationScriptName]);
 
   const reportConfigError = useCallback((property: string, message: string) => {
     const key = `${property}\n${message}`;
@@ -882,6 +906,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         filterPresetsConfig,
         selectedFilterPresetId,
         applyFilterPreset,
+        cardMoveValidationFunctionName,
       }}
     >
       <div className="app-content-wrapper">

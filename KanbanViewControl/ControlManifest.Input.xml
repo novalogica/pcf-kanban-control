@@ -54,6 +54,24 @@
     />
 
     <property 
+      name="cardMoveValidationFunction" 
+      display-name-key="Card move validation function" 
+      description-key="Optional global JavaScript function that is called before a card is moved to another column. Use together with Card move validation script (web resource) so the control loads the script when the view opens."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="cardMoveValidationScript" 
+      display-name-key="Card move validation script (web resource)" 
+      description-key="Optional web resource name (e.g. prefix_/scripts/kanban_validate.js). When set, the control loads this script when the view opens so the validation function is available without using the command bar."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="showOpenInNewTabButton" 
       display-name-key="Show open in new tab button on card" 
       description-key="When enabled, each card shows a button (top right) that opens the record in a new browser tab."
