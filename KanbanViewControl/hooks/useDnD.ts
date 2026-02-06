@@ -34,7 +34,7 @@ export const useDnD = (columns: ColumnItem[]) => {
   const strings = getStrings(locale);
   const { updateRecord } = useDataverse(context);
 
-  const resolveValidationFunction = () => {
+  const resolveValidationFunction = (): { fn: (args: CardMoveValidationArgs) => unknown; owner: unknown } | undefined => {
     if (!cardMoveValidationFunctionName) return undefined;
     const path = cardMoveValidationFunctionName.split(".").map((p) => p.trim()).filter(Boolean);
     if (path.length === 0) return undefined;
@@ -43,14 +43,24 @@ export const useDnD = (columns: ColumnItem[]) => {
       if (current == null) return undefined;
       current = current[part];
     }
-    return typeof current === "function" ? current : undefined;
+    if (typeof current !== "function") return undefined;
+    const fn = current as (args: CardMoveValidationArgs) => unknown;
+    if (path.length === 1) {
+      return { fn, owner: undefined };
+    }
+    let owner: any = (window as any);
+    for (let i = 0; i < path.length - 1; i++) {
+      if (owner == null) return { fn, owner: undefined };
+      owner = owner[path[i]];
+    }
+    return { fn, owner };
   };
 
   const runCardMoveValidator = async (
     args: CardMoveValidationArgs
   ): Promise<{ allow: boolean; message?: string }> => {
-    const fn = resolveValidationFunction();
-    if (!fn) {
+    const resolved = resolveValidationFunction();
+    if (!resolved) {
       if (cardMoveValidationFunctionName) {
         return {
           allow: false,
@@ -60,8 +70,9 @@ export const useDnD = (columns: ColumnItem[]) => {
       return { allow: true };
     }
 
+    const { fn, owner } = resolved;
     try {
-      const result = fn(args);
+      const result = owner != null ? fn.call(owner, args) : fn(args);
       const awaited = result && typeof (result as Promise<unknown>).then === "function"
         ? await (result as Promise<unknown>)
         : result;
