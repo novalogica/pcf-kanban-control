@@ -12,6 +12,7 @@ import Loading from "./container/loading";
 import NoResults from "./container/no-results";
 import Dropdown from "./dropdown/Dropdown";
 import { Lookup } from "./lookup/Lookup";
+import QuickFilters from "./quick-filters/QuickFilters";
 
 export {
   Loading,
@@ -28,5 +29,6 @@ export {
   Button,
   IconButton,
   Lookup,
-  Dropdown,  
+  Dropdown,
+  QuickFilters,
 }

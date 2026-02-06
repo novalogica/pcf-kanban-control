@@ -7,9 +7,10 @@ interface IProps  {
   noBorder?: boolean,
   cursor?: string,
   onClick?: () => void;
+  title?: string;
 }
 
-const IconButton = ({ iconName, color, noBorder, onClick }: IProps) => {
+const IconButton = ({ iconName, color, noBorder, onClick, title }: IProps) => {
   const button: IButtonStyles = {
     root: {
       width: 32,
@@ -33,7 +34,10 @@ const IconButton = ({ iconName, color, noBorder, onClick }: IProps) => {
     <IconBtn 
       styles={button} 
       iconProps={{ iconName: iconName }} 
-      onClick={onClick} />
+      onClick={onClick}
+      title={title}
+      ariaLabel={title}
+    />
   );
 }
 
