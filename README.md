@@ -11,6 +11,7 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 - Dynamically shows columns based on the selected view.
 - Supports **business process flows** and **Choice** columns.
 - Drag-and-drop functionality.
+- **Progressive loading**: Only a configurable number of cards per column are shown initially; more load when scrolling down (reduces DOM size and improves performance).
 - Lookup column support (including Persona-style display).
 - **Quick filter** dropdowns and **custom sort** fields (configurable).
 - **Date/time quick filters**: For DateTime and DateOnly fields, special filter options (Today, Last 7 days, Last 30 days, Custom range) with Fluent UI DatePicker.
@@ -40,6 +41,7 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Expand board to full width](#expand-board-to-full-width)
   - [Minimum column width](#minimum-column-width)
   - [Maximum column width](#maximum-column-width)
+  - [Initial cards visible per column](#initial-cards-visible-per-column)
   - [Column widths](#column-widths)
   - [Allow creating new records from board](#allow-creating-new-records-from-board)
 - [Card content & appearance](#card-content--appearance)
@@ -169,6 +171,16 @@ Minimum width of each column in **pixels** (number as text, e.g. `300` or `400`)
 Maximum width of each column (and cards) in **pixels** (e.g. `500` or `800`). Valid range 200–2000. Empty = no limit.
 
 **Example:** `500` or `800`. Leave empty for no limit.
+
+---
+
+### Initial cards visible per column
+
+**Type:** Text (number)
+
+Number of **cards shown per column initially**. When a column has more cards than this value, only the first N cards are rendered; scrolling near the bottom of the column loads more (progressive loading). This reduces initial DOM size and improves performance for columns with many records. Counts and sums in the column header always reflect **all** cards in the column. Valid range: 1–500. Empty = default (**30**).
+
+**Example:** `30` (default), `50`, `100`. Leave empty for default (30).
 
 ---
 

@@ -270,6 +270,15 @@
     />
 
     <property 
+      name="initialCardsVisible" 
+      display-name-key="Initial cards visible per column" 
+      description-key="Number of cards shown per column initially; more load when scrolling down. Leave empty for default (30)."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="columnWidths" 
       display-name-key="Column widths" 
       description-key="JSON array to set width per column. Each item: &quot;id&quot; (column id, e.g. BPF stage name or option value) and &quot;width&quot; (pixels, 200-1200). Example: [{&quot;id&quot;:&quot;Develop&quot;,&quot;width&quot;:280}]."
