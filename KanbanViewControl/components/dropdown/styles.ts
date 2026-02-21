@@ -7,9 +7,15 @@ export const dropdownStyles: Partial<IDropdownStyles> = {
     justifyContent: 'start'
   },
   dropdown: { 
-      width: 200,
+      width: 'auto',
       textAlign: 'left',
       border: 'none'
+  },
+  title: {
+    /* Fixed height including border (32 + 2px) prevents layout shift on open/focus */
+    minHeight: 34,
+    height: 34,
+    boxSizing: 'border-box',
   },
   label: {
       color: '#595959',

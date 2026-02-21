@@ -11,15 +11,6 @@
     <data-set name="dataset" display-name-key="Dataset" />
 
     <property 
-      name="bpfStepsOptionsOrder" 
-      display-name-key="Business Process Flow Step Order" 
-      description-key="User can reorganize the column orders by providing a json"
-      of-type="SingleLine.TextArea" 
-      usage="input" 
-      required="false"
-    />
-
-    <property 
       name="defaultView" 
       display-name-key="Default View By" 
       of-type="SingleLine.TextArea" 
@@ -28,8 +19,287 @@
     />
 
     <property 
+      name="filteredBusinessProcessFlows" 
+      display-name-key="Filter out Business Process Flows" 
+      description-key="Provide an array of strings with the business process flow names to filter out."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="businessProcessFlowStepOrder" 
+      display-name-key="Business Process Flow Step Order" 
+      description-key="Provide a JSON array to control the order of business process flow stages (e.g. [{&quot;id&quot;:&quot;Develop&quot;,&quot;order&quot;:2}])."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="hideViewBy" 
       display-name-key="Hide View By if default View By set?" 
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowCardMove" 
+      display-name-key="Allow moving cards" 
+      description-key="When disabled, cards cannot be moved by drag and drop."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="cardMoveValidationFunction" 
+      display-name-key="Card move validation function" 
+      description-key="Optional global JavaScript function that is called before a card is moved to another column. Use together with Card move validation script (web resource) so the control loads the script when the view opens."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="cardMoveValidationScript" 
+      display-name-key="Card move validation script (web resource)" 
+      description-key="Optional web resource name (e.g. prefix_/scripts/kanban_validate.js). When set, the control loads this script when the view opens so the validation function is available without using the command bar."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="showOpenInNewTabButton" 
+      display-name-key="Show open in new tab button on card" 
+      description-key="When enabled, each card shows a button (top right) that opens the record in a new browser tab."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="hideEmptyColumns" 
+      display-name-key="Hide empty columns" 
+      description-key="When enabled, columns that contain no cards are not shown."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="hideColumnFieldOnCard" 
+      display-name-key="Hide column field on card" 
+      description-key="When enabled, the field used for column grouping (View By) is not displayed on the card to save space."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="hiddenFieldsOnCard" 
+      display-name-key="Hidden fields on card" 
+      description-key="Field logical names that are loaded but not displayed on cards. JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="htmlFieldsOnCard" 
+      display-name-key="HTML fields on card" 
+      description-key="Field logical names whose content is rendered as HTML (sanitized). JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;])."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowedHtmlTagsOnCard" 
+      display-name-key="Allowed HTML tags on card" 
+      description-key="Comma-separated list of allowed HTML tags for HTML fields on card. Default: p,br,b,i,u,strong,em,a,ul,ol,li,table,thead,tbody,tr,th,td. Empty = no tags (all HTML stripped). Add style only if needed and accept security risk (see Security in README)."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowedHtmlAttributesOnCard" 
+      display-name-key="Allowed HTML attributes on card" 
+      description-key="Comma-separated list of allowed attributes for HTML fields on card (e.g. href for links). Default: href. Empty = no attributes."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="hideLabelForFieldsOnCard" 
+      display-name-key="Hide label for fields on card" 
+      description-key="Field logical names for which the label is hidden on the card. JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="fieldDisplayNamesOnCard" 
+      display-name-key="Field display names on card" 
+      description-key="Assign custom display names to fields by logical name. JSON array (e.g. [{&quot;logicalName&quot;:&quot;estimatedvalue&quot;,&quot;displayName&quot;:&quot;Value&quot;}]). The display name is shown as the field label on the card."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="booleanFieldHighlights" 
+      display-name-key="Field highlights" 
+      description-key="JSON array: [{&quot;logicalName&quot;:&quot;fieldname&quot;,&quot;color&quot;:&quot;#ff0000&quot;,&quot;type&quot;:&quot;left&quot;}]. Any field type (boolean, text, lookup, etc.). Empty = no highlight, filled = highlight. Optional type: left (default), right, cornerTopLeft, cornerTopRight, cornerBottomLeft, cornerBottomRight. left/right = colored border; corner = diagonal corner mark. First match per type wins."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="fieldWidthsOnCard" 
+      display-name-key="Field widths on card" 
+      description-key="JSON array to set percentage width of fields on the card (e.g. [{&quot;logicalName&quot;:&quot;description&quot;,&quot;width&quot;:100},{&quot;logicalName&quot;:&quot;estimatedvalue&quot;,&quot;width&quot;:50}]). Width 100 = full width, 50 = half, etc. Fields not listed use default width."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="lookupFieldsAsPersonaOnCard" 
+      display-name-key="Lookup fields as Persona on card" 
+      description-key="Field logical names for which lookup values are shown with image/initials (Persona style). Other lookup fields are shown as a simple link. JSON array (e.g. [&quot;ownerid&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="lookupFieldsPersonaIconOnlyOnCard" 
+      display-name-key="Lookup Persona icon only on card" 
+      description-key="Field logical names for which Persona is shown with icon/initials only (no text). Only applies to fields also listed in Lookup fields as Persona on card. JSON array (e.g. [&quot;ownerid&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="showEmailAndPhoneAsLinks" 
+      display-name-key="Show E-Mail and Phone as links on card" 
+      description-key="When enabled, fields with type SingleLine.Email or SingleLine.Phone are shown as clickable mailto/tel links. The data type is read from the dataset; no per-field list needed."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="ellipsisFieldsOnCard" 
+      display-name-key="Ellipsis fields on card" 
+      description-key="Field logical names for which the value is shown with text-overflow: ellipsis (single line, overflow hidden with ...). Other fields use multi-line clamp. JSON array (e.g. [&quot;description&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="quickFilterFields" 
+      display-name-key="Quick filter fields" 
+      description-key="Field logical names to show as quick filter dropdowns (multiselect for all except Boolean). Use the exact column name from the dataset (e.g. ownerid for entity, or a_xxx.ownerid for linked-entity columns). Supports OptionSet, Lookup, and text fields. JSON array (e.g. [&quot;statuscode&quot;,&quot;ownerid&quot;,&quot;a_c66099806c8349a18e63498da795a1a6.ownerid&quot;]) or comma-separated list. Only fields present in the dataset can be used."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="quickFilterFieldsInPopup" 
+      display-name-key="Quick filter fields in popup" 
+      description-key="Field logical names that are shown in a popup (e.g. &quot;More filters&quot;) instead of inline, to save space and avoid wrapping. Must be a subset of Quick filter fields. JSON array (e.g. [&quot;ownerid&quot;,&quot;statuscode&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="sortFields" 
+      display-name-key="Sort fields" 
+      description-key="Field logical names available for custom sorting (dropdown next to search). JSON array (e.g. [&quot;createdon&quot;,&quot;estimatedvalue&quot;]) or comma-separated list. Only fields present in the dataset can be used. Ascending/descending is selectable in the UI."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="defaultSort" 
+      display-name-key="Default sort" 
+      description-key="Default sort when no user preference is saved. JSON object: { &quot;field&quot;: &quot;logicalName&quot; (e.g. estimatedvalue for revenue), &quot;direction&quot;: &quot;asc&quot; | &quot;desc&quot; }. Only applies if the field is also listed in Sort fields. Example: { &quot;field&quot;: &quot;estimatedvalue&quot;, &quot;direction&quot;: &quot;desc&quot; } for revenue descending."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="filterPresets" 
+      display-name-key="Filter presets" 
+      description-key="JSON array of filter presets. Each preset: { &quot;id&quot;: &quot;unique-id&quot;, &quot;label&quot;: &quot;Display name&quot;, &quot;filters&quot;: { &quot;fieldLogicalName&quot;: &quot;value&quot; or [&quot;value1&quot;,&quot;value2&quot;] } }. For multiselect use array; for Boolean single value. Use &quot;{{currentUser}}&quot; for current user (e.g. ownerid). Date fields: &quot;today&quot;, &quot;last7&quot;, &quot;last30&quot;, &quot;currentMonth&quot;, &quot;currentYear&quot;, &quot;currentWeek&quot;, &quot;nextWeek&quot;, &quot;nextMonth&quot;, &quot;YYYY-MM-DD|YYYY-MM-DD&quot;, or { &quot;start&quot;: &quot;YYYY-MM-DD&quot;, &quot;end&quot;: &quot;YYYY-MM-DD&quot; }. Number/currency fields: &quot;gt:123&quot;, &quot;lt:456&quot;, &quot;gte:0&quot;, &quot;lte:10000&quot;, &quot;between:100|5000&quot;. Example: [{ &quot;id&quot;: &quot;my-opportunities&quot;, &quot;label&quot;: &quot;Meine Opportunities&quot;, &quot;filters&quot;: { &quot;ownerid&quot;: &quot;{{currentUser}}&quot; } }, { &quot;id&quot;: &quot;high-value&quot;, &quot;label&quot;: &quot;Umsatz &gt; 10000&quot;, &quot;filters&quot;: { &quot;estimatedvalue&quot;: &quot;gt:10000&quot; } }]."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="expandBoardToFullWidth" 
+      display-name-key="Expand board to full width" 
+      description-key="When enabled, the board uses the full view width and columns scale proportionally."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="minColumnWidth" 
+      display-name-key="Minimum column width" 
+      description-key="Minimum width of each column in pixels. Also applies when &quot;Expand board to full width&quot; is enabled; horizontal scrolling is used if needed. Leave empty for default (400)."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="maxColumnWidth" 
+      display-name-key="Maximum column width" 
+      description-key="Maximum width of each column (and cards) in pixels. Leave empty for no limit."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="initialCardsVisible" 
+      display-name-key="Initial cards visible per column" 
+      description-key="Number of cards shown per column initially; more load when scrolling down. Leave empty for default (30)."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="columnWidths" 
+      display-name-key="Column widths" 
+      description-key="JSON array to set width per column. Each item: &quot;id&quot; (column id, e.g. BPF stage name or option value) and &quot;width&quot; (pixels, 200-1200). Example: [{&quot;id&quot;:&quot;Develop&quot;,&quot;width&quot;:280}]."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="allowCreateNew" 
+      display-name-key="Allow creating new records from board" 
+      description-key="When disabled, the add button on each column is hidden and new records cannot be created from the board."
       of-type="TwoOptions" 
       usage="input" 
       required="false"

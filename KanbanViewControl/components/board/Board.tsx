@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useContext, useMemo } from "react";
-import { CommandBar, Column } from "..";
+import { CommandBar, Column, QuickFilters } from "..";
 import {
   DragDropContext,
   DropResult,
@@ -11,51 +11,129 @@ import { useDnD } from "../../hooks/useDnD";
 import { pluralizedLogicalNames } from "../../lib/utils";
 
 const Board = () => {
-  const { context, columns, selectedEntity, activeView } =
+  const { context, columns, selectedEntity, activeView, draggingRef } =
     useContext(BoardContext);
   const { onDragEnd } = useDnD(columns);
 
-  const handleCardDrag = async (result: DropResult, _: ResponderProvided) => {
-    const field = activeView?.uniqueName;
-    const columnName = activeView?.columns?.find(
-      (column) => column.id == result.destination?.droppableId
-    )?.title;
-    const logicalName = pluralizedLogicalNames(selectedEntity as string);
-    const record = {
-      update: {
-        [field as string]:
-          result.destination?.droppableId == "unallocated"
-            ? null
-            : result.destination?.droppableId,
-      },
-      logicalName: logicalName,
-      entityName: selectedEntity,
-      id: result.draggableId,
-      columnName,
-    };
+  const allowCardMove = useMemo(() => {
+    const raw = (context.parameters as { allowCardMove?: { raw?: boolean } }).allowCardMove?.raw;
+    return raw !== false;
+  }, [context.parameters]);
 
-    await onDragEnd(result, record);
-    context.parameters.dataset.refresh();
+  const handleDragStart = () => {
+    draggingRef.current = true;
+  };
+
+  const handleCardDrag = async (result: DropResult, _: ResponderProvided) => {
+    try {
+      const field = activeView?.uniqueName;
+      const columnName = activeView?.columns?.find(
+        (column) => column.id == result.destination?.droppableId
+      )?.title;
+      const logicalName = pluralizedLogicalNames(selectedEntity as string);
+      const record = {
+        update: {
+          [field as string]:
+            result.destination?.droppableId == "unallocated"
+              ? null
+              : result.destination?.droppableId,
+        },
+        logicalName: logicalName,
+        entityName: selectedEntity,
+        id: result.draggableId,
+        columnName,
+      };
+
+      await onDragEnd(result, record);
+      context.parameters.dataset.refresh();
+    } finally {
+      setTimeout(() => {
+        draggingRef.current = false;
+      }, 150);
+    }
   };
 
   const hideViews = useMemo(() => {
     return context.parameters.hideViewBy?.raw;
   }, [context.parameters.hideViewBy]);
 
+  const hideEmptyColumns = useMemo(() => {
+    return (context.parameters as { hideEmptyColumns?: { raw?: boolean } }).hideEmptyColumns?.raw === true;
+  }, [context.parameters]);
+
+  const expandBoardToFullWidth = useMemo(() => {
+    return (context.parameters as { expandBoardToFullWidth?: { raw?: boolean } }).expandBoardToFullWidth?.raw === true;
+  }, [context.parameters]);
+
+  const minColumnWidthPx = useMemo(() => {
+    const raw = (context.parameters as { minColumnWidth?: { raw?: string } }).minColumnWidth?.raw;
+    if (raw == null || String(raw).trim() === "") return undefined;
+    const n = parseInt(String(raw).trim(), 10);
+    if (Number.isNaN(n) || n < 200 || n > 1200) return undefined;
+    return n;
+  }, [context.parameters]);
+
+  const maxColumnWidthPx = useMemo(() => {
+    const raw = (context.parameters as { maxColumnWidth?: { raw?: string } }).maxColumnWidth?.raw;
+    if (raw == null || String(raw).trim() === "") return undefined;
+    const n = parseInt(String(raw).trim(), 10);
+    if (Number.isNaN(n) || n < 200 || n > 2000) return undefined;
+    return n;
+  }, [context.parameters]);
+
+  const columnWidthsMap = useMemo(() => {
+    const raw = (context.parameters as { columnWidths?: { raw?: string } }).columnWidths?.raw;
+    if (raw == null || String(raw).trim() === "") return new Map<string, number>();
+    try {
+      const arr = JSON.parse(raw) as { id?: string; width?: number }[];
+      if (!Array.isArray(arr)) return new Map<string, number>();
+      const map = new Map<string, number>();
+      for (const item of arr) {
+        if (item?.id != null && typeof item.width === "number") {
+          const w = Math.min(1200, Math.max(200, item.width));
+          map.set(String(item.id), w);
+        }
+      }
+      return map;
+    } catch {
+      return new Map<string, number>();
+    }
+  }, [context.parameters]);
+
+  const visibleColumns = useMemo(() => {
+    if (!columns) return [];
+    if (!hideEmptyColumns) return columns;
+    return columns.filter((col) => (col.cards?.length ?? 0) > 0);
+  }, [columns, hideEmptyColumns]);
+
+  const columnsContent = visibleColumns.map((column) => (
+    <Column
+      key={column.id}
+      column={column}
+      widthPx={columnWidthsMap.get(column.id.toString())}
+    />
+  ));
+
   return (
     <div className="main-container">
-      {!hideViews && columns && columns.length > 0 && <CommandBar />}
+      <QuickFilters />
+      {!hideViews && <CommandBar />}
       <div className="kanban-container">
-        <div className="columns-wrapper">
-          {columns && columns.length > 0 && (
-            <DragDropContext onDragEnd={handleCardDrag}>
-              {columns &&
-                columns.map((column) => (
-                  <Column key={column.id} column={column} />
-                ))}
+        <div
+          className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}`}
+          style={{
+            ...(minColumnWidthPx != null ? { "--min-column-width": `${minColumnWidthPx}px` } : {}),
+            ...(maxColumnWidthPx != null ? { "--max-column-width": `${maxColumnWidthPx}px` } : {}),
+          } as React.CSSProperties}
+        >
+          {allowCardMove ? (
+            <DragDropContext onDragStart={handleDragStart} onDragEnd={handleCardDrag}>
+              {columnsContent}
             </DragDropContext>
+          ) : (
+            columnsContent
           )}
-          {(!columns || columns.length === 0) && (
+          {visibleColumns.length === 0 && (
             <div className="no-columns">
               <div className="no-data-content">
                 <span className="no-data-text">No records found</span>
