@@ -13,10 +13,10 @@ const style: React.CSSProperties = {
   minHeight: 50
 }
 
-const NoResults = () => {
-  return ( 
+const NoResults = ({ text }: { text: string }) => {
+  return (
     <div style={style}>
-      <p>No results found</p>
+      <p>{text}</p>
     </div>
   );
 }

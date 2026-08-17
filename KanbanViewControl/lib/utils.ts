@@ -321,6 +321,107 @@ export function getFieldNamePrefixBeforeDot(fieldName: string): string | null {
     return fieldName.slice(0, lastDot);
 }
 
+/**
+ * Resolve a localized display name value.
+ * `displayName` can be a plain string (used as-is) or a Record<locale, string>
+ * (e.g. {"en":"Value","de":"Wert"}). Falls back to the base locale (e.g. "en" from "en-US"),
+ * then to "en", then to the first available value.
+ */
+export function resolveLocalizedDisplayName(displayName: unknown, locale: string): string {
+    if (typeof displayName === "string") return displayName;
+    if (displayName != null && typeof displayName === "object" && !Array.isArray(displayName)) {
+        const map = displayName as Record<string, string>;
+        if (locale in map) return map[locale];
+        const baseLang = locale.split("-")[0];
+        if (baseLang !== locale && baseLang in map) return map[baseLang];
+        if ("en" in map) return map["en"];
+        const keys = Object.keys(map);
+        if (keys.length > 0) return map[keys[0]];
+    }
+    return String(displayName ?? "");
+}
+
+/**
+ * Parse the fieldDisplayNamesOnCard JSON config into a Map<logicalName, resolvedDisplayName>.
+ * Supports both plain string and locale-object values for displayName.
+ */
+export function parseFieldDisplayNames(
+    raw: string | undefined | null,
+    locale: string,
+    reportConfigError?: (property: string, message: string) => void,
+    clearConfigError?: (property: string) => void,
+): Map<string, string> {
+    const trimmed = raw?.trim();
+    if (!trimmed) return new Map();
+    try {
+        const arr = JSON.parse(trimmed);
+        if (!Array.isArray(arr)) return new Map();
+        clearConfigError?.("fieldDisplayNamesOnCard");
+        const map = new Map<string, string>();
+        for (const e of arr) {
+            if (e && typeof e === "object" && "logicalName" in e && "displayName" in e) {
+                const name = String(e.logicalName).trim();
+                const displayName = resolveLocalizedDisplayName(e.displayName, locale);
+                if (name) map.set(name, displayName);
+            }
+        }
+        return map;
+    } catch (e) {
+        reportConfigError?.("fieldDisplayNamesOnCard", e instanceof Error ? e.message : String(e));
+        return new Map();
+    }
+}
+
+/**
+ * Parst eine Feldnamen-Liste in ein Set. Akzeptiert ein JSON-Array (z. B. ["a","b"])
+ * oder eine kommagetrennte Liste (z. B. "a,b"). Bei einem JSON-Parse-Fehler eines mit "["
+ * beginnenden Strings wird ein Config-Fehler gemeldet und auf CSV-Interpretation zurückgefallen.
+ */
+export function parseFieldNameSet(
+    raw: string | undefined | null,
+    propertyName: string,
+    reportConfigError?: (property: string, message: string) => void,
+    clearConfigError?: (property: string) => void,
+): Set<string> {
+    const trimmed = raw?.trim();
+    if (!trimmed) return new Set<string>();
+    try {
+        if (trimmed.startsWith("[")) {
+            const arr = JSON.parse(trimmed) as unknown;
+            clearConfigError?.(propertyName);
+            return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
+        }
+        return new Set(trimmed.split(",").map((s) => s.trim()).filter(Boolean));
+    } catch (e) {
+        if (trimmed.startsWith("[")) {
+            reportConfigError?.(propertyName, e instanceof Error ? e.message : String(e));
+        }
+        return new Set(trimmed.split(",").map((s) => s.trim()).filter(Boolean));
+    }
+}
+
+/** True, wenn ein Quick-Filter-Wert als "aktiv" zählt (nicht null, nicht leer). */
+export function isQuickFilterActive(value: string | string[] | null | undefined): boolean {
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== "";
+}
+
+/**
+ * True, wenn aktuell irgendein Filter greift: Suchbegriff, ausgewähltes Preset
+ * oder mindestens ein gesetzter Quick-Filter. Genutzt für den "Filter zurücksetzen"-
+ * Button und die differenzierte Leerzustandsmeldung.
+ */
+export function hasActiveFilters(
+    quickFilterValues: Record<string, string | string[] | null>,
+    searchKeyword: string,
+    selectedFilterPresetId: string | null,
+): boolean {
+    if (searchKeyword.trim() !== "") return true;
+    if (selectedFilterPresetId != null) return true;
+    return Object.values(quickFilterValues).some(isQuickFilterActive);
+}
+
 export const getColumnValue = (
     record: ComponentFramework.PropertyHelper.DataSetApi.EntityRecord,
     column: ComponentFramework.PropertyHelper.DataSetApi.Column

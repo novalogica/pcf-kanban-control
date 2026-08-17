@@ -1,16 +1,29 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { IInputs } from '../generated/ManifestTypes';
-import { isNullOrEmpty, orderStages } from '../lib/utils';
+import { isNullOrEmpty, orderStages, chunkArray } from '../lib/utils';
 import { ViewEntity } from '../interfaces';
 import { XrmService } from './service';
 
 export type ConfigErrorReporter = (property: string, message: string) => void;
 export type ClearConfigError = (property: string) => void;
 
+/**
+ * Anzahl Record-IDs pro In()-Filter bei der BPF-Stage-Abfrage. Alle IDs (bis 2500) in
+ * einer URL wuerden die URL-Laengenlimits sprengen; daher wird in Chunks abgefragt.
+ */
+const BPF_STAGE_QUERY_CHUNK_SIZE = 100;
+
 export const useDataverse = (context: ComponentFramework.Context<IInputs>, onConfigError?: ConfigErrorReporter, clearConfigError?: ClearConfigError) => {
     const { parameters, webAPI } = context;
     const { dataset } = parameters;
     const entityName = useMemo(() => parameters.dataset.getTargetEntityType(), [])
+
+    // Cache fuer die STATISCHEN OptionSet-/stringmap-/statuscode-Metadaten. Diese aendern
+    // sich waehrend einer Session praktisch nie, wurden aber bisher bei jedem
+    // handleColumnsChange (jede dataset.columns-Referenzaenderung, u.a. nach jedem
+    // dataset.refresh()) neu vom Server geholt. Gekeyed auf Entity + Sprache + Spalten.
+    // (BPF-Stages pro Record bleiben bewusst ungecacht - siehe getRecordCurrentStage.)
+    const optionSetsCacheRef = useRef<{ key: string; value: any } | null>(null);
 
     const xrmService = useMemo(() => {
         const service = XrmService.getInstance();
@@ -24,20 +37,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
             record.id,
             record.update
         )
-    }
-
-    const getStatusMetadata = async () => {
-        try {
-            const metadata = xrmService.fetch(`api/data/v9.2/EntityDefinitions(LogicalName='nl_opportunity')/Attributes/Microsoft.Dynamics.CRM.StatusAttributeMetadata?$select=LogicalName,DisplayName&$expand=OptionSet($select=Options,MetadataId)`)
-            const options = (metadata as any).OptionSet?.Options;
-
-            if (isNullOrEmpty(options))
-                return;
-
-            return options;
-        } catch (e) {
-            console.log(e)
-        }
     }
 
     const getBusinessProcessFlows = async (logicalName: string, records: string[]) => {
@@ -145,19 +144,24 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
         const process = logicalName.includes("_") ? `_bpf_${entityName}id_value` : `${entityName}id_value`;
 
         const property = logicalName.includes("_") ? `bpf_${entityName}id` : `${entityName}id`;
-        const filter = `(Microsoft.Dynamics.CRM.In(PropertyName='${property}',PropertyValues=[${records.map(id => `'${id}'`).join(',')}]))`
 
-        const stages = await webAPI.retrieveMultipleRecords(
-            logicalName,
-            `?$select=_activestageid_value,_processid_value,${process}&$filter=${filter}&$expand=activestageid($select=stagename)`
+        // In Chunks abfragen, damit die In()-Filter-URL bei vielen Records nicht zu lang wird.
+        const chunks = chunkArray(records, BPF_STAGE_QUERY_CHUNK_SIZE);
+        const perChunk = await Promise.all(
+            chunks.map(async (chunk) => {
+                const filter = `(Microsoft.Dynamics.CRM.In(PropertyName='${property}',PropertyValues=[${chunk.map(id => `'${id}'`).join(',')}]))`
+                const stages = await webAPI.retrieveMultipleRecords(
+                    logicalName,
+                    `?$select=_activestageid_value,_processid_value,${process}&$filter=${filter}&$expand=activestageid($select=stagename)`
+                );
+                return stages.entities.map((item: any) => ({
+                    id: item[process],
+                    stageName: item.activestageid.stagename
+                }));
+            })
         );
 
-        return stages.entities.map((item: any) => {
-            return {
-                id: item[process],
-                stageName: item.activestageid.stagename
-            }
-        });
+        return perChunk.flat();
     }
 
     const retrieveStatusMetadata = async (logicalName: string): Promise<any> => {
@@ -175,6 +179,11 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
                 return [];
             }
 
+            const cacheKey = `${entityLogicalName}|${context.userSettings.languageId}|${datasetColumns.map((c) => c.name).sort().join(',')}`;
+            if (optionSetsCacheRef.current && optionSetsCacheRef.current.key === cacheKey) {
+                return optionSetsCacheRef.current.value;
+            }
+
             const filter = datasetColumns.map((column) => `attributename eq '${column.name}'`).join(' or ');
 
             const columnOptions = await webAPI.retrieveMultipleRecords(
@@ -182,17 +191,35 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
                 `?$filter=(objecttypecode eq '${entityLogicalName}' and (${filter}))`
             );
 
+            const userLang = context.userSettings.languageId;
+
             const columns = datasetColumns.map((column) => {
-                const options = columnOptions.entities
-                    .filter((option: any) => option.attributename == column.name)
-                    .filter((option: any) => option.langid == context.userSettings.languageId)
-                    .map((option: any) => ({
-                        key: option.attributevalue,
-                        id: option.attributevalue,
-                        label: option.value,
-                        title: option.value,
-                        order: option.displayorder
-                    }));
+                const columnEntries = columnOptions.entities.filter(
+                    (option: any) => option.attributename == column.name
+                );
+
+                // Pro Options-Wert (attributevalue) das Label in der Benutzersprache
+                // bevorzugen. Fehlt die Übersetzung, auf einen anderen gepflegten
+                // Sprach-Eintrag zurückfallen, damit die Spalte trotzdem existiert
+                // (sonst würden Karten dieses Werts ganz verschwinden).
+                const optionByValue = new Map<string, any>();
+                for (const opt of columnEntries) {
+                    const value = String(opt.attributevalue);
+                    const current = optionByValue.get(value);
+                    if (current == null) {
+                        optionByValue.set(value, opt);
+                    } else if (opt.langid == userLang && current.langid != userLang) {
+                        optionByValue.set(value, opt);
+                    }
+                }
+
+                const options = Array.from(optionByValue.values()).map((option: any) => ({
+                    key: option.attributevalue,
+                    id: option.attributevalue,
+                    label: option.value,
+                    title: option.value,
+                    order: option.displayorder
+                }));
 
                 return {
                     key: column.name,
@@ -221,6 +248,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
                 columns: item.columns.sort((a: any, b: any) => a.order - b.order)
             }));
 
+            optionSetsCacheRef.current = { key: cacheKey, value: sortedColumns };
             return sortedColumns;
         } catch (e) {
             console.log(e)
@@ -229,7 +257,6 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
 
     return {
         updateRecord,
-        getStatusMetadata,
         getBusinessProcessFlows,
         getOptionSets,
         getRecordCurrentStage

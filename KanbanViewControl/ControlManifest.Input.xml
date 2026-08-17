@@ -3,7 +3,7 @@
   <control 
     namespace="novalogica" 
     constructor="KanbanViewControl" 
-    version="1.7.1"
+    version="1.7.27"
     display-name-key="Kanban View Control" 
     description-key="PowerApps Component Framework control (PCF) that allows users to see records in a kanban view format." 
     control-type="virtual"
@@ -27,17 +27,26 @@
       required="false"
     />
 
-    <property 
-      name="businessProcessFlowStepOrder" 
-      display-name-key="Business Process Flow Step Order" 
+    <property
+      name="businessProcessFlowStepOrder"
+      display-name-key="Business Process Flow Step Order"
       description-key="Provide a JSON array to control the order of business process flow stages (e.g. [{&quot;id&quot;:&quot;Develop&quot;,&quot;order&quot;:2}])."
-      of-type="SingleLine.TextArea" 
-      usage="input" 
+      of-type="SingleLine.TextArea"
+      usage="input"
       required="false"
     />
 
-    <property 
-      name="hideViewBy" 
+    <property
+      name="disableBusinessProcessFlows"
+      display-name-key="Disable Business Process Flows"
+      description-key="When enabled, Business Process Flows are not loaded and not offered as views. Use this when the entity has no relevant BPFs (or you do not want them) to avoid unnecessary queries while the board loads."
+      of-type="TwoOptions"
+      usage="input"
+      required="false"
+    />
+
+    <property
+      name="hideViewBy"
       display-name-key="Hide View By if default View By set?" 
       of-type="TwoOptions" 
       usage="input" 
@@ -81,6 +90,33 @@
     />
 
     <property 
+      name="showCreateActivityButton" 
+      display-name-key="Show create activity button on card" 
+      description-key="When enabled, each card shows a button to create an activity (e.g. task) linked to the record. Use with Activity entity type to choose task, appointment, etc."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="createActivityEntityType" 
+      display-name-key="Create activity entity type" 
+      description-key="Logical name of the activity entity to create from the card (e.g. task, appointment, email). Default: task. Only used when Show create activity button on card is enabled."
+      of-type="SingleLine.Text" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="showSharePointFolderButton" 
+      display-name-key="Show SharePoint folder button on card" 
+      description-key="When enabled, each card shows a button to open the related SharePoint folder in a new browser tab."
+      of-type="TwoOptions" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="hideEmptyColumns" 
       display-name-key="Hide empty columns" 
       description-key="When enabled, columns that contain no cards are not shown."
@@ -102,6 +138,15 @@
       name="hiddenFieldsOnCard" 
       display-name-key="Hidden fields on card" 
       description-key="Field logical names that are loaded but not displayed on cards. JSON array (e.g. [&quot;field1&quot;,&quot;field2&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="fieldsVisiblePerStage" 
+      display-name-key="Fields visible per stage (phase)" 
+      description-key="Fields that are only shown on the card in certain columns. JSON object: field logical name -&gt; array of column identifiers. For Business Process Flow: use stage names (e.g. Qualify, Develop). For OptionSet/dropdown columns: use the numeric option values (IDs), not the labels (e.g. [&quot;1&quot;,&quot;2&quot;,&quot;3&quot;]). Example: {&quot;estimatedvalue&quot;:[&quot;Qualify&quot;,&quot;Develop&quot;],&quot;description&quot;:[&quot;2&quot;]}. Fields not listed are visible in all columns."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"
@@ -207,6 +252,24 @@
     />
 
     <property 
+      name="lineBreakFieldsOnCard" 
+      display-name-key="Line break fields on card" 
+      description-key="Field logical names for which line breaks (newlines) in the value are displayed. Other text fields show content in one line or with clamped lines. JSON array (e.g. [&quot;description&quot;]) or comma-separated list."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
+      name="fieldMaxHeightOnCard" 
+      display-name-key="Field max height on card" 
+      description-key="JSON array to set a maximum height (in pixels) for specific fields on the card (e.g. [{&quot;logicalName&quot;:&quot;description&quot;,&quot;maxHeightPx&quot;:80}]). Overflow is scrollable. Useful together with Line break fields on card for multi-line text."
+      of-type="SingleLine.TextArea" 
+      usage="input" 
+      required="false"
+    />
+
+    <property 
       name="quickFilterFields" 
       display-name-key="Quick filter fields" 
       description-key="Field logical names to show as quick filter dropdowns (multiselect for all except Boolean). Use the exact column name from the dataset (e.g. ownerid for entity, or a_xxx.ownerid for linked-entity columns). Supports OptionSet, Lookup, and text fields. JSON array (e.g. [&quot;statuscode&quot;,&quot;ownerid&quot;,&quot;a_c66099806c8349a18e63498da795a1a6.ownerid&quot;]) or comma-separated list. Only fields present in the dataset can be used."
@@ -245,7 +308,7 @@
     <property 
       name="filterPresets" 
       display-name-key="Filter presets" 
-      description-key="JSON array of filter presets. Each preset: { &quot;id&quot;: &quot;unique-id&quot;, &quot;label&quot;: &quot;Display name&quot;, &quot;filters&quot;: { &quot;fieldLogicalName&quot;: &quot;value&quot; or [&quot;value1&quot;,&quot;value2&quot;] } }. For multiselect use array; for Boolean single value. Use &quot;{{currentUser}}&quot; for current user (e.g. ownerid). Date fields: &quot;today&quot;, &quot;last7&quot;, &quot;last30&quot;, &quot;currentMonth&quot;, &quot;currentYear&quot;, &quot;currentWeek&quot;, &quot;nextWeek&quot;, &quot;nextMonth&quot;, &quot;YYYY-MM-DD|YYYY-MM-DD&quot;, or { &quot;start&quot;: &quot;YYYY-MM-DD&quot;, &quot;end&quot;: &quot;YYYY-MM-DD&quot; }. Number/currency fields: &quot;gt:123&quot;, &quot;lt:456&quot;, &quot;gte:0&quot;, &quot;lte:10000&quot;, &quot;between:100|5000&quot;. Example: [{ &quot;id&quot;: &quot;my-opportunities&quot;, &quot;label&quot;: &quot;Meine Opportunities&quot;, &quot;filters&quot;: { &quot;ownerid&quot;: &quot;{{currentUser}}&quot; } }, { &quot;id&quot;: &quot;high-value&quot;, &quot;label&quot;: &quot;Umsatz &gt; 10000&quot;, &quot;filters&quot;: { &quot;estimatedvalue&quot;: &quot;gt:10000&quot; } }]."
+      description-key="JSON array of filter presets. Each preset: { &quot;id&quot;: &quot;unique-id&quot;, &quot;label&quot;: &quot;Display name&quot;, &quot;filters&quot;: { &quot;fieldLogicalName&quot;: &quot;value&quot; or [&quot;value1&quot;,&quot;value2&quot;] } }. For multiselect use array; for Boolean single value. Use &quot;{{currentUser}}&quot; for current user (e.g. ownerid). Date fields: &quot;today&quot;, &quot;last7&quot;, &quot;last30&quot;, &quot;currentMonth&quot;, &quot;currentYear&quot;, &quot;currentWeek&quot;, &quot;nextWeek&quot;, &quot;nextMonth&quot;, &quot;YYYY-MM-DD|YYYY-MM-DD&quot;, or { &quot;start&quot;: &quot;YYYY-MM-DD&quot;, &quot;end&quot;: &quot;YYYY-MM-DD&quot; }. Number/currency fields: &quot;gt:123&quot;, &quot;lt:456&quot;, &quot;gte:0&quot;, &quot;lte:10000&quot;, &quot;between:100|5000&quot;. Add &quot;default&quot;: true to a preset to apply it automatically on first load (until the user changes filters). Example: [{ &quot;id&quot;: &quot;my-opportunities&quot;, &quot;label&quot;: &quot;Meine Opportunities&quot;, &quot;default&quot;: true, &quot;filters&quot;: { &quot;ownerid&quot;: &quot;{{currentUser}}&quot; } }, { &quot;id&quot;: &quot;high-value&quot;, &quot;label&quot;: &quot;Umsatz &gt; 10000&quot;, &quot;filters&quot;: { &quot;estimatedvalue&quot;: &quot;gt:10000&quot; } }]."
       of-type="SingleLine.TextArea" 
       usage="input" 
       required="false"

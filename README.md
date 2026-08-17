@@ -39,6 +39,9 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Card move validation function](#card-move-validation-function)
   - [Card move validation script (web resource)](#card-move-validation-script-web-resource)
   - [Show open in new tab button on card](#show-open-in-new-tab-button-on-card)
+  - [Show create activity button on card](#show-create-activity-button-on-card)
+  - [Create activity entity type](#create-activity-entity-type)
+  - [Show SharePoint folder button on card](#show-sharepoint-folder-button-on-card)
   - [Hide empty columns](#hide-empty-columns)
   - [Expand board to full width](#expand-board-to-full-width)
   - [Minimum column width](#minimum-column-width)
@@ -49,6 +52,7 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
 - [Card content & appearance](#card-content--appearance)
   - [Hide column field on card](#hide-column-field-on-card)
   - [Hidden fields on card](#hidden-fields-on-card)
+  - [Fields visible per stage (phase)](#fields-visible-per-stage-phase)
   - [HTML fields on card](#html-fields-on-card)
   - [Allowed HTML tags on card](#allowed-html-tags-on-card)
   - [Allowed HTML attributes on card](#allowed-html-attributes-on-card)
@@ -60,6 +64,8 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Lookup Persona icon only on card](#lookup-persona-icon-only-on-card)
   - [Show E-Mail and Phone as links on card](#show-e-mail-and-phone-as-links-on-card)
   - [Ellipsis fields on card](#ellipsis-fields-on-card)
+  - [Line break fields on card](#line-break-fields-on-card)
+  - [Field max height on card](#field-max-height-on-card)
 - [Security (HTML on cards)](#security-html-on-cards)
 - [Filters & sorting](#filters--sorting)
   - [Quick filter fields](#quick-filter-fields)
@@ -308,6 +314,40 @@ When **Yes**, each card shows a button (top right) that opens the record in a ne
 
 ---
 
+### Show create activity button on card
+
+**Type:** Yes/No
+
+When **Yes**, each card shows an additional **create activity** button (calendar icon) in the top-right corner (next to **open in new tab**).  
+Clicking the button opens a **Quick Create form** for the configured activity type when available; otherwise, the standard create form is opened.  
+The new activity is automatically linked to the card's record via the **Regarding** relationship (using `createFromEntity`). Default: **No**.
+
+---
+
+### Create activity entity type
+
+**Type:** Text
+
+Logical **name of the activity table** to create from the card when the create activity button is clicked, e.g. `task`, `appointment`, `email`.  
+If empty, the control uses `task` as the default.  
+Only used when **Show create activity button on card** is enabled.
+
+---
+
+### Show SharePoint folder button on card
+
+**Type:** Yes/No
+
+When **Yes**, each card shows a **SharePoint folder** button (folder icon) in the top-right corner, next to the other action buttons.  
+Clicking the button opens the **related SharePoint folder** for the current record in a new browser tab.  
+The control resolves the folder URL from the **SharePoint Document Location** linked to the record in Dataverse.  
+If **no document location exists yet** for the record, the control **creates one** (e.g. for opportunities: under the account's location and opportunity root, same behaviour as the Documents tab).  
+Default: **No**.
+
+If the opened folder is wrong or you want to compare with the app's behaviour, see [docs/SHAREPOINT_DEBUG.md](docs/SHAREPOINT_DEBUG.md) for using the browser Network tab.
+
+---
+
 ### Hide empty columns
 
 **Type:** Yes/No
@@ -402,6 +442,31 @@ Or comma-separated: `estimatedvalue, createdon, ownerid`
 
 ---
 
+### Fields visible per stage (phase)
+
+**Type:** Text (JSON object)
+
+Restricts **which fields are shown on the card** depending on the current column (phase/stage). Only listed fields are affected; fields not in the config are visible in all columns.
+
+- **Business Process Flow:** Use the **stage display names** (e.g. `Qualify`, `Develop`, `Propose`).
+- **OptionSet / dropdown columns:** Use the **numeric option values (IDs)**, not the dropdown labels. For example, if your status has values 1 = Open, 2 = In Progress, 3 = Closed, use `"1"`, `"2"`, `"3"` in the array.
+
+Format: `{ "fieldLogicalName": ["columnId1", "columnId2", ...], ... }`. A field is only shown when the card’s column is in that field’s list.
+
+**Example (BPF + OptionSet):**
+
+```json
+{
+  "estimatedvalue": ["Qualify", "Develop"],
+  "description": ["Develop"],
+  "custom_notes": ["2", "3"]
+}
+```
+
+Here, `estimatedvalue` is visible only in BPF stages Qualify and Develop; `description` only in Develop; `custom_notes` only when the OptionSet column has value 2 or 3.
+
+---
+
 ### HTML fields on card
 
 **Type:** Text (JSON array or comma-separated)
@@ -454,11 +519,21 @@ Or comma-separated.
 
 Custom **display names (labels)** for fields on the card. Format: `{"logicalName":"...","displayName":"..."}`. Fields not listed keep their dataset display name. Invalid JSON is reported.
 
-**Example:**
+`displayName` can be either a **plain string** (same label for all languages) or a **locale object** for internationalization (keys are locale codes like `"en"`, `"de"`, `"fr"`). The control resolves the label based on the user's app language. Falls back to the base language (e.g. `"en"` from `"en-US"`), then to `"en"`, then to the first available value.
+
+**Example (plain string — same for all locales):**
 
 ```json
 [{"logicalName":"estimatedvalue","displayName":"Value"},{"logicalName":"description","displayName":"Description"}]
 ```
+
+**Example (localized per language):**
+
+```json
+[{"logicalName":"estimatedvalue","displayName":{"en":"Value","de":"Wert","fr":"Valeur"}},{"logicalName":"description","displayName":{"en":"Notes","de":"Notizen"}}]
+```
+
+Both formats can be mixed in the same array.
 
 ---
 
@@ -537,6 +612,49 @@ When **enabled**, fields whose column type is **SingleLine.Email** or **SingleLi
 ```
 
 Or comma-separated.
+
+---
+
+### Line break fields on card
+
+**Type:** Text (JSON array or comma-separated)
+
+**Logical field names** for which **line breaks (newlines)** inside the value are preserved on the card.  
+Useful for multi-line descriptions or notes. Only applies to **non-HTML text values**; HTML fields are controlled via **HTML fields on card**.
+
+Combined with **Field widths on card**, you can make long text fields span the full card width and show proper paragraphs instead of a single wrapped line.
+
+**Example:**
+
+```json
+["description","nl_field"]
+```
+
+Or comma-separated.
+
+---
+
+### Field max height on card
+
+**Type:** Text (JSON array)
+
+Limit the **maximum height (in pixels)** of specific field values on the card. When the content exceeds this height, a **vertical scrollbar** appears inside the field so the card itself does not grow indefinitely.
+
+Each item has:
+
+- `logicalName` – field logical name
+- `maxHeightPx` – maximum height in pixels (number > 0)
+
+Often used together with **Line break fields on card** to show multi-line text in a scrollable area.
+
+**Example:**
+
+```json
+[
+  {"logicalName":"description","maxHeightPx":120},
+  {"logicalName":"internalnotes","maxHeightPx":160}
+]
+```
 
 ---
 
@@ -674,7 +792,7 @@ You can still use standard **Edit Columns** and **Edit Filters** functionality.
 
 ### Configuration errors
 
-If a JSON property contains invalid JSON, the control shows a **Configuration errors** banner above the board with the property name and error message. Properties validated as JSON: **Filter out Business Process Flows**, **Business Process Flow Step Order**, **Field display names on card**, **Field highlights**, **Field widths on card**, **Filter presets**. For **Quick filter fields** and **Sort fields**, an error is only reported when the value starts with `[` but is not valid JSON; otherwise comma-separated parsing is used. Fix the value in the control configuration to clear the banner.
+If a JSON property contains invalid JSON, the control shows a **Configuration errors** banner above the board with the property name and error message. Properties validated as JSON: **Filter out Business Process Flows**, **Business Process Flow Step Order**, **Fields visible per stage (phase)**, **Field display names on card**, **Field highlights**, **Field widths on card**, **Filter presets**. For **Quick filter fields** and **Sort fields**, an error is only reported when the value starts with `[` but is not valid JSON; otherwise comma-separated parsing is used. Fix the value in the control configuration to clear the banner.
 
 ## 📦 Deployment
 

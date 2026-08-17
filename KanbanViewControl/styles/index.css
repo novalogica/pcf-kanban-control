@@ -209,7 +209,7 @@
 .card-header-container {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
@@ -227,20 +227,29 @@
 
 .card-title {
   text-align: start;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   height: auto;
   text-wrap: wrap;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2; 
+  -webkit-line-clamp: 3;
+  line-clamp: 3; 
   -webkit-box-orient: vertical;
   min-width: 0;
   flex: 1 1 auto;
 }
 
-.card-open-new-tab-btn {
+.card-header-actions {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.card-open-new-tab-btn,
+.card-create-activity-btn,
+.card-open-sharepoint-folder-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -255,17 +264,35 @@
   cursor: pointer;
 }
 
-.card-open-new-tab-btn:hover {
+.card-open-new-tab-btn:hover,
+.card-create-activity-btn:hover,
+.card-open-sharepoint-folder-btn:hover {
   background: rgba(0, 0, 0, 0.06);
   color: rgb(33, 78, 128);
 }
 
-.card-open-new-tab-btn:focus {
+.card-open-new-tab-btn:focus,
+.card-create-activity-btn:focus,
+.card-open-sharepoint-folder-btn:focus {
   outline: 1px solid rgb(33, 78, 128);
   outline-offset: 1px;
 }
 
-.card-open-new-tab-btn svg {
+.card-open-new-tab-btn svg,
+.card-create-activity-btn svg,
+.card-open-sharepoint-folder-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.card-open-sharepoint-folder-btn:disabled,
+.card-create-activity-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.card-open-sharepoint-folder-btn .ms-Spinner,
+.card-create-activity-btn .ms-Spinner {
   width: 16px;
   height: 16px;
 }
@@ -360,6 +387,22 @@
   max-width: 100%;
 }
 
+/* Text fields with line breaks: preserve newlines, no line-clamp (configured via lineBreakFieldsOnCard). */
+.card-info-value-wrap {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.card-info-value--pre-wrap {
+  white-space: pre-wrap;
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  -webkit-box-orient: unset;
+  overflow-wrap: break-word;
+}
+
 /* Lookup as simple link – same height as other card-info-value */
 .card-info-value--link {
   all: unset;
@@ -428,6 +471,10 @@
   overflow: hidden;
 }
 
+.kanban-quick-filters-inline-item {
+  flex-shrink: 0;
+}
+
 .kanban-quick-filters-inline .kanban-dropdown,
 .kanban-quick-filters-inline .kanban-date-filter,
 .kanban-quick-filters-inline .kanban-number-filter {
@@ -438,10 +485,38 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  position: relative;
 }
 
 .kanban-quick-filters-more-btn {
   flex-shrink: 0;
+}
+
+.kanban-quick-filters-more-btn--active {
+  color: #0078d4;
+}
+
+.kanban-quick-filters-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background-color: #0078d4;
+  border-radius: 8px;
+  padding: 0 4px;
+  pointer-events: none;
+}
+
+.kanban-quick-filters-popup-empty {
+  font-size: 13px;
+  color: #605e5c;
+  padding: 4px 0;
 }
 
 .kanban-quick-filters-callout.kanban-quick-filters-callout {
@@ -510,12 +585,6 @@
 /* Hide dropdown label in popup (we use row label instead) */
 .kanban-quick-filters-popup-dropdown .kanban-dropdown > .ms-Label {
   display: none;
-}
-
-.kanban-quick-filters-popup-trigger {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
 }
 
 /* Date filter: only dropdown inline; Von/Bis in callout when "Benutzerdefinierter Bereich" selected */
@@ -786,7 +855,8 @@ body {
 }
 
 .config-errors-banner {
-  padding: 12px 16px;
+  position: relative;
+  padding: 12px 40px 12px 16px;
   margin-bottom: 12px;
   background-color: #fde7e9;
   border: 1px solid #d13438;
@@ -799,9 +869,35 @@ body {
   color: #a4262c;
 }
 
+.config-errors-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #161616;
+}
+
 .config-errors-banner ul {
   margin: 8px 0 0;
   padding-left: 20px;
+}
+
+.config-errors-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #a4262c;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.config-errors-dismiss:hover {
+  background-color: rgba(164, 38, 44, 0.12);
 }
 
 /* No z-index so host popup and backdrop render on top and cover the indicator. */

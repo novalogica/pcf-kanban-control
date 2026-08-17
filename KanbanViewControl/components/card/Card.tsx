@@ -1,27 +1,16 @@
 import * as React from "react";
 import { Text } from "@fluentui/react/lib/Text";
-import { OpenRegular } from "@fluentui/react-icons";
+import { OpenRegular, CalendarRegular, FolderRegular } from "@fluentui/react-icons";
 import CardHeader from "./CardHeader";
 import CardBody from "./CardBody";
 import { CardInfo, CardItem } from "../../interfaces";
 import { CardDetails, CardDetailsList } from "./CardDetails";
-import { useMemo, useCallback, useRef } from "react";
-import { BoardContext } from "../../context/board-context";
+import { useMemo, useCallback, useRef, useState } from "react";
+import { CardActionsContext } from "../../context/card-actions-context";
+import { CardConfigContext } from "../../context/card-config-context";
+import { getStrings } from "../../lib/strings";
 import { useContext } from "react";
-
-export type HighlightType = "left" | "right" | "cornerTopRight" | "cornerBottomRight" | "cornerTopLeft" | "cornerBottomLeft";
-
-export interface BooleanFieldHighlightConfig {
-  logicalName: string;
-  color: string;
-  /** Highlight type: left/right border or diagonal corner (top-left, top-right, bottom-left, bottom-right). Default "left". First match per type wins. */
-  type?: HighlightType;
-}
-
-export interface FieldWidthConfig {
-  logicalName: string;
-  width: number;
-}
+import { Spinner, SpinnerSize } from "@fluentui/react";
 
 interface IProps {
   item: CardItem;
@@ -66,8 +55,39 @@ function hasValue(value: unknown): boolean {
 const CLICK_MOVE_THRESHOLD_PX = 5;
 
 const Card = ({ item, draggable = true }: IProps) => {
-  const { context, activeView, openFormWithLoading, openEntityInNewTab, showOpenInNewTabButton, reportConfigError, clearConfigError } = useContext(BoardContext);
+  const {
+    locale,
+    context,
+    activeView,
+    openFormWithLoading,
+    openEntityInNewTab,
+    showOpenInNewTabButton,
+    showCreateActivityButton,
+    createActivityEntityType,
+    openCreateActivityForm,
+    showSharePointFolderButton,
+    openSharePointFolderInNewTab,
+  } = useContext(CardActionsContext);
+  const strings = getStrings(locale);
+  const {
+    hideColumnFieldOnCard,
+    hiddenFieldsOnCardSet,
+    fieldsVisiblePerStageMap,
+    htmlFieldsOnCardSet,
+    hideLabelForFieldsOnCardSet,
+    booleanFieldHighlights,
+    fieldWidthsOnCardMap,
+    lookupFieldsAsPersonaOnCardSet,
+    lookupFieldsPersonaIconOnlyOnCardSet,
+    showEmailAndPhoneAsLinks,
+    ellipsisFieldsOnCardSet,
+    lineBreakFieldsOnCardSet,
+    fieldMaxHeightOnCardMap,
+    fieldDisplayNamesOnCardMap,
+  } = useContext(CardConfigContext);
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const [isSharePointLoading, setIsSharePointLoading] = useState(false);
+  const [isCreatingActivity, setIsCreatingActivity] = useState(false);
 
   const onCardClick = useCallback(() => {
     openFormWithLoading(context.parameters.dataset.getTargetEntityType(), item.id.toString());
@@ -105,198 +125,6 @@ const Card = ({ item, draggable = true }: IProps) => {
     [onCardClick]
   );
 
-  const hideColumnFieldOnCard = useMemo(() => {
-    return context.parameters.hideColumnFieldOnCard?.raw === true;
-  }, [context.parameters]);
-
-  const hiddenFieldsOnCardSet = useMemo(() => {
-    const raw = context.parameters.hiddenFieldsOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("hiddenFieldsOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("hiddenFieldsOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters.hiddenFieldsOnCard, reportConfigError, clearConfigError]);
-
-  const htmlFieldsOnCardSet = useMemo(() => {
-    const raw = (context.parameters as { htmlFieldsOnCard?: { raw?: string } }).htmlFieldsOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("htmlFieldsOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("htmlFieldsOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const hideLabelForFieldsOnCardSet = useMemo(() => {
-    const raw = (context.parameters as { hideLabelForFieldsOnCard?: { raw?: string } }).hideLabelForFieldsOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("hideLabelForFieldsOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("hideLabelForFieldsOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const booleanFieldHighlights = useMemo((): BooleanFieldHighlightConfig[] => {
-    const raw = (context.parameters as { booleanFieldHighlights?: { raw?: string } }).booleanFieldHighlights?.raw?.trim();
-    if (!raw) return [];
-    try {
-      const arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) return [];
-      clearConfigError?.("booleanFieldHighlights");
-      const validTypes: HighlightType[] = ["left", "right", "cornerTopRight", "cornerBottomRight", "cornerTopLeft", "cornerBottomLeft"];
-      return arr
-        .filter((e: unknown) => e && typeof e === "object" && "logicalName" in e && "color" in e)
-        .map((e: { logicalName: string; color: string; type?: string }) => {
-          const typeRaw = e.type != null ? String(e.type).trim() : "left";
-          const type = validTypes.includes(typeRaw as HighlightType) ? (typeRaw as HighlightType) : "left";
-          return {
-            logicalName: String(e.logicalName).trim(),
-            color: String(e.color).trim(),
-            type,
-          };
-        })
-        .filter((e) => e.logicalName && e.color);
-    } catch (e) {
-      reportConfigError?.("booleanFieldHighlights", e instanceof Error ? e.message : String(e));
-      return [];
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const fieldWidthsOnCardMap = useMemo((): Map<string, number> => {
-    const raw = (context.parameters as { fieldWidthsOnCard?: { raw?: string } }).fieldWidthsOnCard?.raw?.trim();
-    if (!raw) return new Map();
-    try {
-      const arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) return new Map();
-      clearConfigError?.("fieldWidthsOnCard");
-      const map = new Map<string, number>();
-      for (const e of arr) {
-        if (e && typeof e === "object" && "logicalName" in e && "width" in e) {
-          const name = String(e.logicalName).trim();
-          const w = Number(e.width);
-          if (name && !isNaN(w) && w > 0 && w <= 100) map.set(name, w);
-        }
-      }
-      return map;
-    } catch (e) {
-      reportConfigError?.("fieldWidthsOnCard", e instanceof Error ? e.message : String(e));
-      return new Map();
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const lookupFieldsAsPersonaOnCardSet = useMemo(() => {
-    const raw = (context.parameters as { lookupFieldsAsPersonaOnCard?: { raw?: string } }).lookupFieldsAsPersonaOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("lookupFieldsAsPersonaOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("lookupFieldsAsPersonaOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const lookupFieldsPersonaIconOnlyOnCardSet = useMemo(() => {
-    const raw = (context.parameters as { lookupFieldsPersonaIconOnlyOnCard?: { raw?: string } }).lookupFieldsPersonaIconOnlyOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("lookupFieldsPersonaIconOnlyOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("lookupFieldsPersonaIconOnlyOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const showEmailAndPhoneAsLinks = useMemo(() => {
-    return (context.parameters as { showEmailAndPhoneAsLinks?: { raw?: boolean } }).showEmailAndPhoneAsLinks?.raw === true;
-  }, [context.parameters]);
-
-  const ellipsisFieldsOnCardSet = useMemo(() => {
-    const raw = (context.parameters as { ellipsisFieldsOnCard?: { raw?: string } }).ellipsisFieldsOnCard?.raw?.trim();
-    if (!raw) return new Set<string>();
-    try {
-      const trimmed = raw.trim();
-      if (trimmed.startsWith("[")) {
-        const arr = JSON.parse(trimmed) as string[];
-        clearConfigError?.("ellipsisFieldsOnCard");
-        return new Set(Array.isArray(arr) ? arr.map((s) => String(s).trim()).filter(Boolean) : []);
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    } catch (e) {
-      if (raw.trim().startsWith("[")) {
-        reportConfigError?.("ellipsisFieldsOnCard", e instanceof Error ? e.message : String(e));
-      }
-      return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
-  const fieldDisplayNamesOnCardMap = useMemo((): Map<string, string> => {
-    const raw = (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw?.trim();
-    if (!raw) return new Map();
-    try {
-      const arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) return new Map();
-      clearConfigError?.("fieldDisplayNamesOnCard");
-      const map = new Map<string, string>();
-      for (const e of arr) {
-        if (e && typeof e === "object" && "logicalName" in e && "displayName" in e) {
-          const name = String(e.logicalName).trim();
-          const displayName = String(e.displayName).trim();
-          if (name) map.set(name, displayName);
-        }
-      }
-      return map;
-    } catch (e) {
-      reportConfigError?.("fieldDisplayNamesOnCard", e instanceof Error ? e.message : String(e));
-      return new Map();
-    }
-  }, [context.parameters, reportConfigError, clearConfigError]);
-
   const highlights = useMemo(() => {
     const result: { left?: string; right?: string; cornerTopRight?: string; cornerBottomRight?: string; cornerTopLeft?: string; cornerBottomLeft?: string } = {};
     const done = { left: false, right: false, cornerTopRight: false, cornerBottomRight: false, cornerTopLeft: false, cornerBottomLeft: false };
@@ -318,14 +146,23 @@ const Card = ({ item, draggable = true }: IProps) => {
 
   const columnFieldKey = activeView?.key;
 
+  const currentStageName = useMemo(() => {
+    const col = item.column;
+    return col != null ? String(col).trim() : "";
+  }, [item.column]);
+
   const cardDetails = useMemo(() => {
     return Object.entries(item)?.filter((i) => {
       if (i[0] === "title" || i[0] === "tag" || i[0] === "id" || i[0] === "column") return false;
       if (hideColumnFieldOnCard && columnFieldKey && i[0] === columnFieldKey) return false;
       if (setMatchesField(hiddenFieldsOnCardSet, i[0])) return false;
+      const allowedStages = fieldsVisiblePerStageMap.get(i[0]);
+      if (allowedStages !== undefined && allowedStages.length > 0) {
+        if (!currentStageName || !allowedStages.includes(currentStageName)) return false;
+      }
       return true;
     });
-  }, [item, hideColumnFieldOnCard, columnFieldKey, hiddenFieldsOnCardSet]);
+  }, [item, hideColumnFieldOnCard, columnFieldKey, hiddenFieldsOnCardSet, fieldsVisiblePerStageMap, currentStageName]);
 
   const isClickable = !draggable;
 
@@ -370,20 +207,79 @@ const Card = ({ item, draggable = true }: IProps) => {
         <Text className="card-title" nowrap>
           {item?.title?.value}
         </Text>
-        {showOpenInNewTabButton && (
-          <button
-            type="button"
-            className="card-open-new-tab-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              openEntityInNewTab(context.parameters.dataset.getTargetEntityType(), item.id.toString());
-            }}
-            aria-label="In neuem Tab öffnen"
-            title="In neuem Tab öffnen"
-          >
-            <OpenRegular />
-          </button>
+        {(showOpenInNewTabButton || showCreateActivityButton || showSharePointFolderButton) && (
+          <span className="card-header-actions">
+            {showCreateActivityButton && (
+              <button
+                type="button"
+                className="card-create-activity-btn"
+                disabled={isCreatingActivity}
+                aria-busy={isCreatingActivity}
+                aria-label={strings.cardActionCreateActivity}
+                title={strings.cardActionCreateActivity}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (isCreatingActivity) return;
+                  setIsCreatingActivity(true);
+                  openCreateActivityForm(
+                    createActivityEntityType,
+                    context.parameters.dataset.getTargetEntityType(),
+                    item.id.toString(),
+                    typeof item?.title?.value === "string" ? item.title.value : undefined
+                  ).finally(() => setIsCreatingActivity(false));
+                }}
+              >
+                {isCreatingActivity ? (
+                  <Spinner size={SpinnerSize.small} />
+                ) : (
+                  <CalendarRegular />
+                )}
+              </button>
+            )}
+            {showSharePointFolderButton && (
+              <button
+                type="button"
+                className="card-open-sharepoint-folder-btn"
+                disabled={isSharePointLoading}
+                aria-busy={isSharePointLoading}
+                aria-label={strings.cardActionOpenSharePoint}
+                title={strings.cardActionOpenSharePoint}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (isSharePointLoading) return;
+                  setIsSharePointLoading(true);
+                  openSharePointFolderInNewTab(
+                    context.parameters.dataset.getTargetEntityType(),
+                    item.id.toString(),
+                    typeof item?.title?.value === "string" ? item.title.value : undefined
+                  ).finally(() => setIsSharePointLoading(false));
+                }}
+              >
+                {isSharePointLoading ? (
+                  <Spinner size={SpinnerSize.small} />
+                ) : (
+                  <FolderRegular />
+                )}
+              </button>
+            )}
+            {showOpenInNewTabButton && (
+              <button
+                type="button"
+                className="card-open-new-tab-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  openEntityInNewTab(context.parameters.dataset.getTargetEntityType(), item.id.toString());
+                }}
+                aria-label={strings.cardActionOpenInNewTab}
+                title={strings.cardActionOpenInNewTab}
+              >
+                <OpenRegular />
+              </button>
+            )}
+          </span>
         )}
       </CardHeader>
       <CardBody>
@@ -404,6 +300,8 @@ const Card = ({ item, draggable = true }: IProps) => {
                 lookupPersonaIconOnly={setMatchesField(lookupFieldsPersonaIconOnlyOnCardSet, fieldKey)}
                 showEmailAndPhoneAsLinks={showEmailAndPhoneAsLinks}
                 textEllipsis={setMatchesField(ellipsisFieldsOnCardSet, fieldKey)}
+                preserveLineBreaks={setMatchesField(lineBreakFieldsOnCardSet, fieldKey)}
+                maxHeightPx={mapGetByField(fieldMaxHeightOnCardMap, fieldKey)}
               />
             );
           })}
@@ -413,4 +311,7 @@ const Card = ({ item, draggable = true }: IProps) => {
   );
 }
 
-export default Card;
+// React.memo: Karte rendert nur neu, wenn sich item/draggable ändern. Da Card jetzt nur
+// noch CardActionsContext + CardConfigContext (beide stabil bei Filter/Sort/Suche) und
+// referenzstabile item-Objekte (P4) konsumiert, entfallen Re-Renders bei diesen Interaktionen.
+export default React.memo(Card);

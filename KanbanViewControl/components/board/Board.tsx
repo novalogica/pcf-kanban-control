@@ -8,11 +8,14 @@ import {
 } from "@hello-pangea/dnd";
 import { BoardContext } from "../../context/board-context";
 import { useDnD } from "../../hooks/useDnD";
-import { pluralizedLogicalNames } from "../../lib/utils";
+import { pluralizedLogicalNames, hasActiveFilters } from "../../lib/utils";
+import { getStrings } from "../../lib/strings";
 
 const Board = () => {
-  const { context, columns, selectedEntity, activeView, draggingRef } =
+  const { locale, context, columns, selectedEntity, activeView, draggingRef, quickFilterValues, searchKeyword, selectedFilterPresetId } =
     useContext(BoardContext);
+  const strings = getStrings(locale);
+  const filtersActive = hasActiveFilters(quickFilterValues, searchKeyword, selectedFilterPresetId);
   const { onDragEnd } = useDnD(columns);
 
   const allowCardMove = useMemo(() => {
@@ -44,8 +47,13 @@ const Board = () => {
         columnName,
       };
 
-      await onDragEnd(result, record);
-      context.parameters.dataset.refresh();
+      const outcome = await onDragEnd(result, record);
+      // Nur neu laden, wenn onDragEnd es signalisiert (persistierter OptionSet-Wechsel
+      // oder BPF-Formular). Kein Refresh bei Reorder, Ablehnung oder Fehler; im BPF-Fall
+      // refresht onDragEnd nicht mehr selbst -> kein doppeltes dataset.refresh().
+      if (outcome?.shouldRefresh) {
+        context.parameters.dataset.refresh();
+      }
     } finally {
       setTimeout(() => {
         draggingRef.current = false;
@@ -136,7 +144,7 @@ const Board = () => {
           {visibleColumns.length === 0 && (
             <div className="no-columns">
               <div className="no-data-content">
-                <span className="no-data-text">No records found</span>
+                <span className="no-data-text">{filtersActive ? strings.noRecordsForFilters : strings.noRecordsFound}</span>
               </div>
             </div>
           )}
