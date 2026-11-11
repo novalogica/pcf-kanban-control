@@ -1,7 +1,9 @@
 import { DropResult, DraggableStateSnapshot, DraggableStyle } from "@hello-pangea/dnd";
 import { ColumnItem, CardItem } from "../interfaces";
 
-export const moveCard = async (columns: ColumnItem[], sourceCard: CardItem | undefined, result: DropResult) => {
+// Synchron (kein await): @hello-pangea/dnd erwartet die Reorder-Zustandsänderung
+// synchron im onDragEnd-Handler, sonst springt die Karte sichtbar an den Ursprung zurück.
+export const moveCard = (columns: ColumnItem[], sourceCard: CardItem | undefined, result: DropResult) => {
   let copy = [...columns];
 
   const itemId = result.draggableId;

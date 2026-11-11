@@ -7,8 +7,11 @@ import { ColumnItem, ViewItem, ViewEntity } from "./interfaces";
 import Loading from "./components/container/loading";
 import { Toaster } from "react-hot-toast";
 import { useDataverse } from "./hooks/useDataverse";
+import { useCardConfig } from "./hooks/useCardConfig";
+import { CardConfigContext } from "./context/card-config-context";
+import { CardActionsContext } from "./context/card-actions-context";
 import { useNavigation } from "./hooks/useNavigation";
-import { getColumnValue, isBooleanColumnDataType, isDateColumnDataType, isNumberColumnDataType, toComparableDate, toComparableNumber, isDateInFilterRange, isNumberInFilterRange } from "./lib/utils";
+import { getColumnValue, isBooleanColumnDataType, isDateColumnDataType, isNumberColumnDataType, toComparableDate, toComparableNumber, isDateInFilterRange, isNumberInFilterRange, parseFieldDisplayNames } from "./lib/utils";
 import { unlocatedColumn } from "./lib/constants";
 import { getLocaleFromLanguageId, getStrings } from "./lib/strings";
 import { getClientUrl, loadWebResourceScript } from "./lib/load-validation-script";
@@ -87,6 +90,24 @@ function getQuickFilterComparableValue(fieldValue: unknown): string {
   return String(fieldValue);
 }
 
+/** Sortier-Schlüssel pro Karte: leer = immer ans Ende (unabhängig von asc/desc). */
+function getCardSortKey(card: Record<string, unknown>, sortByField: string): { comparable: number | string; empty: boolean } {
+  // Rohwert nutzen, falls vorhanden (in filterRecords als `${field}Raw` für Zahl-/
+  // Währungs- und Datumsfelder gesetzt) -> korrekte numerische bzw. chronologische
+  // Sortierung statt eines formatierten Strings wie "1.234,56 €" oder "14.07.2026".
+  const raw = card[`${sortByField}Raw`];
+  if (typeof raw === "number" && !Number.isNaN(raw)) {
+    return { comparable: raw, empty: false };
+  }
+  if (raw instanceof Date) {
+    return { comparable: raw.getTime(), empty: false };
+  }
+  // Fallback: formatierter Textwert (String-Vergleich, numeric-aware in handleViewChange).
+  const va = getQuickFilterComparableValue(card[sortByField]);
+  const empty = va == null || String(va).trim() === "";
+  return { comparable: va ?? "", empty };
+}
+
 interface DefaultSortConfig {
   field: string | null;
   direction: SortDirection;
@@ -143,10 +164,12 @@ interface IProps {
 }
 
 const App = ({ context, notificationPosition }: IProps) => {
-  // View ID for local storage scope: store quick filters per view separately
+  // Local-Storage-Scope: gespeicherte Quick-Filter je Entitaet UND View trennen, damit
+  // verschiedene Board-Instanzen unterschiedlicher Entitaeten ihre Filter nicht teilen.
   const viewId = (context.parameters?.dataset as { getViewId?: () => string })?.getViewId?.() ?? "";
+  const storageEntityType = (context.parameters?.dataset as { getTargetEntityType?: () => string })?.getTargetEntityType?.() ?? "";
   const quickFiltersStorageKey =
-    viewId ? `${QUICK_FILTERS_STORAGE_PREFIX}-${viewId}` : null;
+    viewId ? `${QUICK_FILTERS_STORAGE_PREFIX}-${storageEntityType}-${viewId}` : null;
 
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState<ViewItem | undefined>();
@@ -156,13 +179,13 @@ const App = ({ context, notificationPosition }: IProps) => {
   const [activeViewEntity, setActiveViewEntity] = useState<ViewEntity | undefined>();
   const [isOpeningEntity, setIsOpeningEntity] = useState(false);
   const [configErrors, setConfigErrors] = useState<ConfigError[]>([]);
+  const [configErrorsDismissed, setConfigErrorsDismissed] = useState(false);
   const [quickFilterValues, setQuickFilterValuesState] = useState<Record<string, string | string[] | null>>(
     () =>
       quickFiltersStorageKey
         ? (loadStoredQuickFilters(quickFiltersStorageKey)?.quickFilterValues ?? {})
         : {}
   );
-  const [quickFilterOptions, setQuickFilterOptions] = useState<Record<string, IDropdownOption[]>>({});
   const [searchKeyword, setSearchKeyword] = useState(() =>
     quickFiltersStorageKey
       ? (loadStoredQuickFilters(quickFiltersStorageKey)?.searchKeyword ?? "")
@@ -213,6 +236,12 @@ const App = ({ context, notificationPosition }: IProps) => {
   const prevViewIdRef = useRef<string | null>(null);
   const draggingRef = useRef(false);
   const openingRef = useRef(false);
+  // Ob beim ersten Laden bereits ein gespeicherter Filterzustand existierte. Nur wenn NICHT,
+  // wird ein als default markiertes Filter-Preset automatisch angewendet (Standardfilter).
+  const hadStoredFilterStateRef = useRef<boolean>(
+    quickFiltersStorageKey ? loadStoredQuickFilters(quickFiltersStorageKey) !== null : false
+  );
+  const appliedDefaultPresetRef = useRef(false);
 
   const cardMoveValidationFunctionName = useMemo(() => {
     const raw = (context.parameters as { cardMoveValidationFunction?: { raw?: string } }).cardMoveValidationFunction?.raw;
@@ -254,10 +283,16 @@ const App = ({ context, notificationPosition }: IProps) => {
   const locale = getLocaleFromLanguageId(
     (context as { userSettings?: { languageId?: number } }).userSettings?.languageId
   );
+  const strings = getStrings(locale);
   const { getOptionSets, getBusinessProcessFlows } = useDataverse(context, reportConfigError, clearConfigError);
-  const { openForm, openEntityInNewTab } = useNavigation(context);
+  const cardConfig = useCardConfig(context, locale, reportConfigError, clearConfigError);
+  const { openForm, openEntityInNewTab, openCreateActivityForm, openSharePointFolderInNewTab } = useNavigation(context);
   const { dataset } = context.parameters;
   const showOpenInNewTabButton = (context.parameters as { showOpenInNewTabButton?: { raw?: boolean } }).showOpenInNewTabButton?.raw === true;
+  const showCreateActivityButton = (context.parameters as { showCreateActivityButton?: { raw?: boolean } }).showCreateActivityButton?.raw === true;
+  const createActivityEntityTypeRaw = (context.parameters as { createActivityEntityType?: { raw?: string } }).createActivityEntityType?.raw?.trim();
+  const createActivityEntityType = createActivityEntityTypeRaw !== undefined && createActivityEntityTypeRaw !== "" ? createActivityEntityTypeRaw : "task";
+  const showSharePointFolderButton = (context.parameters as { showSharePointFolderButton?: { raw?: boolean } }).showSharePointFolderButton?.raw === true;
 
   // Key for refresh: derived from current records on each render so that
   // after dataset.refresh() the display updates (even when PCF returns the same reference).
@@ -314,6 +349,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         .map((e) => ({
           id: String(e.id).trim(),
           label: String(e.label),
+          ...((e as { default?: unknown }).default === true ? { default: true as const } : {}),
           filters: typeof e.filters === "object" && e.filters !== null && !Array.isArray(e.filters)
             ? Object.fromEntries(
                 Object.entries(e.filters).map(([k, v]) => {
@@ -337,27 +373,15 @@ const App = ({ context, notificationPosition }: IProps) => {
     }
   }, [filterPresetsParam, reportConfigError, clearConfigError]);
 
-  const fieldDisplayNamesOnCardMap = useMemo((): Map<string, string> => {
-    const raw = (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw?.trim();
-    if (!raw) return new Map();
-    try {
-      const arr = JSON.parse(raw);
-      if (!Array.isArray(arr)) return new Map();
-      clearConfigError("fieldDisplayNamesOnCard");
-      const map = new Map<string, string>();
-      for (const e of arr) {
-        if (e && typeof e === "object" && "logicalName" in e && "displayName" in e) {
-          const name = String(e.logicalName).trim();
-          const displayName = String(e.displayName).trim();
-          if (name) map.set(name, displayName);
-        }
-      }
-      return map;
-    } catch (e) {
-      reportConfigError("fieldDisplayNamesOnCard", e instanceof Error ? e.message : String(e));
-      return new Map();
-    }
-  }, [(context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw, reportConfigError, clearConfigError]);
+  const fieldDisplayNamesOnCardMap = useMemo(
+    () => parseFieldDisplayNames(
+      (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw,
+      locale,
+      reportConfigError,
+      clearConfigError,
+    ),
+    [(context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw, locale, reportConfigError, clearConfigError]
+  );
 
   const quickFilterFieldsConfig = useMemo((): QuickFilterFieldConfig[] => {
     if (!dataset?.columns) return [];
@@ -478,6 +502,18 @@ const App = ({ context, notificationPosition }: IProps) => {
     [filterPresetsConfig, quickFilterFieldsConfig, currentUserDisplayName]
   );
 
+  // Standardfilter: Ein mit "default": true markiertes Preset wird beim ersten Laden
+  // automatisch angewendet, sofern noch kein gespeicherter Filterzustand existierte.
+  // Danach hat der gespeicherte Zustand des Nutzers Vorrang. Der {{currentUser}}-Platzhalter
+  // wird ggf. vom bestehenden Re-Apply-Effekt ergänzt, sobald der Nutzername geladen ist.
+  useEffect(() => {
+    if (hadStoredFilterStateRef.current || appliedDefaultPresetRef.current) return;
+    const defaultPreset = filterPresetsConfig.find((p) => p.default);
+    if (!defaultPreset) return;
+    appliedDefaultPresetRef.current = true;
+    applyFilterPreset(defaultPreset.id);
+  }, [filterPresetsConfig, applyFilterPreset]);
+
   useEffect(() => {
     reportedConfigErrorsRef.current.clear();
   }, [
@@ -491,6 +527,8 @@ const App = ({ context, notificationPosition }: IProps) => {
     (context.parameters as { fieldWidthsOnCard?: { raw?: string } }).fieldWidthsOnCard?.raw,
     (context.parameters as { showEmailAndPhoneAsLinks?: { raw?: boolean } }).showEmailAndPhoneAsLinks?.raw,
     (context.parameters as { ellipsisFieldsOnCard?: { raw?: string } }).ellipsisFieldsOnCard?.raw,
+    (context.parameters as { lineBreakFieldsOnCard?: { raw?: string } }).lineBreakFieldsOnCard?.raw,
+    (context.parameters as { fieldMaxHeightOnCard?: { raw?: string } }).fieldMaxHeightOnCard?.raw,
     (context.parameters as { fieldDisplayNamesOnCard?: { raw?: string } }).fieldDisplayNamesOnCard?.raw,
     (context.parameters as { quickFilterFields?: { raw?: string } }).quickFilterFields?.raw,
     (context.parameters as { sortFields?: { raw?: string } }).sortFields?.raw,
@@ -585,17 +623,118 @@ const App = ({ context, notificationPosition }: IProps) => {
     }
   }, [openForm]);
 
-  const handleViewChange = useCallback(() => {
-    if (activeView === undefined || activeView.columns === undefined) return;
+  const filterRecords = useCallback(
+    (activeView: ViewItem, quickFilterFieldsList: string[]) => {
+      const columns = dataset.columns;
+      // Vorab-Lookups (einmal pro Aufruf) statt find() pro Record -> vermeidet O(n^2):
+      // - Stage pro Record-Id (nur bei BPF-Views)
+      // - Spalte pro Feldname (für die Quick-Filter-Felder)
+      const bpfStageById =
+        activeView.type === "BPF" && activeView.records
+          ? new Map(activeView.records.map((r) => [r.id, r.stageName]))
+          : null;
+      const columnByName = new Map(columns.map((c) => [c.name, c]));
 
-    const allCards: any[] = filterRecords(activeView, quickFilterFieldsParsed);
+      return Object.entries(dataset.records).map(([id, record]) => {
+        // Mutierendes Zielobjekt statt {...acc}-Spread pro Spalte (vermeidet O(columns^2)).
+        const cardData: Record<string, unknown> = { id };
 
+        columns.forEach((col, index) => {
+          if (col.name === activeView.key) {
+            // Zuordnung über die numerische OptionSet-ID (sprachunabhängig), nicht über
+            // das angezeigte Label. Damit ist die Spaltenzuordnung unabhängig davon, in
+            // welcher Sprache die stringmap-Werte gepflegt/übersetzt sind.
+            const rawValue = record.getValue(col.name);
+            const targetColumn =
+              activeView.columns !== undefined
+                ? activeView.columns.find(
+                    (column) => rawValue != null && String(column.id) === String(rawValue)
+                  )
+                : { id: null };
+            cardData.column = targetColumn ? targetColumn.id : "unallocated";
+          }
+
+          if (activeView.type === "BPF") {
+            cardData.column = bpfStageById?.get(id) ?? "";
+          }
+
+          const name = index === 0 ? "title" : col.name;
+          const hasDisplayName = col.displayName != null && String(col.displayName).trim() !== "";
+
+          if (!hasDisplayName) {
+            return;
+          }
+
+          cardData[name] = getColumnValue(record, col);
+
+          const rawColVal = record.getValue(col.name);
+          const isDateValue =
+            rawColVal instanceof Date ||
+            (typeof rawColVal === "number" && rawColVal > 1000000000000);
+          const isNumericValue =
+            typeof rawColVal === "number" && !Number.isNaN(rawColVal) && rawColVal < 1000000000000;
+          if (
+            isDateValue ||
+            isDateColumnDataType((col as { dataType?: string | number }).dataType)
+          ) {
+            if (rawColVal !== null && rawColVal !== undefined) {
+              cardData[`${col.name}Raw`] = rawColVal;
+            }
+          }
+          if (
+            isNumericValue ||
+            isNumberColumnDataType((col as { dataType?: string | number }).dataType)
+          ) {
+            if (rawColVal !== null && rawColVal !== undefined) {
+              cardData[`${col.name}Raw`] = rawColVal;
+            }
+          }
+        });
+
+        for (const fieldName of quickFilterFieldsList) {
+          const col = columnByName.get(fieldName);
+          if (col && !(col.name in cardData)) {
+            cardData[col.name] = getColumnValue(record, col);
+          }
+        }
+
+        // Vorberechneter, bereits lowercased Suchtext: nur formatierte Werte, KEINE
+        // Raw-Duplikate (Date/Zahl) und kein id/column. Vermeidet, dass die Suche pro
+        // Eingabe den Text jeder Karte neu zusammenbaut, und verhindert Fehltreffer auf
+        // Roh-Datumsstrings (z. B. "GMT", englische Monatsnamen).
+        const searchParts: string[] = [];
+        for (const key of Object.keys(cardData)) {
+          if (key === "id" || key === "column" || key.endsWith("Raw")) continue;
+          searchParts.push(getQuickFilterComparableValue(cardData[key]));
+        }
+        cardData.__search = searchParts.join(" ").toLowerCase();
+
+        return cardData;
+      });
+    },
+    [dataset.records, dataset.columns]
+  );
+
+  // Rohtransformation Record -> Karte, memoisiert: läuft NUR neu, wenn sich Daten
+  // (filterRecords hängt an dataset.records/columns), View oder Quick-Filter-Felder
+  // ändern. NICHT bei Filter-/Sortier-/Sucheingaben -> Karten-Objekte bleiben
+  // referenzstabil (Voraussetzung für React.memo an den Karten).
+  const transformedCards = useMemo<Record<string, unknown>[]>(() => {
+    if (activeView === undefined || activeView.columns === undefined) return [];
+    return filterRecords(activeView, quickFilterFieldsParsed);
+  }, [filterRecords, activeView, quickFilterFieldsParsed, datasetRecordsKey]);
+
+  // Dropdown-Wertelisten der Quick-Filter: haengen NUR von den transformierten Karten und
+  // der Filter-Konfiguration ab, nicht von Auswahl/Suche/Sortierung. Daher memoisiert (kein
+  // setState in handleViewChange) -> keine unnoetige Neuberechnung + kein zusaetzlicher
+  // Board-Re-Render/Reflow bei jeder Filter-/Sort-/Sucheingabe.
+  const quickFilterOptions = useMemo<Record<string, IDropdownOption[]>>(() => {
     const optionsByField: Record<string, IDropdownOption[]> = {};
     for (const cfg of quickFilterFieldsConfig) {
       if (cfg.isDateField || cfg.isNumberField) continue;
       const values = new Set<string>();
       let hasEmpty = false;
-      for (const card of allCards) {
+      for (const card of transformedCards) {
         const v = getQuickFilterComparableValue(card[cfg.key]);
         if (v === "") hasEmpty = true;
         else values.add(v);
@@ -604,15 +743,20 @@ const App = ({ context, notificationPosition }: IProps) => {
         .sort((a, b) => a.localeCompare(b))
         .map((val) => ({ key: val, text: val }));
       optionsByField[cfg.key] = [
-        { key: QUICK_FILTER_ALL_KEY, text: "(Alle)" },
-        ...(hasEmpty ? [{ key: QUICK_FILTER_EMPTY_KEY, text: "(Leer)" }] : []),
+        { key: QUICK_FILTER_ALL_KEY, text: strings.quickFilterAll },
+        ...(hasEmpty ? [{ key: QUICK_FILTER_EMPTY_KEY, text: strings.quickFilterEmpty }] : []),
         ...valueOptions,
       ];
     }
-    setQuickFilterOptions(optionsByField);
+    return optionsByField;
+  }, [transformedCards, quickFilterFieldsConfig, strings]);
 
-    let filteredCards = allCards.filter((card: any) => {
+  // Prüft, ob eine Karte die Quick-Filter erfüllt. `exceptKey` blendet EIN Feld aus –
+  // für die facettierten Counts dieses Feldes, damit dessen eigene Auswahl nicht mitzählt.
+  const cardPassesQuickFilters = useCallback(
+    (card: any, exceptKey?: string) => {
       for (const cfg of quickFilterFieldsConfig) {
+        if (cfg.key === exceptKey) continue;
         const selected = quickFilterValues[cfg.key];
         if (cfg.isDateField) {
           const dateFilterVal = selected == null || Array.isArray(selected) ? null : selected;
@@ -647,26 +791,57 @@ const App = ({ context, notificationPosition }: IProps) => {
         }
       }
       return true;
-    });
+    },
+    [quickFilterFieldsConfig, quickFilterValues]
+  );
 
-    const searchTrimmed = searchKeyword.trim().toLowerCase();
-    if (searchTrimmed) {
-      filteredCards = filteredCards.filter((card: any) => {
-        const parts: string[] = [];
-        for (const key of Object.keys(card)) {
-          if (key === "id" || key === "column") continue;
-          parts.push(getQuickFilterComparableValue(card[key]));
-        }
-        const searchableText = parts.join(" ").toLowerCase();
-        return searchableText.includes(searchTrimmed);
-      });
+  const searchTrimmedLower = searchKeyword.trim().toLowerCase();
+  const cardMatchesSearch = useCallback(
+    (card: any) => !searchTrimmedLower || String(card.__search ?? "").includes(searchTrimmedLower),
+    [searchTrimmedLower]
+  );
+
+  // Facettierte Counts: pro Quick-Filter-Wert die Anzahl der Karten, die übrig blieben,
+  // wenn dieser Wert zusätzlich zu den anderen aktiven Filtern + Suche gewählt würde.
+  // (Nur Nicht-Datum/Nicht-Zahl-Felder haben Wertelisten.)
+  const quickFilterCounts = useMemo<Record<string, Record<string, number>>>(() => {
+    const result: Record<string, Record<string, number>> = {};
+    for (const cfg of quickFilterFieldsConfig) {
+      if (cfg.isDateField || cfg.isNumberField) continue;
+      const counts: Record<string, number> = {};
+      for (const card of transformedCards) {
+        if (!cardPassesQuickFilters(card, cfg.key)) continue;
+        if (!cardMatchesSearch(card)) continue;
+        const v = getQuickFilterComparableValue(card[cfg.key]);
+        const key = v === "" ? QUICK_FILTER_EMPTY_KEY : v;
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+      result[cfg.key] = counts;
     }
+    return result;
+  }, [transformedCards, quickFilterFieldsConfig, cardPassesQuickFilters, cardMatchesSearch]);
+
+  const handleViewChange = useCallback(() => {
+    if (activeView === undefined || activeView.columns === undefined) return;
+
+    const allCards: any[] = transformedCards;
+
+    const filteredCards = allCards.filter(
+      (card: any) => cardPassesQuickFilters(card) && cardMatchesSearch(card)
+    );
 
     let activeColumns = activeView?.columns ?? [];
     if (
       activeView.type != "BPF" &&
-      (filteredCards.some((card: any) => !(activeView.key in card)) ||
-        filteredCards.some((card: any) => card[activeView.key]?.value === ""))
+      filteredCards.some(
+        (card: any) =>
+          // Karte konnte keiner Spalte zugeordnet werden (z. B. Options-Wert ohne
+          // passendes Spalten-Label) -> muss in der Unallocated-Spalte sichtbar sein,
+          // statt ganz zu verschwinden.
+          card?.column === unlocatedColumn.id ||
+          !(activeView.key in card) ||
+          card[activeView.key]?.value === ""
+      )
     ) {
       activeColumns = [unlocatedColumn, ...activeColumns];
     }
@@ -679,43 +854,17 @@ const App = ({ context, notificationPosition }: IProps) => {
     });
 
     if (sortByField) {
-      const useEstimatedValueRaw = sortByField === "estimatedvalue";
       columns = columns.map((col) => {
         const sortedCards = [...(col.cards ?? [])].sort((a: any, b: any) => {
-          let cmp: number;
-          if (useEstimatedValueRaw) {
-            const aNum =
-              typeof a.estimatedvalueRaw === "number" && !Number.isNaN(a.estimatedvalueRaw)
-                ? a.estimatedvalueRaw
-                : null;
-            const bNum =
-              typeof b.estimatedvalueRaw === "number" && !Number.isNaN(b.estimatedvalueRaw)
-                ? b.estimatedvalueRaw
-                : null;
-            if (aNum !== null && bNum !== null) {
-              cmp = aNum - bNum;
-            } else if (aNum !== null) {
-              cmp = -1;
-            } else if (bNum !== null) {
-              cmp = 1;
-            } else {
-              cmp = 0;
-            }
-          } else {
-            const va = getQuickFilterComparableValue(a[sortByField]);
-            const vb = getQuickFilterComparableValue(b[sortByField]);
-            const aEmpty = va == null || String(va).trim() === "";
-            const bEmpty = vb == null || String(vb).trim() === "";
-            if (aEmpty && bEmpty) {
-              cmp = 0;
-            } else if (aEmpty) {
-              cmp = 1;
-            } else if (bEmpty) {
-              cmp = -1;
-            } else {
-              cmp = String(va).localeCompare(String(vb), undefined, { numeric: true });
-            }
-          }
+          const ka = getCardSortKey(a, sortByField);
+          const kb = getCardSortKey(b, sortByField);
+          if (ka.empty && kb.empty) return 0;
+          if (ka.empty) return 1;
+          if (kb.empty) return -1;
+          const cmp =
+            typeof ka.comparable === "number" && typeof kb.comparable === "number"
+              ? ka.comparable - kb.comparable
+              : String(ka.comparable).localeCompare(String(kb.comparable), undefined, { numeric: true });
           return sortDirection === "asc" ? cmp : -cmp;
         });
         return { ...col, cards: sortedCards };
@@ -724,16 +873,12 @@ const App = ({ context, notificationPosition }: IProps) => {
 
     setColumns(columns);
   }, [
+    transformedCards,
     activeView,
-    quickFilterFieldsParsed,
-    quickFilterFieldsConfig,
-    quickFilterValues,
-    searchKeyword,
+    cardPassesQuickFilters,
+    cardMatchesSearch,
     sortByField,
     sortDirection,
-    dataset.records,
-    datasetRecordsKey,
-    context,
   ]);
 
   useEffect(() => {
@@ -741,9 +886,8 @@ const App = ({ context, notificationPosition }: IProps) => {
   }, [handleViewChange]);
 
   const handleColumnsChange = async () => {
-    const options = await getOptionSets(undefined);
     const recordIds = Object.keys(dataset.records);
-    if (Object.keys(dataset.records).length <= 0) {
+    if (recordIds.length <= 0) {
       setIsLoading(false);
       return;
     }
@@ -751,16 +895,32 @@ const App = ({ context, notificationPosition }: IProps) => {
     if (
       context.parameters.dataset.paging != null &&
       context.parameters.dataset.paging.hasNextPage == true &&
-      Object.keys(dataset.records).length < 2500
+      recordIds.length < 2500
     ) {
-      context.parameters.dataset.paging.loadNextPage();
+      // Page-Size fuer das Nachladen hochsetzen: Das Board braucht ALLE Records
+      // client-seitig (Gruppierung/Filter/Sortierung/Suche). Die Standard-Page-Size ist
+      // durch die Dynamics-Einstellung "Datensaetze pro Seite" auf max. 250 gedeckelt und
+      // erzeugt sonst viele sequenzielle Roundtrips. So kommt der Rest in moeglichst
+      // wenigen Anfragen. setPageSize wird defensiv aufgerufen (nicht in jeder SDK-Version typisiert).
+      const paging = context.parameters.dataset.paging as
+        typeof context.parameters.dataset.paging & { setPageSize?: (pageSize: number) => void };
+      paging.setPageSize?.(2500);
+      paging.loadNextPage();
       return;
     }
 
-    const process = await getBusinessProcessFlows(
-      dataset.getTargetEntityType(),
-      recordIds
-    );
+    // Metadaten erst laden, wenn alle Seiten geladen sind (sonst würde getOptionSets bei
+    // jeder Paging-Iteration ausgeführt und verworfen). OptionSets und BPF sind voneinander
+    // unabhängig -> parallel laden, damit die Latenz das Maximum statt die Summe beider ist.
+    const disableBpf =
+      (context.parameters as { disableBusinessProcessFlows?: { raw?: boolean } })
+        .disableBusinessProcessFlows?.raw === true;
+    const [options, process] = await Promise.all([
+      getOptionSets(undefined),
+      disableBpf
+        ? Promise.resolve([])
+        : getBusinessProcessFlows(dataset.getTargetEntityType(), recordIds),
+    ]);
     const allViews = [...(options ?? []), ...(process ?? [])];
 
     if (allViews === undefined) {
@@ -792,79 +952,42 @@ const App = ({ context, notificationPosition }: IProps) => {
     handleColumnsChange();
   }, [context.parameters.dataset.columns]);
 
-  const filterRecords = useCallback(
-    (activeView: ViewItem, quickFilterFieldsList: string[]) => {
-      return Object.entries(dataset.records).map(([id, record]) => {
-        const columnValues = dataset.columns.reduce((acc, col, index) => {
-          if (col.name === activeView.key) {
-            const targetColumn =
-              activeView.columns !== undefined
-                ? activeView.columns.find(
-                    (column) =>
-                      column.title === record.getFormattedValue(col.name)
-                  )
-                : { id: null };
-            const key = targetColumn ? targetColumn.id : "unallocated";
-            acc = { ...acc, column: key };
-          }
+  // Bei neuen/geänderten Konfigurationsfehlern das Ausblenden zurücksetzen, damit
+  // ein zuvor weggeklickter Banner bei einem neuen Fehler wieder erscheint.
+  const configErrorsSignature = configErrors.map((e) => `${e.property}:${e.message}`).join("|");
+  useEffect(() => {
+    setConfigErrorsDismissed(false);
+  }, [configErrorsSignature]);
 
-          if (activeView.type === "BPF") {
-            const key =
-              activeView.records?.find((val) => val.id === id)?.stageName ?? "";
-            acc = { ...acc, column: key };
-          }
-
-          const name = index === 0 ? "title" : col.name;
-          const hasDisplayName = col.displayName != null && String(col.displayName).trim() !== "";
-
-          if (!hasDisplayName) {
-            return { ...acc };
-          }
-
-          const columnValue = getColumnValue(record, col);
-          let result: Record<string, unknown> = { ...acc, [name]: columnValue };
-          if (col.name === "estimatedvalue") {
-            const rawValue = record.getValue(col.name);
-            if (rawValue !== null && rawValue !== undefined) {
-              result = { ...result, estimatedvalueRaw: rawValue };
-            }
-          }
-          const rawColVal = record.getValue(col.name);
-          const isDateValue =
-            rawColVal instanceof Date ||
-            (typeof rawColVal === "number" && rawColVal > 1000000000000);
-          const isNumericValue =
-            typeof rawColVal === "number" && !Number.isNaN(rawColVal) && rawColVal < 1000000000000;
-          if (
-            isDateValue ||
-            isDateColumnDataType((col as { dataType?: string | number }).dataType)
-          ) {
-            if (rawColVal !== null && rawColVal !== undefined) {
-              result = { ...result, [`${col.name}Raw`]: rawColVal };
-            }
-          }
-          if (
-            isNumericValue ||
-            isNumberColumnDataType((col as { dataType?: string | number }).dataType)
-          ) {
-            if (rawColVal !== null && rawColVal !== undefined) {
-              result = { ...result, [`${col.name}Raw`]: rawColVal };
-            }
-          }
-          return result;
-        }, {} as Record<string, unknown>);
-
-        const cardData = { id, ...columnValues } as Record<string, unknown>;
-        for (const fieldName of quickFilterFieldsList) {
-          const col = dataset.columns.find((c) => c.name === fieldName);
-          if (col && !(col.name in cardData)) {
-            cardData[col.name] = getColumnValue(record, col);
-          }
-        }
-        return cardData;
-      });
-    },
-    [dataset.records, dataset.columns]
+  // Stabiler Wert für die Karten (siehe card-actions-context.ts): ändert sich nur bei
+  // context/activeView/Callback-/Flag-Änderungen, NICHT bei Filter/Sort/Suche.
+  const cardActions = useMemo(
+    () => ({
+      locale,
+      context,
+      activeView,
+      openFormWithLoading,
+      openEntityInNewTab,
+      showOpenInNewTabButton,
+      showCreateActivityButton,
+      createActivityEntityType,
+      openCreateActivityForm,
+      showSharePointFolderButton,
+      openSharePointFolderInNewTab,
+    }),
+    [
+      locale,
+      context,
+      activeView,
+      openFormWithLoading,
+      openEntityInNewTab,
+      showOpenInNewTabButton,
+      showCreateActivityButton,
+      createActivityEntityType,
+      openCreateActivityForm,
+      showSharePointFolderButton,
+      openSharePointFolderInNewTab,
+    ]
   );
 
   if (isLoading) {
@@ -889,6 +1012,11 @@ const App = ({ context, notificationPosition }: IProps) => {
         openFormWithLoading,
         openEntityInNewTab,
         showOpenInNewTabButton,
+        showCreateActivityButton,
+        createActivityEntityType,
+        openCreateActivityForm,
+        showSharePointFolderButton,
+        openSharePointFolderInNewTab,
         configErrors,
         reportConfigError,
         clearConfigError,
@@ -896,6 +1024,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         quickFilterValues,
         setQuickFilterValue,
         quickFilterOptions,
+        quickFilterCounts,
         searchKeyword,
         setSearchKeyword,
         sortFieldsConfig,
@@ -909,10 +1038,22 @@ const App = ({ context, notificationPosition }: IProps) => {
         cardMoveValidationFunctionName,
       }}
     >
+      <CardConfigContext.Provider value={cardConfig}>
+      <CardActionsContext.Provider value={cardActions}>
       <div className="app-content-wrapper">
-        {configErrors.length > 0 && (
+        {configErrors.length > 0 && !configErrorsDismissed && (
           <div className="config-errors-banner" role="alert">
-            <strong>Configuration errors:</strong>
+            <button
+              type="button"
+              className="config-errors-dismiss"
+              aria-label={strings.configErrorsDismiss}
+              title={strings.configErrorsDismiss}
+              onClick={() => setConfigErrorsDismissed(true)}
+            >
+              ×
+            </button>
+            <strong>{strings.configErrorsTitle}</strong>
+            <p className="config-errors-hint">{strings.configErrorsHint}</p>
             <ul>
               {configErrors.map((err, i) => (
                 <li key={i}>
@@ -937,6 +1078,8 @@ const App = ({ context, notificationPosition }: IProps) => {
           duration: 5000,
         }}
       />
+      </CardActionsContext.Provider>
+      </CardConfigContext.Provider>
     </BoardContext.Provider>
   );
 };

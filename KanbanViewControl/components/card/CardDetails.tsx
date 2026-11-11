@@ -1,11 +1,12 @@
 import * as React from "react";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { CardInfo, UniqueIdentifier } from "../../interfaces";
 import { Text } from "@fluentui/react/lib/Text";
 import { isEntityReference, isNullOrEmpty, isEmailColumnDataType, isPhoneColumnDataType } from "../../lib/utils";
 import { sanitizeHtml } from "../../lib/sanitize-html";
 import { Lookup } from "../lookup/Lookup";
-import { BoardContext } from "../../context/board-context";
+import { CardActionsContext } from "../../context/card-actions-context";
+import { getStrings } from "../../lib/strings";
 import { useContext } from "react";
 import { MultiType } from "../../interfaces/card.type";
 
@@ -36,6 +37,10 @@ interface ICardInfoProps {
   showEmailAndPhoneAsLinks?: boolean,
   /** When true, the field value uses text-overflow: ellipsis (single line); otherwise multi-line clamp. */
   textEllipsis?: boolean,
+  /** When true, line breaks (newlines) in the text value are displayed. */
+  preserveLineBreaks?: boolean,
+  /** Maximum height in pixels for the field value; overflow is scrollable. */
+  maxHeightPx?: number,
 }
 
 const CARD_INFO_GAP_PX = 16;
@@ -46,8 +51,9 @@ function getColumnDataType(dataset: { columns?: { name: string; dataType?: strin
   return col?.dataType;
 }
 
-const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml = false, hideLabel = false, widthPercent, lookupAsPersona = false, lookupPersonaIconOnly = false, showEmailAndPhoneAsLinks = false, textEllipsis = false }: ICardInfoProps) => {
-  const { context, openFormWithLoading } = useContext(BoardContext);
+const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml = false, hideLabel = false, widthPercent, lookupAsPersona = false, lookupPersonaIconOnly = false, showEmailAndPhoneAsLinks = false, textEllipsis = false, preserveLineBreaks = false, maxHeightPx }: ICardInfoProps) => {
+  const { locale, context, openFormWithLoading } = useContext(CardActionsContext);
+  const strings = getStrings(locale);
   const htmlHostRef = useRef<HTMLDivElement>(null);
   const columnDataType = getColumnDataType(context.parameters?.dataset as { columns?: { name: string; dataType?: string }[] }, fieldName);
   const isEmailField = showEmailAndPhoneAsLinks && isEmailColumnDataType(columnDataType);
@@ -80,9 +86,12 @@ const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml =
   const htmlSanitizeParams = context.parameters as HtmlSanitizeParams;
   const allowedTagsRaw = htmlSanitizeParams.allowedHtmlTagsOnCard?.raw;
   const allowedAttrsRaw = htmlSanitizeParams.allowedHtmlAttributesOnCard?.raw;
-  const sanitizedHtml = renderAsHtml && htmlContent
-    ? sanitizeHtml(htmlContent, allowedTagsRaw, allowedAttrsRaw)
-    : "";
+  // DOMPurify-Sanitisierung memoisieren: laeuft nur neu, wenn sich Inhalt oder erlaubte
+  // Tags/Attribute aendern, nicht bei jedem Re-Render des HTML-Feldes.
+  const sanitizedHtml = useMemo(
+    () => (renderAsHtml && htmlContent ? sanitizeHtml(htmlContent, allowedTagsRaw, allowedAttrsRaw) : ""),
+    [renderAsHtml, htmlContent, allowedTagsRaw, allowedAttrsRaw]
+  );
 
   useEffect(() => {
     if (!renderAsHtml || !htmlHostRef.current) return;
@@ -138,7 +147,7 @@ const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml =
                         href={linkHref}
                         onClick={onLinkClick}
                         rel="noopener noreferrer"
-                        aria-label={label ? (isEmailField ? `E-Mail: ${displayText}` : `Anrufen: ${displayText}`) : undefined}
+                        aria-label={label ? (isEmailField ? strings.cardAriaEmail(displayText) : strings.cardAriaPhone(displayText)) : undefined}
                         style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                       >
                         {displayText}
@@ -157,9 +166,17 @@ const CardDetails = ({ id, fieldName, info, displayLabelOverride, renderAsHtml =
                     </a>
                   )
               : (
-                  <Text className="card-text card-info-value" variant="medium">
-                    {handleInfoValue(info.value)}
-                  </Text>
+                  <div
+                    className={"card-info-value-wrap" + (preserveLineBreaks ? " card-info-value-wrap--line-breaks" : "")}
+                    style={maxHeightPx != null ? { maxHeight: maxHeightPx, overflowY: "auto" } : undefined}
+                  >
+                    <Text
+                      className={"card-text card-info-value" + (preserveLineBreaks ? " card-info-value--pre-wrap" : "")}
+                      variant="medium"
+                    >
+                      {handleInfoValue(info.value)}
+                    </Text>
+                  </div>
                 )
       }
     </div>
@@ -178,4 +195,8 @@ const CardDetailsList = ({ children }: IProps) => {
   );
 }
 
-export { CardDetailsList, CardDetails };
+// React.memo: Feld rendert nur neu, wenn sich seine Props ändern. Props (info, config-
+// abgeleitete Flags) sind dank P1/P4 referenz- bzw. wertstabil bei Filter/Sort/Suche.
+const MemoizedCardDetails = React.memo(CardDetails);
+
+export { CardDetailsList, MemoizedCardDetails as CardDetails };

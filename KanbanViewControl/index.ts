@@ -1,9 +1,9 @@
 import * as React from "react";
 import { IInputs, IOutputs } from "./generated/ManifestTypes";
 import App from "./App";
+import { logBuildInfo } from "./version";
 
 export class KanbanViewControl implements ComponentFramework.ReactControl<IInputs, IOutputs> {
-    private control: ComponentFramework.ReactControl<IInputs, IOutputs>;
 
     constructor() { }
 
@@ -12,6 +12,7 @@ export class KanbanViewControl implements ComponentFramework.ReactControl<IInput
         notifyOutputChanged: () => void,
         _: ComponentFramework.Dictionary
     ): void {
+        logBuildInfo();
         context.mode.trackContainerResize(true);
     }
 
@@ -28,6 +29,8 @@ export class KanbanViewControl implements ComponentFramework.ReactControl<IInput
     }
 
     public destroy(): void {
-        this.control.destroy()
+        // ReactControl: Das Unmounting des von updateView zurückgegebenen Elements
+        // übernimmt die PCF-Plattform. Es gibt hier keinen eigenen DOM-Container
+        // und keine manuell registrierten Listener, die aufgeräumt werden müssten.
     }
 }

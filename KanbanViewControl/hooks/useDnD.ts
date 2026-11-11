@@ -102,63 +102,63 @@ export const useDnD = (columns: ColumnItem[]) => {
     }
   };
 
-  const onDragEnd = async (result: DropResult, record: any) => {
+  const onDragEnd = async (result: DropResult, record: any): Promise<{ shouldRefresh: boolean }> => {
     if (result.destination == null) {
-      return;
+      return { shouldRefresh: false };
     }
 
     if(activeView?.type === "BPF"){
+      // BPF: Stage wird im Formular geaendert (kein optimistischer Move). Das einmalige
+      // Neuladen uebernimmt der Aufrufer (Board) anhand von shouldRefresh -> kein doppeltes
+      // dataset.refresh() mehr.
       try {
         await openFormWithLoading(record.entityName, record.id)
       } catch (e: any) {
         toast.error(e.message);
-      } finally {
-        context.parameters.dataset.refresh();
       }
-      return;
+      return { shouldRefresh: true };
     }
-
-    let movedCards: ColumnItem[] | undefined
 
     const itemId = result.draggableId;
     const sourceColumn = columns.find(c => c.id == result.source.droppableId);
     const destinationColumn = columns.find(c => c.id == result.destination?.droppableId);
     const sourceCard = sourceColumn?.cards?.find(i => i.id === itemId);
 
-    if (sourceColumn?.id !== destinationColumn?.id) {
-      const updateFieldName = Object.keys(record.update ?? {})[0];
-      const newValue = updateFieldName ? record.update[updateFieldName] : undefined;
+    // SYNCHRON und als Erstes: optimistisches Verschieben, damit @hello-pangea/dnd die
+    // Karte an der Zielposition einrasten lässt. Passiert der State-Update erst nach einem
+    // await (Validierung/Speichern), animiert die Bibliothek die Karte sichtbar zurück.
+    const movedCards = moveCard(columns, sourceCard, result);
+    setColumns(movedCards ?? []);
 
-      const validation = await runCardMoveValidator({
-        recordId: record.id,
-        entityName: record.entityName,
-        logicalName: record.logicalName,
-        fieldName: updateFieldName,
-        newValue,
-        sourceColumnId: (sourceColumn?.id ?? null) as ColumnId | null,
-        sourceColumnTitle: sourceColumn?.title ?? null,
-        destinationColumnId: (destinationColumn?.id ?? null) as ColumnId | null,
-        destinationColumnTitle: destinationColumn?.title ?? null,
-        card: sourceCard,
-      });
-
-      if (!validation.allow) {
-        if (validation.message) {
-          toast.error(validation.message);
-        }
-        return;
-      }
-    }
-
-    // Do not save when the card was only moved within the same column
+    // Verschieben innerhalb derselben Spalte: nur Neuordnung, kein Speichern, kein Reload.
     if (sourceColumn?.id === destinationColumn?.id) {
-      movedCards = await moveCard(columns, sourceCard, result);
-      setColumns(movedCards ?? []);
-      return movedCards;
+      return { shouldRefresh: false };
     }
 
-    movedCards = await moveCard(columns, sourceCard, result);
-    setColumns(movedCards ?? [])
+    const updateFieldName = Object.keys(record.update ?? {})[0];
+    const newValue = updateFieldName ? record.update[updateFieldName] : undefined;
+
+    // Optionale Validierung NACH dem optimistischen Move; bei Ablehnung Rollback.
+    const validation = await runCardMoveValidator({
+      recordId: record.id,
+      entityName: record.entityName,
+      logicalName: record.logicalName,
+      fieldName: updateFieldName,
+      newValue,
+      sourceColumnId: (sourceColumn?.id ?? null) as ColumnId | null,
+      sourceColumnTitle: sourceColumn?.title ?? null,
+      destinationColumnId: (destinationColumn?.id ?? null) as ColumnId | null,
+      destinationColumnTitle: destinationColumn?.title ?? null,
+      card: sourceCard,
+    });
+
+    if (!validation.allow) {
+      if (validation.message) {
+        toast.error(validation.message);
+      }
+      setColumns(columns); // Rollback auf den Ausgangszustand
+      return { shouldRefresh: false };
+    }
 
     const columnName = record.columnName ?? strings.toastUnallocated;
     const response = await toast.promise(
@@ -169,19 +169,21 @@ export const useDnD = (columns: ColumnItem[]) => {
         error: (e) => e.message,
       }
     );
-    
-    if(!response) {
-      const oldValue = sourceColumn?.title;
-      (sourceCard![Object.keys(record.update)[0]] as CardInfo).value = oldValue as string
-      movedCards = await moveCard(columns, sourceCard, result)
-    } else {
-      const updatedValue = destinationColumn?.title;
-      (sourceCard![Object.keys(record.update)[0]] as CardInfo).value = updatedValue as string
-      movedCards = await moveCard(columns, sourceCard, result)
+
+    if (!response) {
+      setColumns(columns); // Rollback: Karte zurück in die Ausgangsspalte
+      return { shouldRefresh: false };
     }
 
-    setColumns(movedCards ?? [])
-    return movedCards
+    if (updateFieldName) {
+      // Gruppierungsfeld auf der Karte auf den neuen Spaltenwert setzen
+      // (bis dataset.refresh die serverseitige Wahrheit nachliefert).
+      (sourceCard![updateFieldName] as CardInfo).value = destinationColumn?.title as string;
+    }
+
+    // Nur bei tatsaechlich persistiertem Spaltenwechsel neu laden (Server-Wahrheit /
+    // ggf. Plugin-Nebeneffekte). Der optimistische Move steht bereits.
+    return { shouldRefresh: true };
   };
 
   return { 

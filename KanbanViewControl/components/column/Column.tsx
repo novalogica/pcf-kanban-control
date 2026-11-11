@@ -8,6 +8,7 @@ import { isNullOrEmpty } from "../../lib/utils";
 import NoResults from "../container/no-results";
 import { getItemStyle, getListStyle } from "../../lib/card-drag";
 import { BoardContext } from "../../context/board-context";
+import { getStrings } from "../../lib/strings";
 import {
   INITIAL_CARDS_VISIBLE,
   LOAD_MORE_CARDS_COUNT,
@@ -22,7 +23,8 @@ function parseInitialCardsVisible(raw: unknown): number {
 }
 
 const Column = ({ column, widthPx }: { column: ColumnItem; widthPx?: number }) => {
-  const { context, draggingRef, openFormWithLoading } = useContext(BoardContext);
+  const { locale, context, draggingRef, openFormWithLoading } = useContext(BoardContext);
+  const strings = getStrings(locale);
   const allowCardMove = ((context.parameters as unknown) as { allowCardMove?: { raw?: boolean } }).allowCardMove?.raw !== false;
   const hasCards = !isNullOrEmpty(column.cards) && column.cards!.length > 0;
   const columnStyle = widthPx != null ? { width: widthPx, minWidth: widthPx, maxWidth: widthPx } : undefined;
@@ -79,7 +81,7 @@ const Column = ({ column, widthPx }: { column: ColumnItem; widthPx?: number }) =
                 <Card item={item} draggable={false} />
               </div>
             ))}
-          {!hasCards && <NoResults />}
+          {!hasCards && <NoResults text={strings.noResultsInColumn} />}
         </div>
       </div>
     );
@@ -107,31 +109,41 @@ const Column = ({ column, widthPx }: { column: ColumnItem; widthPx?: number }) =
                   draggableId={item.id.toString()}
                   index={index}
                 >
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.dragHandleProps}
-                      {...provided.draggableProps}
-                      style={getItemStyle(snapshot, provided.draggableProps.style)}
-                      onClick={handleCardWrapperClick(item.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if ((e.key === "Enter" || e.key === " ") && !draggingRef.current) {
-                          e.preventDefault();
-                          openFormWithLoading(
-                            context.parameters.dataset.getTargetEntityType(),
-                            String(item.id)
-                          );
-                        }
-                      }}
-                    >
-                      <Card item={item} />
-                    </div>
-                  )}
+                  {(provided, snapshot) => {
+                    const dragHandleProps = provided.dragHandleProps;
+                    // dnd deklariert onKeyDown nicht im Typ, liefert ihn aber zur Laufzeit.
+                    const dragHandleKeyDown = (dragHandleProps as { onKeyDown?: React.KeyboardEventHandler<HTMLDivElement> } | null | undefined)?.onKeyDown;
+                    return (
+                      <div
+                        ref={provided.innerRef}
+                        {...dragHandleProps}
+                        {...provided.draggableProps}
+                        style={getItemStyle(snapshot, provided.draggableProps.style)}
+                        onClick={handleCardWrapperClick(item.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          // Enter öffnet den Datensatz. Space und Pfeiltasten bleiben dem
+                          // Drag-Handle vorbehalten, damit Tastatur-Drag&Drop von
+                          // @hello-pangea/dnd funktioniert (Space = aufnehmen/ablegen).
+                          if (e.key === "Enter" && !draggingRef.current) {
+                            e.preventDefault();
+                            openFormWithLoading(
+                              context.parameters.dataset.getTargetEntityType(),
+                              String(item.id)
+                            );
+                            return;
+                          }
+                          dragHandleKeyDown?.(e);
+                        }}
+                      >
+                        <Card item={item} />
+                      </div>
+                    );
+                  }}
                 </Draggable>
               ))}
-            {!hasCards && <NoResults />}
+            {!hasCards && !snapshot.isDraggingOver && <NoResults text={strings.noResultsInColumn} />}
             {provided.placeholder}
           </div>
         )}

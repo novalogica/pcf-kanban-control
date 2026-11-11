@@ -36,6 +36,7 @@ export interface Strings {
 
   // Quick filters & sort
   quickFilterAll: string;
+  quickFilterEmpty: string;
   quickFiltersMoreFilters: string;
   quickFiltersMoreFiltersOpen: string;
   quickFiltersSearchPlaceholder: string;
@@ -57,6 +58,28 @@ export interface Strings {
   // Loading
   loadingLabel: string;
   openingRecordLabel: string;
+
+  // Empty states
+  noRecordsFound: string;
+  noRecordsForFilters: string;
+  noResultsInColumn: string;
+
+  // Filter reset
+  resetFilters: string;
+
+  // Configuration errors banner
+  configErrorsTitle: string;
+  configErrorsHint: string;
+  configErrorsDismiss: string;
+
+  // Card action buttons (aria-label / title)
+  cardActionCreateActivity: string;
+  cardActionOpenSharePoint: string;
+  cardActionOpenInNewTab: string;
+
+  // Card field links (aria-label)
+  cardAriaEmail: (value: string) => string;
+  cardAriaPhone: (value: string) => string;
 }
 
 const en: Strings = {
@@ -89,6 +112,7 @@ const en: Strings = {
   numberFilterMaxAriaLabel: "Maximum value",
 
   quickFilterAll: "(All)",
+  quickFilterEmpty: "(Empty)",
   quickFiltersMoreFilters: "More filters",
   quickFiltersMoreFiltersOpen: "Open more filters",
   quickFiltersSearchPlaceholder: "Search in all fields…",
@@ -108,6 +132,23 @@ const en: Strings = {
 
   loadingLabel: "Loading...",
   openingRecordLabel: "Opening record...",
+
+  noRecordsFound: "No records found",
+  noRecordsForFilters: "No matches for the current filters",
+  noResultsInColumn: "No results found",
+
+  resetFilters: "Reset filters",
+
+  configErrorsTitle: "Configuration errors:",
+  configErrorsHint: "The control configuration is invalid. Please ask an administrator to review the affected properties.",
+  configErrorsDismiss: "Dismiss",
+
+  cardActionCreateActivity: "Create activity",
+  cardActionOpenSharePoint: "Open SharePoint folder",
+  cardActionOpenInNewTab: "Open in new tab",
+
+  cardAriaEmail: (value) => `Email: ${value}`,
+  cardAriaPhone: (value) => `Call: ${value}`,
 };
 
 const de: Strings = {
@@ -140,6 +181,7 @@ const de: Strings = {
   numberFilterMaxAriaLabel: "Höchstwert",
 
   quickFilterAll: "(Alle)",
+  quickFilterEmpty: "(Leer)",
   quickFiltersMoreFilters: "Weitere Filter",
   quickFiltersMoreFiltersOpen: "Weitere Filter öffnen",
   quickFiltersSearchPlaceholder: "In allen Feldern suchen…",
@@ -159,6 +201,23 @@ const de: Strings = {
 
   loadingLabel: "Laden...",
   openingRecordLabel: "Datensatz wird geöffnet...",
+
+  noRecordsFound: "Keine Datensätze gefunden",
+  noRecordsForFilters: "Keine Treffer für die aktuellen Filter",
+  noResultsInColumn: "Keine Treffer",
+
+  resetFilters: "Filter zurücksetzen",
+
+  configErrorsTitle: "Konfigurationsfehler:",
+  configErrorsHint: "Die Konfiguration des Steuerelements ist ungültig. Bitte lassen Sie die betroffenen Eigenschaften von einem Administrator prüfen.",
+  configErrorsDismiss: "Ausblenden",
+
+  cardActionCreateActivity: "Aktivität anlegen",
+  cardActionOpenSharePoint: "SharePoint-Ordner öffnen",
+  cardActionOpenInNewTab: "In neuem Tab öffnen",
+
+  cardAriaEmail: (value) => `E-Mail: ${value}`,
+  cardAriaPhone: (value) => `Anrufen: ${value}`,
 };
 
 const stringsByLocale: Record<string, Strings> = {
