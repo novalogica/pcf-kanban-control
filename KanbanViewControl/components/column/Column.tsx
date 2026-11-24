@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useContext, useCallback, useEffect, useRef, useState } from "react";
+import { useContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Draggable, Droppable } from "@hello-pangea/dnd";
 import Card from "../card/Card";
 import ColumnHeader from "./ColumnHeader";
@@ -42,7 +42,10 @@ const Column = ({ column, widthPx, registerBoardLoadMore }: {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const useProgressiveLoad = totalCount > initialCardsVisible;
-  const cardsToShow = useProgressiveLoad ? cards.slice(0, visibleCount) : cards;
+  const cardsToShow = useMemo(
+    () => (useProgressiveLoad ? cards.slice(0, visibleCount) : cards),
+    [cards, useProgressiveLoad, visibleCount]
+  );
   const hasMore = useProgressiveLoad && visibleCount < totalCount;
 
   const loadMoreCards = useCallback(() => {
