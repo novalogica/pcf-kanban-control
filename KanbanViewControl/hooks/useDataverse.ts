@@ -43,7 +43,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
         try {
             const stages = await webAPI.retrieveMultipleRecords(
                 "processstage",
-                `?$select=stagename,processstageid,stagecategory,_processid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename,statecode,uidata)`
+                `?$select=stagename,processstageid,stagecategory,_processid_value,_parentprocessstageid_value&$filter=primaryentitytypecode eq '${logicalName}'&$expand=processid($select=name,uniquename,statecode,uidata)`
             )
 
             const filter = context.parameters.filteredBusinessProcessFlows?.raw ?? "";
@@ -71,6 +71,14 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
                 }
             }
 
+            const parentStageIdByStageId = new Map<string, string | null>();
+            for (const stage of stages.entities as any[]) {
+                parentStageIdByStageId.set(
+                    String(stage.processstageid).replace(/[{}]/g, "").toLowerCase(),
+                    stage._parentprocessstageid_value ?? null,
+                );
+            }
+
             const stagesReduced = stages.entities
                 .filter((stage: any) => (!filterOutBusinessProcess || !filterOutBusinessProcess.includes(stage.processid.name)) && stage.processid.statecode == 1)
                 .reduce((acc: any, stage: any) => {
@@ -84,7 +92,7 @@ export const useDataverse = (context: ComponentFramework.Context<IInputs>, onCon
                             .filter((entity: BusinessProcessFlowEntity) => !entity.Relationships);
                     }
 
-                    const orderedEntities = orderStages(entities);
+                    const orderedEntities = orderStages(entities, parentStageIdByStageId);
 
                     const defaultOrder = orderedEntities.findIndex(e => e.Stage.StageDisplayName === stage.stagename);
                     const customOrder = stepOrderConfig?.find(config => config.id === stage.stagename)?.order;

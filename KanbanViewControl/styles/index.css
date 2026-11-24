@@ -15,6 +15,10 @@
   padding: 16px;
 }
 
+.kanban-container--whole-board-scroll {
+  overflow-y: auto;
+}
+
 .columns-wrapper {
   width: fit-content;
   max-width: 100%;
@@ -45,6 +49,22 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.columns-wrapper--whole-board-scroll {
+  max-height: none;
+  overflow-y: visible;
+  align-items: flex-start;
+}
+
+.columns-wrapper--whole-board-scroll .column-container {
+  max-height: none;
+}
+
+.columns-wrapper--whole-board-scroll .cards-wrapper {
+  height: auto;
+  max-height: none;
+  overflow-y: visible;
 }
 
 /* Container */
@@ -145,6 +165,33 @@
   gap: 10px;
   cursor: grab;
   transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.columns-wrapper--compact .card-container {
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.columns-wrapper--compact .card-header-container {
+  gap: 8px;
+}
+
+.columns-wrapper--compact .card-title {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 14px;
+}
+
+.columns-wrapper--compact .card-info-container {
+  gap: 8px;
+}
+
+.columns-wrapper--compact .card-info-label {
+  font-size: 11px;
+}
+
+.columns-wrapper--compact .card-info-value {
+  font-size: 13px;
 }
 
 .card-container--highlight-left {

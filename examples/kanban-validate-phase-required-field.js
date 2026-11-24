@@ -1,23 +1,23 @@
 /**
- * Beispiel-Webressource für die Kanban-Validierung "Phasenwechsel":
- * Beim Verschieben von Phase 2 nach Phase 3 muss das Feld "estimatedvalue" (Umsatz) gepflegt sein.
+ * Example web resource for Kanban phase-change validation:
+ * When moving from Phase 2 to Phase 3, the "estimatedvalue" (revenue) field must have a value.
  *
- * Verwendung:
- * 1. Diese Datei als Webressource in Dataverse hochladen (z. B. Name: kanban_validate_phase).
- * 2. Die Webressource auf der Form/Seite einbinden, auf der das Kanban-Control liegt.
- * 3. Beim Kanban-Control die Eigenschaft "Card move validation function" setzen auf:
+ * Usage:
+ * 1. Upload this file to Dataverse as a web resource (for example, kanban_validate_phase).
+ * 2. Add the web resource to the form or page that contains the Kanban control.
+ * 3. Set the Kanban control's "Card move validation function" property to:
  *    MyNamespace.Kanban.onBeforeMove
  *
- * Spaltennamen anpassen: Ersetzen Sie "Phase 2" und "Phase 3" durch die exakten Anzeigenamen
- * Ihrer Phasen-Spalten (so wie im View-By-Dropdown angezeigt).
+ * Customize the column names: Replace "Phase 2" and "Phase 3" with the exact display names
+ * of your phase columns, as shown in the View By dropdown.
  */
 
 var MyNamespace = MyNamespace || {};
 
 MyNamespace.Kanban = (function () {
-  // Anpassen an Ihre View: exakte Anzeigenamen der Spalten (View By / Phasen)
-  var SOURCE_PHASE_TITLE = "Phase 2";   // Von dieser Phase aus wird geprüft
-  var TARGET_PHASE_TITLE = "Phase 3";   // In diese Phase darf nur mit gepflegtem estimatedvalue
+  // Customize for your view: exact column display names (View By / phases)
+  var SOURCE_PHASE_TITLE = "Phase 2";   // Validation starts from this phase
+  var TARGET_PHASE_TITLE = "Phase 3";   // estimatedvalue is required to move here
 
   var REQUIRED_FIELD = "estimatedvalue";
   var REQUIRED_FIELD_RAW = "estimatedvalueRaw";
@@ -37,11 +37,11 @@ MyNamespace.Kanban = (function () {
 
   function getEstimatedValue(card) {
     if (!card) return null;
-    // Rohwert (Zahl) hat Priorität, falls im Dataset geladen
+    // Prefer the raw numeric value when it is loaded in the dataset
     if (REQUIRED_FIELD_RAW in card && !isEmpty(card[REQUIRED_FIELD_RAW])) {
       return card[REQUIRED_FIELD_RAW];
     }
-    // Ansonsten Anzeigewert (z. B. { label: "...", value: "12.345 €" })
+    // Otherwise, use the formatted display value (for example, { label: "...", value: "$12,345" })
     var field = card[REQUIRED_FIELD];
     if (field && typeof field === "object" && "value" in field) {
       var v = field.value;
@@ -51,7 +51,7 @@ MyNamespace.Kanban = (function () {
   }
 
   /**
-   * Von der Kanban-Control aufgerufen vor dem Spaltenwechsel.
+   * Called by the Kanban control before changing columns.
    * @param {object} args - { recordId, entityName, sourceColumnTitle, destinationColumnTitle, card, ... }
    * @returns {boolean|{allow: boolean, message?: string}}
    */
@@ -64,7 +64,7 @@ MyNamespace.Kanban = (function () {
     if (isEmpty(estimated)) {
       return {
         allow: false,
-        message: "Bitte erfassen Sie zuerst den Umsatz (estimatedvalue), bevor Sie in Phase 3 wechseln."
+        message: "Enter a revenue value (estimatedvalue) before moving to Phase 3."
       };
     }
 

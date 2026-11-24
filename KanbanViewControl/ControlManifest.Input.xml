@@ -125,12 +125,48 @@
       required="false"
     />
 
+    <property
+      name="hideUnallocatedColumn"
+      display-name-key="Hide Unallocated column"
+      description-key="When enabled, records without a matching board column are not shown in a separate column."
+      of-type="TwoOptions"
+      usage="input"
+      required="false"
+    />
+
+    <property
+      name="unallocatedColumnName"
+      display-name-key="Unallocated column name"
+      description-key="Custom label for the column that contains records without a matching board column."
+      of-type="SingleLine.Text"
+      usage="input"
+      required="false"
+    />
+
+    <property
+      name="scrollWholeBoard"
+      display-name-key="Scroll whole board"
+      description-key="Use one vertical scrollbar for all columns instead of separate column scrollbars."
+      of-type="TwoOptions"
+      usage="input"
+      required="false"
+    />
+
     <property 
       name="hideColumnFieldOnCard" 
       display-name-key="Hide column field on card" 
       description-key="When enabled, the field used for column grouping (View By) is not displayed on the card to save space."
       of-type="TwoOptions" 
       usage="input" 
+      required="false"
+    />
+
+    <property
+      name="compactCards"
+      display-name-key="Compact cards"
+      description-key="Reduce card spacing to show more records in the same board area."
+      of-type="TwoOptions"
+      usage="input"
       required="false"
     />
 

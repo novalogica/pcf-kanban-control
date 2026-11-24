@@ -503,22 +503,26 @@ export function chunkArray<T>(array: T[], chunkSize: number): T[][] {
     return results;
 }
 
-export function orderStages(entities: BusinessProcessFlowEntity[]): BusinessProcessFlowEntity[] {
+export function orderStages(
+    entities: BusinessProcessFlowEntity[],
+    parentStageIdByStageId: Map<string, string | null | undefined> = new Map(),
+): BusinessProcessFlowEntity[] {
     const stageMap = new Map<string, BusinessProcessFlowEntity>();
     const nextStageIds = new Set<string>();
+    const normalizeId = (id: string | null | undefined) => id?.replace(/[{}]/g, "").toLowerCase();
 
     for (const entity of entities) {
-        const stageId = entity.Stage.StageId;
-        const nextStageId = entity.Stage.NextStageId;
+        const stageId = normalizeId(entity.Stage.StageId);
+        const nextStageId = normalizeId(entity.Stage.NextStageId);
 
-        stageMap.set(stageId, entity);
+        if (stageId) stageMap.set(stageId, entity);
         if (nextStageId) {
             nextStageIds.add(nextStageId);
         }
     }
 
     const firstStage = Array.from(stageMap.values()).find(
-        entity => !nextStageIds.has(entity.Stage.StageId)
+        entity => !nextStageIds.has(normalizeId(entity.Stage.StageId) ?? "")
     );
 
     if (!firstStage) {
@@ -531,9 +535,50 @@ export function orderStages(entities: BusinessProcessFlowEntity[]): BusinessProc
     while (currentStage) {
         orderedEntities.push(currentStage);
 
-        const nextId: string | null | undefined = currentStage.Stage.NextStageId;
+        const nextId = normalizeId(currentStage.Stage.NextStageId);
         currentStage = nextId ? stageMap.get(nextId) : undefined;
     }
 
-    return orderedEntities;
+    const orderedIds = new Set(orderedEntities.map(entity => normalizeId(entity.Stage.StageId)));
+    const branchesByParent = new Map<string, BusinessProcessFlowEntity[]>();
+    for (const entity of entities) {
+        const id = normalizeId(entity.Stage.StageId);
+        const parentId = id ? normalizeId(parentStageIdByStageId.get(id)) : undefined;
+        if (!id || orderedIds.has(id) || !parentId) continue;
+        const siblings = branchesByParent.get(parentId) ?? [];
+        siblings.push(entity);
+        branchesByParent.set(parentId, siblings);
+    }
+
+    const result: BusinessProcessFlowEntity[] = [];
+    const visited = new Set<string>();
+    function appendBranches(parentId: string): void {
+        for (const branch of branchesByParent.get(parentId) ?? []) {
+            const branchId = normalizeId(branch.Stage.StageId);
+            if (!branchId || visited.has(branchId)) continue;
+            visited.add(branchId);
+            result.push(branch);
+            appendBranches(branchId);
+        }
+    }
+
+    for (const entity of orderedEntities) {
+        const id = normalizeId(entity.Stage.StageId);
+        if (!id || visited.has(id)) continue;
+        visited.add(id);
+        result.push(entity);
+        appendBranches(id);
+    }
+
+    // Keep otherwise disconnected stages visible at the end instead of sorting them
+    // ahead of the first stage (findIndex previously returned -1 for these stages).
+    for (const entity of entities) {
+        const id = normalizeId(entity.Stage.StageId);
+        if (id && !visited.has(id)) {
+            visited.add(id);
+            result.push(entity);
+        }
+    }
+
+    return result;
 }

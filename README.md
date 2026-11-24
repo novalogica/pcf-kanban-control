@@ -12,6 +12,9 @@ This **PowerApps Component Framework (PCF)** control enables users to visualize 
 - Supports **business process flows** and **Choice** columns.
 - Drag-and-drop functionality.
 - **Progressive loading**: Only a configurable number of cards per column are shown initially; more load when scrolling down (reduces DOM size and improves performance).
+- **Optional whole-board scrolling**: Keep one vertical scrollbar for all columns while loading more cards as you scroll.
+- **Configurable Unallocated column**: Rename it or hide records without a matching board column.
+- **Optional compact cards**: Reduce spacing and title height to fit more records on screen.
 - Lookup column support (including Persona-style display).
 - **Quick filter** dropdowns and **custom sort** fields (configurable).
 - **Date/time quick filters**: For DateTime and DateOnly fields, special filter options (Today, Last 7 days, Last 30 days, Custom range) with Fluent UI DatePicker.
@@ -32,6 +35,7 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
 - [View & column selection](#view--column-selection)
   - [Default View By](#default-view-by)
   - [Filter out Business Process Flows](#filter-out-business-process-flows)
+  - [Disable Business Process Flows](#disable-business-process-flows)
   - [Business Process Flow Step Order](#business-process-flow-step-order)
   - [Hide View By if default View By set?](#hide-view-by-if-default-view-by-set)
 - [Board layout & behaviour](#board-layout--behaviour)
@@ -43,6 +47,9 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Create activity entity type](#create-activity-entity-type)
   - [Show SharePoint folder button on card](#show-sharepoint-folder-button-on-card)
   - [Hide empty columns](#hide-empty-columns)
+  - [Hide Unallocated column](#hide-unallocated-column)
+  - [Unallocated column name](#unallocated-column-name)
+  - [Scroll whole board](#scroll-whole-board)
   - [Expand board to full width](#expand-board-to-full-width)
   - [Minimum column width](#minimum-column-width)
   - [Maximum column width](#maximum-column-width)
@@ -51,6 +58,7 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Allow creating new records from board](#allow-creating-new-records-from-board)
 - [Card content & appearance](#card-content--appearance)
   - [Hide column field on card](#hide-column-field-on-card)
+  - [Compact cards](#compact-cards)
   - [Hidden fields on card](#hidden-fields-on-card)
   - [Fields visible per stage (phase)](#fields-visible-per-stage-phase)
   - [HTML fields on card](#html-fields-on-card)
@@ -72,6 +80,7 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
   - [Quick filter fields in popup](#quick-filter-fields-in-popup)
   - [Filter presets](#filter-presets)
   - [Sort fields](#sort-fields)
+  - [Default sort](#default-sort)
 - [Notifications](#notifications)
   - [Notification Position](#notification-position)
 
@@ -81,7 +90,7 @@ All configurable properties come from the Control Manifest. Invalid JSON in text
 
 ### Default View By
 
-**Type:** Text
+**Type:** Text area
 
 Pre-selects the initial view when the board loads. The value is matched against the **view label** (the text shown in the "View type" dropdown), e.g. the display name of a Choice option, a BPF name, or a Status Reason label. If no match is found, the first available view is used. Leave empty to start with the first view.
 
@@ -91,7 +100,7 @@ Pre-selects the initial view when the board loads. The value is matched against 
 
 ### Filter out Business Process Flows
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
 List of **BPF names** to **exclude** from the "View type" dropdown. Only BPFs whose name is in this list are hidden. Invalid JSON is reported as a configuration error.
 
@@ -103,11 +112,19 @@ List of **BPF names** to **exclude** from the "View type" dropdown. Only BPFs wh
 
 ---
 
+### Disable Business Process Flows
+
+**Type:** Yes/No
+
+When **Yes**, the control skips loading BPF metadata and does not show BPFs in the **View type** selector. Use this when the table has no relevant BPFs or the board does not need BPF views. Default: **No**.
+
+---
+
 ### Business Process Flow Step Order
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
-Defines the **column order** (stages) for business process flows. Each item has `"id"` (stage display name, e.g. `"Develop"`) and `"order"` (number; lower = further left). Stages not listed keep their default order. Invalid JSON is reported as a configuration error.
+Business process flow stages are ordered automatically from the BPF definition. Conditional stages are placed after their parent stage. This optional JSON setting can override the automatic position for a stage; each item has `"id"` (stage display name, e.g. `"Develop"`) and `"order"` (number; lower = further left). Stages not listed keep their automatic order. Invalid JSON is reported as a configuration error.
 
 **Example:**
 
@@ -115,7 +132,7 @@ Defines the **column order** (stages) for business process flows. Each item has 
 [{"id":"Develop","order":2},{"id":"Propose","order":1},{"id":"Close","order":0}]
 ```
 
-Use the stage **display name** as `id`. In the control configuration: *View > Custom Controls > Kanban View Control > Business Process Flow Step Order > Edit > Bind to a static value > Paste JSON*.
+Use the stage **display name** as `id`. By default, stages follow the BPF definition; conditional stages are ordered after their parent stage. In this version, the optional JSON property can override individual stage positions. In the control configuration: *View > Custom Controls > Kanban View Control > Business Process Flow Step Order > Edit > Bind to a static value > Paste JSON*.
 
 ---
 
@@ -139,7 +156,7 @@ When **No**, drag-and-drop is disabled; cards cannot be moved between columns. C
 
 ### Card move validation function
 
-**Type:** Text  
+**Type:** Text
 
 Optional name of a **global JavaScript function** (from a model-driven app web resource) that is called **before a card is moved to another column**.  
 The function can be **synchronous or asynchronous** and can **allow or cancel** the move and optionally provide an error message that is shown as a **toast notification**.
@@ -172,7 +189,7 @@ This control is used in **Views** (table/list overviews), not on entity forms. S
 
 #### Card move validation script (web resource)
 
-**Type:** Text  
+**Type:** Text
 
 Optional **web resource name** (e.g. `publisherprefix_/scripts/kanban_validate.js` or `publisherprefix_scriptname.js`) that the control loads when the view opens. The name must match the web resource name in your solution (including publisher prefix and path). When set, the control builds the URL and loads the script from Dataverse; after it loads, the **Card move validation function** is available for move validation.
 
@@ -356,6 +373,30 @@ When **Yes**, columns that currently have no cards are hidden. Only columns that
 
 ---
 
+### Hide Unallocated column
+
+**Type:** Yes/No
+
+When **Yes**, records that do not match a board column are omitted from the board. Default: **No**.
+
+---
+
+### Unallocated column name
+
+**Type:** Text
+
+Changes the label of the column that contains records without a matching board column. Empty uses **Unallocated**.
+
+---
+
+### Scroll whole board
+
+**Type:** Yes/No
+
+When **Yes**, columns share one vertical scrollbar instead of scrolling independently. Progressive card loading remains enabled and loads more cards as you reach the bottom of the board. Default: **No**.
+
+---
+
 ### Expand board to full width
 
 **Type:** Yes/No
@@ -388,7 +429,9 @@ Maximum width of each column (and cards) in **pixels** (e.g. `500` or `800`). Va
 
 **Type:** Text (number)
 
-Number of **cards shown per column initially**. When a column has more cards than this value, only the first N cards are rendered; scrolling near the bottom of the column loads more (progressive loading). This reduces initial DOM size and improves performance for columns with many records. Counts and sums in the column header always reflect **all** cards in the column. Valid range: 1–500. Empty = default (**30**).
+Number of **cards rendered per column initially**. When a column has more cards than this value, only the first N cards are rendered; scrolling near the bottom loads more. In whole-board scroll mode, more cards load as you reach the bottom of the board. This reduces initial DOM size and improves performance for columns with many records. Counts and sums in the column header always reflect **all** cards in the loaded dataset. Valid range: 1–500. Empty = default (**30**).
+
+The control requests additional dataset pages up to **2,500 records** so it can group, filter, search, and sort records client-side. The initial-card setting controls how many loaded cards are rendered at once; it does not change the dataset record limit.
 
 **Example:** `30` (default), `50`, `100`. Leave empty for default (30).
 
@@ -396,7 +439,7 @@ Number of **cards shown per column initially**. When a column has more cards tha
 
 ### Column widths
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
 Sets the **width per column**. Each item: `"id"` (column id, e.g. BPF stage name like `"Develop"` or option value for choice/status) and `"width"` (pixels, 200–1200). Columns not listed use the global min/max values.
 
@@ -426,9 +469,17 @@ When **Yes**, the field used for the current "View By" grouping (e.g. priority, 
 
 ---
 
+### Compact cards
+
+**Type:** Yes/No
+
+When **Yes**, cards use tighter spacing and shorter titles so more records fit in the board. Card fields remain visible. Default: **No**.
+
+---
+
 ### Hidden fields on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** that are loaded with the dataset but **not** displayed on cards. Use to load data (e.g. for lookups) without showing it. Invalid JSON is interpreted as comma-separated.
 
@@ -444,7 +495,7 @@ Or comma-separated: `estimatedvalue, createdon, ownerid`
 
 ### Fields visible per stage (phase)
 
-**Type:** Text (JSON object)
+**Type:** Text area (JSON object)
 
 Restricts **which fields are shown on the card** depending on the current column (phase/stage). Only listed fields are affected; fields not in the config are visible in all columns.
 
@@ -469,7 +520,7 @@ Here, `estimatedvalue` is visible only in BPF stages Qualify and Develop; `descr
 
 ### HTML fields on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** whose value is rendered as **HTML** (sanitized with DOMPurify and configurable whitelist). For rich text or formatted content. See [Security (HTML on cards)](#security-html-on-cards) for tag/attribute whitelist.
 
@@ -499,7 +550,7 @@ Here, `estimatedvalue` is visible only in BPF stages Qualify and Develop; `descr
 
 ### Hide label for fields on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** for which the **label** is hidden on the card; only the value is shown. Useful for compact layouts. Invalid JSON is interpreted as comma-separated.
 
@@ -515,7 +566,7 @@ Or comma-separated.
 
 ### Field display names on card
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
 Custom **display names (labels)** for fields on the card. Format: `{"logicalName":"...","displayName":"..."}`. Fields not listed keep their dataset display name. Invalid JSON is reported.
 
@@ -539,7 +590,7 @@ Both formats can be mixed in the same array.
 
 ### Field highlights
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
 Highlight fields when a value is set. Each item: `logicalName`, `color` (e.g. `#hex`), optional `type`. **First match per type** wins. **type**: `left` (default) = colored left border, `right` = right border, `cornerTopLeft`, `cornerTopRight`, `cornerBottomLeft`, `cornerBottomRight` = diagonal corner mark. Fields must be in the dataset columns.
 
@@ -555,7 +606,7 @@ Supported colors: hex (`#ff0000`), RGB or CSS color names.
 
 ### Field widths on card
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
 **Percentage width** of fields on the card (100 = full width, 50 = half). Fields not listed keep the default width. Invalid JSON is reported.
 
@@ -569,7 +620,7 @@ Supported colors: hex (`#ff0000`), RGB or CSS color names.
 
 ### Lookup fields as Persona on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** for which lookup values are shown as **Persona** (image/initials). Other lookup fields are shown as a simple link.
 
@@ -585,7 +636,7 @@ Or comma-separated. For icon/initials only without text see **Lookup Persona ico
 
 ### Lookup Persona icon only on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** for which Persona is shown **icon/initials only** (no text). Only applies to fields also listed in **Lookup fields as Persona on card**.
 
@@ -593,7 +644,7 @@ Or comma-separated. For icon/initials only without text see **Lookup Persona ico
 
 ### Show E-Mail and Phone as links on card
 
-**Type:** TwoOptions (Yes/No)
+**Type:** Yes/No
 
 When **enabled**, fields whose column type is **SingleLine.Email** or **SingleLine.Phone** (from `dataset.columns`) are shown as **clickable mailto/tel links** on the card. The data type is read from the dataset; no per-field list is needed.
 
@@ -601,7 +652,7 @@ When **enabled**, fields whose column type is **SingleLine.Email** or **SingleLi
 
 ### Ellipsis fields on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** for which the value is shown with **text-overflow: ellipsis** (single line, overflow with …). Other fields use multi-line clamp.
 
@@ -617,7 +668,7 @@ Or comma-separated.
 
 ### Line break fields on card
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** for which **line breaks (newlines)** inside the value are preserved on the card.  
 Useful for multi-line descriptions or notes. Only applies to **non-HTML text values**; HTML fields are controlled via **HTML fields on card**.
@@ -636,7 +687,7 @@ Or comma-separated.
 
 ### Field max height on card
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
 Limit the **maximum height (in pixels)** of specific field values on the card. When the content exceeds this height, a **vertical scrollbar** appears inside the field so the card itself does not grow indefinitely.
 
@@ -681,7 +732,7 @@ Content from **HTML fields on card** is sanitized with [DOMPurify](https://githu
 
 ### Quick filter fields
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** to show as **quick filter dropdowns** above the board. All fields except Boolean are **multiselect**; Boolean remains single-select. **DateTime/DateOnly** get a **date filter UI**: (All), Today, Last 7 days, Last 30 days, Current calendar week, Current month, Current year, Next calendar week, Next month, Custom range. **Number/Currency** get a **number filter UI**: (All), Greater than, Less than, Greater/Less or equal, Between (min/max). Use the **exact column name** from the dataset. Only fields present in the dataset can be used. Invalid JSON is interpreted as comma-separated.
 
@@ -697,7 +748,7 @@ Or comma-separated.
 
 ### Quick filter fields in popup
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** that are shown in a **popup** (e.g. "More filters") instead of inline to save space. Must be a **subset** of **Quick filter fields**.
 
@@ -707,9 +758,9 @@ Or comma-separated.
 
 ### Filter presets
 
-**Type:** Text (JSON array)
+**Type:** Text area (JSON array)
 
-Predefined filters shown as a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. For **multiselect** use an array as value; for Boolean use a single value. **The filter preset dropdown is only shown when this property is set.**
+Predefined filters shown as a dropdown next to sorting. Each preset: `{"id":"unique-id","label":"Display name","filters":{"fieldLogicalName":"filterValue"}}`. For **multiselect** use an array as value; for Boolean use a single value. Add `"default": true` to apply a preset automatically on first load when no saved filter state exists. **The filter preset dropdown is only shown when this property is set.**
 
 **Date fields:** `"today"`, `"last7"`, `"last30"`, `"currentMonth"`, `"currentYear"`, `"currentWeek"`, `"nextWeek"`, `"nextMonth"`, `"YYYY-MM-DD|YYYY-MM-DD"` or `{"start":"YYYY-MM-DD","end":"YYYY-MM-DD"}`.  
 **Number/currency fields:** `"gt:123"`, `"lt:456"`, `"gte:0"`, `"lte:10000"`, `"between:100|5000"`.  
@@ -736,7 +787,7 @@ Predefined filters shown as a dropdown next to sorting. Each preset: `{"id":"uni
 
 ### Sort fields
 
-**Type:** Text (JSON array or comma-separated)
+**Type:** Text area (JSON array or comma-separated)
 
 **Logical field names** for **custom sorting** (dropdown next to search). Only fields from the dataset. Ascending/descending is selectable in the UI. Invalid JSON is interpreted as comma-separated.
 
@@ -747,6 +798,22 @@ Predefined filters shown as a dropdown next to sorting. Each preset: `{"id":"uni
 ```
 
 Or comma-separated.
+
+---
+
+### Default sort
+
+**Type:** Text area (JSON object)
+
+Sets the initial sort when no saved sort preference exists. The field must also be listed in **Sort fields**. Users can change the sort in the board; their selection is saved for that dataset view. Invalid JSON or a field not listed in **Sort fields** disables the configured default.
+
+**Example:**
+
+```json
+{"field":"estimatedvalue","direction":"desc"}
+```
+
+`direction` can be `asc` or `desc`. If omitted or invalid, it defaults to `asc`.
 
 ---
 

@@ -17,6 +17,17 @@ interface IProps {
   draggable?: boolean;
 }
 
+function formatCardTitle(value: unknown): string {
+  const formatLookup = (entry: unknown): string => {
+    if (entry && typeof entry === "object" && "name" in entry) {
+      return String((entry as { name: unknown }).name ?? "");
+    }
+    return entry == null ? "" : String(entry);
+  };
+
+  return Array.isArray(value) ? value.map(formatLookup).join(", ") : formatLookup(value);
+}
+
 /** Only true for boolean-like truthy values. False, 0, "false", "no" etc. do not count as true. */
 function isBooleanTruthy(value: unknown): boolean {
   if (value === true || value === 1) return true;
@@ -69,6 +80,7 @@ const Card = ({ item, draggable = true }: IProps) => {
     openSharePointFolderInNewTab,
   } = useContext(CardActionsContext);
   const strings = getStrings(locale);
+  const cardTitle = formatCardTitle(item?.title?.value);
   const {
     hideColumnFieldOnCard,
     hiddenFieldsOnCardSet,
@@ -205,7 +217,7 @@ const Card = ({ item, draggable = true }: IProps) => {
       )}
       <CardHeader>
         <Text className="card-title" nowrap>
-          {item?.title?.value}
+          {cardTitle}
         </Text>
         {(showOpenInNewTabButton || showCreateActivityButton || showSharePointFolderButton) && (
           <span className="card-header-actions">

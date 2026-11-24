@@ -296,8 +296,7 @@ const App = ({ context, notificationPosition }: IProps) => {
 
   // Key for refresh: derived from current records on each render so that
   // after dataset.refresh() the display updates (even when PCF returns the same reference).
-  const datasetRecordsKey =
-    `${Object.keys(dataset.records).length}-${Object.keys(dataset.records).sort().slice(0, 100).join(",")}`;
+  const datasetRecordsKey = dataset.sortedRecordIds.join(",");
 
   const quickFilterFieldsParam = (context.parameters as { quickFilterFields?: { raw?: string } }).quickFilterFields?.raw;
   const quickFilterFieldsParsed = useMemo(
@@ -831,8 +830,13 @@ const App = ({ context, notificationPosition }: IProps) => {
     );
 
     let activeColumns = activeView?.columns ?? [];
+    const hideUnallocatedColumn =
+      (context.parameters as { hideUnallocatedColumn?: { raw?: boolean } }).hideUnallocatedColumn?.raw === true;
+    const configuredUnallocatedName =
+      (context.parameters as { unallocatedColumnName?: { raw?: string } }).unallocatedColumnName?.raw?.trim();
     if (
       activeView.type != "BPF" &&
+      !hideUnallocatedColumn &&
       filteredCards.some(
         (card: any) =>
           // Karte konnte keiner Spalte zugeordnet werden (z. B. Options-Wert ohne
@@ -843,15 +847,21 @@ const App = ({ context, notificationPosition }: IProps) => {
           card[activeView.key]?.value === ""
       )
     ) {
-      activeColumns = [unlocatedColumn, ...activeColumns];
+      const title = configuredUnallocatedName || unlocatedColumn.title;
+      activeColumns = [{ ...unlocatedColumn, title }, ...activeColumns];
     }
 
-    let columns = activeColumns.map((col) => {
-      return {
-        ...col,
-        cards: filteredCards.filter((card: any) => card?.column == col.id),
-      };
-    });
+    const cardsByColumn = new Map<string, any[]>();
+    for (const card of filteredCards) {
+      const key = String(card?.column ?? "");
+      const bucket = cardsByColumn.get(key);
+      if (bucket) bucket.push(card);
+      else cardsByColumn.set(key, [card]);
+    }
+    let columns = activeColumns.map((col) => ({
+      ...col,
+      cards: cardsByColumn.get(String(col.id ?? "")) ?? [],
+    }));
 
     if (sortByField) {
       columns = columns.map((col) => {
@@ -879,6 +889,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     cardMatchesSearch,
     sortByField,
     sortDirection,
+    context.parameters,
   ]);
 
   useEffect(() => {
@@ -886,13 +897,10 @@ const App = ({ context, notificationPosition }: IProps) => {
   }, [handleViewChange]);
 
   const handleColumnsChange = async () => {
-    const recordIds = Object.keys(dataset.records);
-    if (recordIds.length <= 0) {
-      setIsLoading(false);
-      return;
-    }
+    const recordIds = dataset.sortedRecordIds;
 
     if (
+      recordIds.length > 0 &&
       context.parameters.dataset.paging != null &&
       context.parameters.dataset.paging.hasNextPage == true &&
       recordIds.length < 2500
@@ -905,6 +913,7 @@ const App = ({ context, notificationPosition }: IProps) => {
       const paging = context.parameters.dataset.paging as
         typeof context.parameters.dataset.paging & { setPageSize?: (pageSize: number) => void };
       paging.setPageSize?.(2500);
+      pagingLoadRequestedRef.current = true;
       paging.loadNextPage();
       return;
     }
@@ -947,10 +956,27 @@ const App = ({ context, notificationPosition }: IProps) => {
     setIsLoading(false);
   };
 
+  const pagingLoadRequestedRef = useRef(false);
+  const previousDatasetColumnsRef = useRef(dataset.columns);
+  const columnsChangePendingRef = useRef(false);
+
   useEffect(() => {
+    const columnsChanged = previousDatasetColumnsRef.current !== dataset.columns;
+    previousDatasetColumnsRef.current = dataset.columns;
+    if (columnsChanged) columnsChangePendingRef.current = true;
+
+    // loadNextPage is asynchronous and triggers updateView. Wait until PCF reports
+    // the current request finished, then continue while another page is available.
+    if (dataset.loading) return;
+    const shouldContinuePaging = pagingLoadRequestedRef.current;
+    pagingLoadRequestedRef.current = false;
+    const shouldRefreshViews = columnsChangePendingRef.current;
+    columnsChangePendingRef.current = false;
+    if (!isLoading && !shouldRefreshViews && !shouldContinuePaging) return;
+
     setSelectedEntity(dataset.getTargetEntityType());
-    handleColumnsChange();
-  }, [context.parameters.dataset.columns]);
+    void handleColumnsChange();
+  }, [dataset.columns, dataset.loading, datasetRecordsKey, isLoading]);
 
   // Bei neuen/geänderten Konfigurationsfehlern das Ausblenden zurücksetzen, damit
   // ein zuvor weggeklickter Banner bei einem neuen Fehler wieder erscheint.

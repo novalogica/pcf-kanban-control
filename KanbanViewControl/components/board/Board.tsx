@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useRef } from "react";
 import { CommandBar, Column, QuickFilters } from "..";
 import {
   DragDropContext,
@@ -69,6 +69,14 @@ const Board = () => {
     return (context.parameters as { hideEmptyColumns?: { raw?: boolean } }).hideEmptyColumns?.raw === true;
   }, [context.parameters]);
 
+  const compactCards = useMemo(() => {
+    return (context.parameters as { compactCards?: { raw?: boolean } }).compactCards?.raw === true;
+  }, [context.parameters]);
+
+  const scrollWholeBoard = useMemo(() => {
+    return (context.parameters as { scrollWholeBoard?: { raw?: boolean } }).scrollWholeBoard?.raw === true;
+  }, [context.parameters]);
+
   const expandBoardToFullWidth = useMemo(() => {
     return (context.parameters as { expandBoardToFullWidth?: { raw?: boolean } }).expandBoardToFullWidth?.raw === true;
   }, [context.parameters]);
@@ -108,6 +116,8 @@ const Board = () => {
     }
   }, [context.parameters]);
 
+  const boardScrollRef = useRef<HTMLDivElement | null>(null);
+
   const visibleColumns = useMemo(() => {
     if (!columns) return [];
     if (!hideEmptyColumns) return columns;
@@ -119,6 +129,7 @@ const Board = () => {
       key={column.id}
       column={column}
       widthPx={columnWidthsMap.get(column.id.toString())}
+        wholeBoardScrollRef={scrollWholeBoard ? boardScrollRef : undefined}
     />
   ));
 
@@ -126,9 +137,9 @@ const Board = () => {
     <div className="main-container">
       <QuickFilters />
       {!hideViews && <CommandBar />}
-      <div className="kanban-container">
+      <div ref={boardScrollRef} className={`kanban-container${scrollWholeBoard ? " kanban-container--whole-board-scroll" : ""}`}>
         <div
-          className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}`}
+          className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}${compactCards ? " columns-wrapper--compact" : ""}${scrollWholeBoard ? " columns-wrapper--whole-board-scroll" : ""}`}
           style={{
             ...(minColumnWidthPx != null ? { "--min-column-width": `${minColumnWidthPx}px` } : {}),
             ...(maxColumnWidthPx != null ? { "--max-column-width": `${maxColumnWidthPx}px` } : {}),

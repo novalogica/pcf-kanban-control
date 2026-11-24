@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useContext, useCallback, useRef, useState } from "react";
+import { useContext, useCallback, useEffect, useRef, useState } from "react";
 import { Draggable, Droppable } from "@hello-pangea/dnd";
 import Card from "../card/Card";
 import ColumnHeader from "./ColumnHeader";
@@ -22,7 +22,7 @@ function parseInitialCardsVisible(raw: unknown): number {
   return n;
 }
 
-const Column = ({ column, widthPx }: { column: ColumnItem; widthPx?: number }) => {
+const Column = ({ column, widthPx, wholeBoardScrollRef }: { column: ColumnItem; widthPx?: number; wholeBoardScrollRef?: React.RefObject<HTMLDivElement> }) => {
   const { locale, context, draggingRef, openFormWithLoading } = useContext(BoardContext);
   const strings = getStrings(locale);
   const allowCardMove = ((context.parameters as unknown) as { allowCardMove?: { raw?: boolean } }).allowCardMove?.raw !== false;
@@ -42,13 +42,20 @@ const Column = ({ column, widthPx }: { column: ColumnItem; widthPx?: number }) =
   const hasMore = useProgressiveLoad && visibleCount < totalCount;
 
   const handleScroll = useCallback(() => {
-    const el = scrollContainerRef.current;
+    const el = wholeBoardScrollRef?.current ?? scrollContainerRef.current;
     if (!el || !hasMore) return;
     const { scrollTop, clientHeight, scrollHeight } = el;
     if (scrollTop + clientHeight >= scrollHeight - SCROLL_LOAD_THRESHOLD_PX) {
       setVisibleCount((prev) => Math.min(prev + LOAD_MORE_CARDS_COUNT, totalCount));
     }
-  }, [hasMore, totalCount]);
+  }, [hasMore, totalCount, wholeBoardScrollRef]);
+
+  useEffect(() => {
+    const scrollTarget = wholeBoardScrollRef?.current;
+    if (!scrollTarget) return;
+    scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollTarget.removeEventListener("scroll", handleScroll);
+  }, [handleScroll, wholeBoardScrollRef]);
 
   const setScrollRef = useCallback(
     (el: HTMLDivElement | null) => {
