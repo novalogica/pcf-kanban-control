@@ -875,6 +875,7 @@ const App = ({ context, notificationPosition }: IProps) => {
     }));
 
     if (sortByField) {
+      const collator = new Intl.Collator(undefined, { numeric: true });
       columns = columns.map((col) => {
         const sortedCards = [...(col.cards ?? [])].sort((a: any, b: any) => {
           const ka = getCardSortKey(a, sortByField);
@@ -885,7 +886,7 @@ const App = ({ context, notificationPosition }: IProps) => {
           const cmp =
             typeof ka.comparable === "number" && typeof kb.comparable === "number"
               ? ka.comparable - kb.comparable
-              : String(ka.comparable).localeCompare(String(kb.comparable), undefined, { numeric: true });
+              : collator.compare(String(ka.comparable), String(kb.comparable));
           return sortDirection === "asc" ? cmp : -cmp;
         });
         return { ...col, cards: sortedCards };
