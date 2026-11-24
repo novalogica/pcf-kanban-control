@@ -22,7 +22,11 @@ function parseInitialCardsVisible(raw: unknown): number {
   return n;
 }
 
-const Column = ({ column, widthPx, wholeBoardScrollRef }: { column: ColumnItem; widthPx?: number; wholeBoardScrollRef?: React.RefObject<HTMLDivElement> }) => {
+const Column = ({ column, widthPx, registerBoardLoadMore }: {
+  column: ColumnItem;
+  widthPx?: number;
+  registerBoardLoadMore?: (loadMore: () => void) => () => void;
+}) => {
   const { locale, context, draggingRef, openFormWithLoading } = useContext(BoardContext);
   const strings = getStrings(locale);
   const allowCardMove = ((context.parameters as unknown) as { allowCardMove?: { raw?: boolean } }).allowCardMove?.raw !== false;
@@ -41,21 +45,24 @@ const Column = ({ column, widthPx, wholeBoardScrollRef }: { column: ColumnItem; 
   const cardsToShow = useProgressiveLoad ? cards.slice(0, visibleCount) : cards;
   const hasMore = useProgressiveLoad && visibleCount < totalCount;
 
+  const loadMoreCards = useCallback(() => {
+    if (!hasMore) return;
+    setVisibleCount((prev) => Math.min(prev + LOAD_MORE_CARDS_COUNT, totalCount));
+  }, [hasMore, totalCount]);
+
   const handleScroll = useCallback(() => {
-    const el = wholeBoardScrollRef?.current ?? scrollContainerRef.current;
+    const el = scrollContainerRef.current;
     if (!el || !hasMore) return;
     const { scrollTop, clientHeight, scrollHeight } = el;
     if (scrollTop + clientHeight >= scrollHeight - SCROLL_LOAD_THRESHOLD_PX) {
-      setVisibleCount((prev) => Math.min(prev + LOAD_MORE_CARDS_COUNT, totalCount));
+      loadMoreCards();
     }
-  }, [hasMore, totalCount, wholeBoardScrollRef]);
+  }, [hasMore, loadMoreCards]);
 
   useEffect(() => {
-    const scrollTarget = wholeBoardScrollRef?.current;
-    if (!scrollTarget) return;
-    scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
-    return () => scrollTarget.removeEventListener("scroll", handleScroll);
-  }, [handleScroll, wholeBoardScrollRef]);
+    if (!registerBoardLoadMore) return;
+    return registerBoardLoadMore(loadMoreCards);
+  }, [loadMoreCards, registerBoardLoadMore]);
 
   const setScrollRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -80,7 +87,7 @@ const Column = ({ column, widthPx, wholeBoardScrollRef }: { column: ColumnItem; 
         <div
           ref={setScrollRef}
           className="cards-wrapper"
-          onScroll={useProgressiveLoad ? handleScroll : undefined}
+          onScroll={useProgressiveLoad && !registerBoardLoadMore ? handleScroll : undefined}
         >
           {hasCards &&
             cardsToShow.map((item) => (
@@ -106,7 +113,7 @@ const Column = ({ column, widthPx, wholeBoardScrollRef }: { column: ColumnItem; 
             }}
             className="cards-wrapper"
             style={getListStyle(snapshot.isDraggingOver)}
-            onScroll={useProgressiveLoad ? handleScroll : undefined}
+            onScroll={useProgressiveLoad && !registerBoardLoadMore ? handleScroll : undefined}
             {...provided.droppableProps}
           >
             {hasCards &&

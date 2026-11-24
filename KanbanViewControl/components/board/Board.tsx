@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useContext, useMemo, useRef } from "react";
+import { useContext, useCallback, useMemo, useRef } from "react";
 import { CommandBar, Column, QuickFilters } from "..";
 import {
   DragDropContext,
@@ -10,7 +10,7 @@ import { BoardContext } from "../../context/board-context";
 import { useDnD } from "../../hooks/useDnD";
 import { pluralizedLogicalNames, hasActiveFilters } from "../../lib/utils";
 import { getStrings } from "../../lib/strings";
-import { MAX_DATASET_RECORDS } from "../../lib/constants";
+import { MAX_DATASET_RECORDS, SCROLL_LOAD_THRESHOLD_PX } from "../../lib/constants";
 
 const Board = () => {
   const { locale, context, columns, selectedEntity, activeView, draggingRef, quickFilterValues, searchKeyword, selectedFilterPresetId, hasMoreRecordsAvailable } =
@@ -118,6 +118,19 @@ const Board = () => {
   }, [context.parameters]);
 
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
+  const boardLoadMoreCallbacksRef = useRef<Set<() => void>>(new Set());
+
+  const registerBoardLoadMore = useCallback((loadMore: () => void) => {
+    boardLoadMoreCallbacksRef.current.add(loadMore);
+    return () => boardLoadMoreCallbacksRef.current.delete(loadMore);
+  }, []);
+
+  const handleBoardScroll = useCallback(() => {
+    const element = boardScrollRef.current;
+    if (!element) return;
+    if (element.scrollTop + element.clientHeight < element.scrollHeight - SCROLL_LOAD_THRESHOLD_PX) return;
+    boardLoadMoreCallbacksRef.current.forEach((loadMore) => loadMore());
+  }, []);
 
   const visibleColumns = useMemo(() => {
     if (!columns) return [];
@@ -130,7 +143,7 @@ const Board = () => {
       key={column.id}
       column={column}
       widthPx={columnWidthsMap.get(column.id.toString())}
-        wholeBoardScrollRef={scrollWholeBoard ? boardScrollRef : undefined}
+      registerBoardLoadMore={scrollWholeBoard ? registerBoardLoadMore : undefined}
     />
   ));
 
@@ -143,7 +156,11 @@ const Board = () => {
           {strings.recordLimitWarning(MAX_DATASET_RECORDS)}
         </div>
       )}
-      <div ref={boardScrollRef} className={`kanban-container${scrollWholeBoard ? " kanban-container--whole-board-scroll" : ""}`}>
+      <div
+        ref={boardScrollRef}
+        className={`kanban-container${scrollWholeBoard ? " kanban-container--whole-board-scroll" : ""}`}
+        onScroll={scrollWholeBoard ? handleBoardScroll : undefined}
+      >
         <div
           className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}${compactCards ? " columns-wrapper--compact" : ""}${scrollWholeBoard ? " columns-wrapper--whole-board-scroll" : ""}`}
           style={{
