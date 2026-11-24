@@ -58,6 +58,7 @@ export interface Strings {
   // Loading
   loadingLabel: string;
   openingRecordLabel: string;
+  recordLimitWarning: (limit: number) => string;
 
   // Empty states
   noRecordsFound: string;
@@ -132,6 +133,7 @@ const en: Strings = {
 
   loadingLabel: "Loading...",
   openingRecordLabel: "Opening record...",
+  recordLimitWarning: (limit) => `Showing the first ${limit.toLocaleString("en-US")} records. More records are available; add filters to narrow the dataset.`,
 
   noRecordsFound: "No records found",
   noRecordsForFilters: "No matches for the current filters",
@@ -201,6 +203,7 @@ const de: Strings = {
 
   loadingLabel: "Laden...",
   openingRecordLabel: "Datensatz wird geöffnet...",
+  recordLimitWarning: (limit) => `Es werden die ersten ${limit.toLocaleString("de-DE")} Datensätze angezeigt. Weitere Datensätze sind verfügbar; grenzen Sie die Ansicht mit Filtern ein.`,
 
   noRecordsFound: "Keine Datensätze gefunden",
   noRecordsForFilters: "Keine Treffer für die aktuellen Filter",

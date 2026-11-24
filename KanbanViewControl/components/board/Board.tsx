@@ -10,9 +10,10 @@ import { BoardContext } from "../../context/board-context";
 import { useDnD } from "../../hooks/useDnD";
 import { pluralizedLogicalNames, hasActiveFilters } from "../../lib/utils";
 import { getStrings } from "../../lib/strings";
+import { MAX_DATASET_RECORDS } from "../../lib/constants";
 
 const Board = () => {
-  const { locale, context, columns, selectedEntity, activeView, draggingRef, quickFilterValues, searchKeyword, selectedFilterPresetId } =
+  const { locale, context, columns, selectedEntity, activeView, draggingRef, quickFilterValues, searchKeyword, selectedFilterPresetId, hasMoreRecordsAvailable } =
     useContext(BoardContext);
   const strings = getStrings(locale);
   const filtersActive = hasActiveFilters(quickFilterValues, searchKeyword, selectedFilterPresetId);
@@ -137,6 +138,11 @@ const Board = () => {
     <div className="main-container">
       <QuickFilters />
       {!hideViews && <CommandBar />}
+      {hasMoreRecordsAvailable && (
+        <div className="record-limit-warning" role="status" aria-live="polite">
+          {strings.recordLimitWarning(MAX_DATASET_RECORDS)}
+        </div>
+      )}
       <div ref={boardScrollRef} className={`kanban-container${scrollWholeBoard ? " kanban-container--whole-board-scroll" : ""}`}>
         <div
           className={`columns-wrapper${expandBoardToFullWidth ? " columns-wrapper--full-width" : ""}${compactCards ? " columns-wrapper--compact" : ""}${scrollWholeBoard ? " columns-wrapper--whole-board-scroll" : ""}`}

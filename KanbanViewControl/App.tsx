@@ -12,7 +12,7 @@ import { CardConfigContext } from "./context/card-config-context";
 import { CardActionsContext } from "./context/card-actions-context";
 import { useNavigation } from "./hooks/useNavigation";
 import { getColumnValue, isBooleanColumnDataType, isDateColumnDataType, isNumberColumnDataType, toComparableDate, toComparableNumber, isDateInFilterRange, isNumberInFilterRange, parseFieldDisplayNames } from "./lib/utils";
-import { unlocatedColumn } from "./lib/constants";
+import { MAX_DATASET_RECORDS, unlocatedColumn } from "./lib/constants";
 import { getLocaleFromLanguageId, getStrings } from "./lib/strings";
 import { getClientUrl, loadWebResourceScript } from "./lib/load-validation-script";
 import { Spinner, SpinnerSize } from "@fluentui/react";
@@ -288,6 +288,8 @@ const App = ({ context, notificationPosition }: IProps) => {
   const cardConfig = useCardConfig(context, locale, reportConfigError, clearConfigError);
   const { openForm, openEntityInNewTab, openCreateActivityForm, openSharePointFolderInNewTab } = useNavigation(context);
   const { dataset } = context.parameters;
+  const hasMoreRecordsAvailable =
+    dataset.sortedRecordIds.length >= MAX_DATASET_RECORDS && dataset.paging?.hasNextPage === true;
   const showOpenInNewTabButton = (context.parameters as { showOpenInNewTabButton?: { raw?: boolean } }).showOpenInNewTabButton?.raw === true;
   const showCreateActivityButton = (context.parameters as { showCreateActivityButton?: { raw?: boolean } }).showCreateActivityButton?.raw === true;
   const createActivityEntityTypeRaw = (context.parameters as { createActivityEntityType?: { raw?: string } }).createActivityEntityType?.raw?.trim();
@@ -752,46 +754,40 @@ const App = ({ context, notificationPosition }: IProps) => {
 
   // Prüft, ob eine Karte die Quick-Filter erfüllt. `exceptKey` blendet EIN Feld aus –
   // für die facettierten Counts dieses Feldes, damit dessen eigene Auswahl nicht mitzählt.
-  const cardPassesQuickFilters = useCallback(
-    (card: any, exceptKey?: string) => {
-      for (const cfg of quickFilterFieldsConfig) {
-        if (cfg.key === exceptKey) continue;
-        const selected = quickFilterValues[cfg.key];
-        if (cfg.isDateField) {
-          const dateFilterVal = selected == null || Array.isArray(selected) ? null : selected;
-          if (dateFilterVal === null || dateFilterVal === "") continue;
-          const recordDate = toComparableDate(card[`${cfg.key}Raw`] ?? card[cfg.key]);
-          if (!isDateInFilterRange(recordDate, dateFilterVal)) return false;
-          continue;
-        }
-        if (cfg.isNumberField) {
-          const numFilterVal = selected == null || Array.isArray(selected) ? null : selected;
-          if (numFilterVal === null || numFilterVal === "") continue;
-          const recordNum = toComparableNumber(card[`${cfg.key}Raw`] ?? card[cfg.key]);
-          if (!isNumberInFilterRange(recordNum, numFilterVal)) return false;
-          continue;
-        }
-        const cardVal = getQuickFilterComparableValue(card[cfg.key]);
-        if (cfg.isMultiselect) {
-          const arr = Array.isArray(selected) ? selected : null;
-          if (!arr || arr.length === 0) continue;
-          if (arr.includes(QUICK_FILTER_EMPTY_KEY)) {
-            if (cardVal !== "") return false;
-          } else if (!arr.includes(cardVal)) {
-            return false;
-          }
-        } else {
-          if (selected == null || selected === "") continue;
-          if (selected === QUICK_FILTER_EMPTY_KEY) {
-            if (cardVal !== "") return false;
-          } else if (cardVal !== selected) {
-            return false;
-          }
-        }
+  const cardPassesQuickFilter = useCallback(
+    (card: any, cfg: QuickFilterFieldConfig) => {
+      const selected = quickFilterValues[cfg.key];
+      if (cfg.isDateField) {
+        const dateFilterVal = selected == null || Array.isArray(selected) ? null : selected;
+        if (dateFilterVal === null || dateFilterVal === "") return true;
+        const recordDate = toComparableDate(card[`${cfg.key}Raw`] ?? card[cfg.key]);
+        return isDateInFilterRange(recordDate, dateFilterVal);
       }
-      return true;
+      if (cfg.isNumberField) {
+        const numFilterVal = selected == null || Array.isArray(selected) ? null : selected;
+        if (numFilterVal === null || numFilterVal === "") return true;
+        const recordNum = toComparableNumber(card[`${cfg.key}Raw`] ?? card[cfg.key]);
+        return isNumberInFilterRange(recordNum, numFilterVal);
+      }
+
+      const cardVal = getQuickFilterComparableValue(card[cfg.key]);
+      if (cfg.isMultiselect) {
+        const arr = Array.isArray(selected) ? selected : null;
+        if (!arr || arr.length === 0) return true;
+        return arr.includes(QUICK_FILTER_EMPTY_KEY) ? cardVal === "" : arr.includes(cardVal);
+      }
+      if (selected == null || selected === "") return true;
+      return selected === QUICK_FILTER_EMPTY_KEY ? cardVal === "" : cardVal === selected;
     },
-    [quickFilterFieldsConfig, quickFilterValues]
+    [quickFilterValues]
+  );
+
+  const cardPassesQuickFilters = useCallback(
+    (card: any, exceptKey?: string) =>
+      quickFilterFieldsConfig.every(
+        (cfg) => cfg.key === exceptKey || cardPassesQuickFilter(card, cfg)
+      ),
+    [quickFilterFieldsConfig, cardPassesQuickFilter]
   );
 
   const searchTrimmedLower = searchKeyword.trim().toLowerCase();
@@ -805,20 +801,35 @@ const App = ({ context, notificationPosition }: IProps) => {
   // (Nur Nicht-Datum/Nicht-Zahl-Felder haben Wertelisten.)
   const quickFilterCounts = useMemo<Record<string, Record<string, number>>>(() => {
     const result: Record<string, Record<string, number>> = {};
-    for (const cfg of quickFilterFieldsConfig) {
-      if (cfg.isDateField || cfg.isNumberField) continue;
-      const counts: Record<string, number> = {};
-      for (const card of transformedCards) {
-        if (!cardPassesQuickFilters(card, cfg.key)) continue;
-        if (!cardMatchesSearch(card)) continue;
-        const v = getQuickFilterComparableValue(card[cfg.key]);
-        const key = v === "" ? QUICK_FILTER_EMPTY_KEY : v;
+    const countFields = quickFilterFieldsConfig.filter(
+      (cfg) => !cfg.isDateField && !cfg.isNumberField
+    );
+    for (const cfg of countFields) result[cfg.key] = {};
+
+    for (const card of transformedCards) {
+      if (!cardMatchesSearch(card)) continue;
+
+      let failedField: string | null = null;
+      let failedCount = 0;
+      for (const cfg of quickFilterFieldsConfig) {
+        if (!cardPassesQuickFilter(card, cfg)) {
+          failedField = cfg.key;
+          failedCount += 1;
+          if (failedCount > 1) break;
+        }
+      }
+      if (failedCount > 1) continue;
+
+      for (const cfg of countFields) {
+        if (failedCount === 1 && failedField !== cfg.key) continue;
+        const value = getQuickFilterComparableValue(card[cfg.key]);
+        const key = value === "" ? QUICK_FILTER_EMPTY_KEY : value;
+        const counts = result[cfg.key];
         counts[key] = (counts[key] ?? 0) + 1;
       }
-      result[cfg.key] = counts;
     }
     return result;
-  }, [transformedCards, quickFilterFieldsConfig, cardPassesQuickFilters, cardMatchesSearch]);
+  }, [transformedCards, quickFilterFieldsConfig, cardPassesQuickFilter, cardMatchesSearch]);
 
   const handleViewChange = useCallback(() => {
     if (activeView === undefined || activeView.columns === undefined) return;
@@ -903,7 +914,7 @@ const App = ({ context, notificationPosition }: IProps) => {
       recordIds.length > 0 &&
       context.parameters.dataset.paging != null &&
       context.parameters.dataset.paging.hasNextPage == true &&
-      recordIds.length < 2500
+      recordIds.length < MAX_DATASET_RECORDS
     ) {
       // Page-Size fuer das Nachladen hochsetzen: Das Board braucht ALLE Records
       // client-seitig (Gruppierung/Filter/Sortierung/Suche). Die Standard-Page-Size ist
@@ -912,7 +923,7 @@ const App = ({ context, notificationPosition }: IProps) => {
       // wenigen Anfragen. setPageSize wird defensiv aufgerufen (nicht in jeder SDK-Version typisiert).
       const paging = context.parameters.dataset.paging as
         typeof context.parameters.dataset.paging & { setPageSize?: (pageSize: number) => void };
-      paging.setPageSize?.(2500);
+      paging.setPageSize?.(MAX_DATASET_RECORDS);
       pagingLoadRequestedRef.current = true;
       paging.loadNextPage();
       return;
@@ -1030,6 +1041,7 @@ const App = ({ context, notificationPosition }: IProps) => {
         setActiveView,
         columns,
         setColumns,
+        hasMoreRecordsAvailable,
         activeViewEntity,
         setActiveViewEntity,
         selectedEntity,

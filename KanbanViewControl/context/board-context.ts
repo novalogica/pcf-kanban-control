@@ -49,6 +49,8 @@ interface IBoardContext {
   views: ViewItem[],
   columns: ColumnItem[],
   setColumns: React.Dispatch<React.SetStateAction<ColumnItem[]>>,
+  /** True when more dataset rows exist beyond the client-side load limit. */
+  hasMoreRecordsAvailable: boolean,
   activeViewEntity: ViewEntity | undefined,
   setActiveViewEntity: React.Dispatch<React.SetStateAction<ViewEntity | undefined>>,
   selectedEntity: string | undefined,

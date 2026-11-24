@@ -431,7 +431,7 @@ Maximum width of each column (and cards) in **pixels** (e.g. `500` or `800`). Va
 
 Number of **cards rendered per column initially**. When a column has more cards than this value, only the first N cards are rendered; scrolling near the bottom loads more. In whole-board scroll mode, more cards load as you reach the bottom of the board. This reduces initial DOM size and improves performance for columns with many records. Counts and sums in the column header always reflect **all** cards in the loaded dataset. Valid range: 1–500. Empty = default (**30**).
 
-The control requests additional dataset pages up to **2,500 records** so it can group, filter, search, and sort records client-side. The initial-card setting controls how many loaded cards are rendered at once; it does not change the dataset record limit.
+The control requests additional dataset pages up to **2,500 records** so it can group, filter, search, and sort records client-side. If more records are available, a notice appears above the board. Add filters to narrow the dataset. The initial-card setting controls how many loaded cards are rendered at once; it does not change the dataset record limit.
 
 **Example:** `30` (default), `50`, `100`. Leave empty for default (30).
 

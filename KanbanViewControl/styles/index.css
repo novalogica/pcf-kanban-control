@@ -5,6 +5,16 @@
   overflow-x: auto;
 }
 
+.record-limit-warning {
+  margin: 0 16px 8px;
+  padding: 8px 12px;
+  border-left: 4px solid #d29200;
+  background: #fff4ce;
+  color: #323130;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .kanban-container {
   display: flex;
   flex-direction: column;

@@ -6,6 +6,8 @@ export const INITIAL_CARDS_VISIBLE = 30;
 export const LOAD_MORE_CARDS_COUNT = 30;
 /** Abstand zum unteren Scrollrand (px), ab dem nachgeladen wird. */
 export const SCROLL_LOAD_THRESHOLD_PX = 150;
+/** Maximum number of dataset records loaded for client-side filtering and grouping. */
+export const MAX_DATASET_RECORDS = 2500;
 
 export const unlocatedColumn = {
   key: "unallocated",
